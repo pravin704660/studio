@@ -3,7 +3,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
 
@@ -25,26 +25,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setUserProfile(userDoc.data() as UserProfile);
-        } else {
-          // Handle case where user exists in Auth but not Firestore
-          setUserProfile(null);
-        }
-      } else {
-        setUser(null);
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      if (!firebaseUser) {
         setUserProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      const userDocRef = doc(db, 'users', user.uid);
+      const unsubscribeProfile = onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+          setUserProfile(doc.data() as UserProfile);
+        } else {
+          setUserProfile(null);
+        }
+        setLoading(false);
+      });
+      return () => unsubscribeProfile();
+    }
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, userProfile, loading }}>
