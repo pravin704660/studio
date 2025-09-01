@@ -1,7 +1,7 @@
 
 "use server";
 
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import {
   doc,
   runTransaction,
@@ -12,8 +12,9 @@ import {
   deleteDoc,
   Timestamp,
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
-import type { Tournament, UserProfile } from "./lib/types";
+import type { Tournament, UserProfile, TournamentFormData } from "./lib/types";
 
 export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -99,19 +100,33 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 }
 
 export async function createOrUpdateTournament(
-  tournamentData: Omit<Tournament, 'id' | 'date'> & { date: string }
+  formData: FormData
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const tournamentDataString = formData.get('tournamentData') as string;
+    if (!tournamentDataString) {
+      throw new Error("Tournament data is missing.");
+    }
+    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
+    const imageFile = formData.get('imageFile') as File | null;
+    
+    let imageUrl = tournamentData.imageUrl || "https://picsum.photos/600/400";
+    if (imageFile) {
+        const storageRef = ref(storage, `tournaments/${Date.now()}_${imageFile.name}`);
+        const snapshot = await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
+    }
+    
     const tournamentCollection = collection(db, 'tournaments');
     const newTournamentRef = doc(tournamentCollection);
 
-    // Convert the ISO string date back to a Firestore Timestamp
     const firestoreDate = Timestamp.fromDate(new Date(tournamentData.date));
 
     await setDoc(newTournamentRef, {
       ...tournamentData,
-      date: firestoreDate, // Save as a Timestamp
-      id: newTournamentRef.id, // Storing id in the document as well
+      imageUrl,
+      date: firestoreDate,
+      id: newTournamentRef.id,
     });
     
     return { success: true };
@@ -207,3 +222,5 @@ export async function sendNotification(
     return { success: false, error: "Failed to send notification." };
   }
 }
+
+    

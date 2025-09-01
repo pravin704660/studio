@@ -3,9 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
-import { db, storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { Tournament } from "@/lib/types";
+import { db } from "@/lib/firebase";
+import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
@@ -34,8 +33,6 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-type TournamentFormData = Omit<Tournament, 'id' | 'date'> & { date: string };
-
 const initialFormData: TournamentFormData = {
   title: "",
   gameType: "Solo",
@@ -60,7 +57,6 @@ export default function ManageMegaWinTournamentsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<TournamentFormData>(initialFormData);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -99,17 +95,11 @@ export default function ManageMegaWinTournamentsPage() {
     }));
   };
   
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-        setImageFile(e.target.files[0]);
-    }
-  };
-
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.title || !formData.date || !formData.time) {
         toast({ variant: "destructive", title: "Missing Fields", description: "Please fill out title, date and time." });
@@ -117,32 +107,33 @@ export default function ManageMegaWinTournamentsPage() {
     }
     
     setIsUploading(true);
-    
-    try {
-        let imageUrl = formData.imageUrl || "https://picsum.photos/600/400";
-        if (imageFile) {
-            const storageRef = ref(storage, `tournaments/mega/${Date.now()}_${imageFile.name}`);
-            const snapshot = await uploadBytes(storageRef, imageFile);
-            imageUrl = await getDownloadURL(snapshot.ref);
-        }
+
+    const submissionData = new FormData();
+    const form = e.currentTarget;
+    const imageInput = form.querySelector('input[type="file"]') as HTMLInputElement;
+
+    if (imageInput && imageInput.files && imageInput.files[0]) {
+        submissionData.append('imageFile', imageInput.files[0]);
+    }
         
-        const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
+    const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
+    const tournamentDataForAction = {
+        ...formData,
+        isMega: true,
+        date: tournamentDateTime.toISOString(),
+        rules: formData.rules ? (Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n')) : [],
+    };
 
-        const tournamentDataForAction = {
-            ...formData,
-            imageUrl,
-            isMega: true, 
-            date: tournamentDateTime.toISOString(),
-            rules: formData.rules ? (Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n')) : [],
-        };
+    submissionData.append('tournamentData', JSON.stringify(tournamentDataForAction));
 
-        const result = await createOrUpdateTournament(tournamentDataForAction);
+    try {
+        const result = await createOrUpdateTournament(submissionData);
 
         if (result.success) {
             toast({ title: "Success", description: "Mega Tournament saved successfully." });
             setIsDialogOpen(false);
             setFormData(initialFormData);
-            setImageFile(null);
+            if(imageInput) imageInput.value = ""; // Clear file input
             await fetchTournaments();
         } else {
             toast({ variant: "destructive", title: "Error", description: result.error });
@@ -206,7 +197,7 @@ export default function ManageMegaWinTournamentsPage() {
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="image">Image</Label>
-                                <Input id="image" name="image" type="file" onChange={handleImageChange} />
+                                <Input id="image" name="imageFile" type="file" accept="image/*" />
                                  <p className="text-xs text-muted-foreground">Upload an image file from your computer.</p>
                             </div>
                             <div className="space-y-2">
@@ -277,7 +268,7 @@ export default function ManageMegaWinTournamentsPage() {
                     {tournaments.map((t) => (
                         <TableRow key={t.id}>
                         <TableCell className="font-medium">{t.title}</TableCell>
-                        <TableCell>{t.date && typeof (t.date as any).toDate === 'function' ? (t.date as Timestamp).toDate().toLocaleDateString() : (t.date instanceof Date ? t.date.toLocaleDateString() : 'Invalid Date')}</TableCell>
+                        <TableCell>{t.date && (typeof (t.date as any).toDate === 'function' ? (t.date as Timestamp).toDate().toLocaleDateString() : new Date(t.date as any).toLocaleDateString())}</TableCell>
                         <TableCell>₹{t.entryFee}</TableCell>
                         <TableCell>₹{t.prize}</TableCell>
                         <TableCell>
@@ -317,3 +308,5 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
+
+    

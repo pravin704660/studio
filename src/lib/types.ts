@@ -26,6 +26,20 @@ export interface Tournament {
   isMega?: boolean;
 }
 
+export interface TournamentFormData {
+  title: string;
+  gameType: string;
+  date: string;
+  time: string;
+  entryFee: number;
+  slots: number;
+  prize: number;
+  rules: string[] | string;
+  imageUrl: string;
+  status: 'published' | 'draft' | 'cancelled' | 'completed' | 'live';
+  isMega?: boolean;
+}
+
 export interface Entry {
   entryId: string;
   tournamentId: string;
@@ -66,5 +80,7 @@ export interface Notification {
     timestamp: Timestamp;
     isRead: boolean;
 }
+
+    
 
     
