@@ -165,3 +165,28 @@ export async function updateWalletBalance(
     return { success: false, error: error.message };
   }
 }
+
+
+export async function sendNotification(
+  targetUserId: string, // "all" for everyone
+  title: string,
+  message: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!title || !message) {
+    return { success: false, error: "Title and message are required." };
+  }
+
+  try {
+    await addDoc(collection(db, "notifications"), {
+      userId: targetUserId,
+      title,
+      message,
+      timestamp: serverTimestamp(),
+      isRead: false,
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error sending notification:", error);
+    return { success: false, error: "Failed to send notification." };
+  }
+}
