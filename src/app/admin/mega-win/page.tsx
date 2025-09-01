@@ -34,6 +34,19 @@ import { Card, CardContent } from "@/components/ui/card";
 
 type TournamentFormData = Omit<Tournament, 'id' | 'date'> & { date: string };
 
+const initialFormData: Partial<TournamentFormData> = {
+  title: "",
+  gameType: "Solo",
+  date: "",
+  time: "",
+  entryFee: 0,
+  slots: 100,
+  prize: 0,
+  rules: "",
+  imageUrl: "https://picsum.photos/600/400",
+  status: "draft",
+};
+
 export default function ManageMegaWinTournamentsPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -43,18 +56,7 @@ export default function ManageMegaWinTournamentsPage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [formData, setFormData] = useState<Partial<TournamentFormData>>({
-      title: "",
-      gameType: "Solo",
-      date: "",
-      time: "",
-      entryFee: 0,
-      slots: 100,
-      prize: 0,
-      rules: "",
-      imageUrl: "https://picsum.photos/600/400",
-      status: "draft",
-  });
+  const [formData, setFormData] = useState<Partial<TournamentFormData>>(initialFormData);
 
   useEffect(() => {
     if (!authLoading && (!user || userProfile?.role !== "admin")) {
@@ -85,8 +87,11 @@ export default function ManageMegaWinTournamentsPage() {
   }, [userProfile, toast]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: name === 'entryFee' || name === 'slots' || name === 'prize' ? Number(value) : value }));
+    const { name, value, type } = e.target;
+    setFormData(prev => ({ 
+        ...prev, 
+        [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value 
+    }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -112,6 +117,7 @@ export default function ManageMegaWinTournamentsPage() {
     if (result.success) {
         toast({ title: "Success", description: "Mega Tournament saved successfully." });
         setIsDialogOpen(false);
+        setFormData(initialFormData);
         fetchTournaments(); // Refresh list
     } else {
         toast({ variant: "destructive", title: "Error", description: result.error });
