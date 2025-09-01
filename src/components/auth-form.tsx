@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -14,8 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Gamepad2 } from "lucide-react";
 import { Spinner } from "./ui/spinner";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
@@ -89,17 +91,29 @@ export default function AuthForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="mb-4 flex justify-center">
-             <div className="bg-primary text-primary-foreground rounded-full p-3">
-                <Gamepad2 className="h-8 w-8" />
-             </div>
-          </div>
-          <CardTitle className="text-3xl font-bold">Arena Ace</CardTitle>
-          <CardDescription>{isLogin ? "Welcome back!" : "Create your account"}</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className="w-full max-w-sm overflow-hidden">
+        <div className="relative h-40 w-full">
+            <Image 
+                src="https://picsum.photos/400/200" 
+                alt="Player" 
+                fill
+                className="object-cover"
+                data-ai-hint="game player"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute bottom-4 left-4">
+                <CardTitle className="text-3xl font-bold text-white">Arena Ace</CardTitle>
+            </div>
+        </div>
+        <div className="grid grid-cols-2 gap-0">
+            <button onClick={() => setIsLogin(true)} className={cn("py-3 text-sm font-semibold", isLogin ? "border-b-2 border-primary text-primary" : "text-muted-foreground")}>
+                Login
+            </button>
+            <button onClick={() => setIsLogin(false)} className={cn("py-3 text-sm font-semibold", !isLogin ? "border-b-2 border-primary text-primary" : "text-muted-foreground")}>
+                Register
+            </button>
+        </div>
+        <CardContent className="p-6">
           <form onSubmit={handleAuthAction} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -135,17 +149,10 @@ export default function AuthForm() {
             <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-72.2 68.7C297.6 114.5 274.3 104 248 104c-73.8 0-134.3 60.5-134.3 134.3s60.5 134.3 134.3 134.3c81.5 0 115.7-60.2 120.7-90.7H248v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.4z"></path></svg>
             Sign in with Google
           </Button>
-          <div className="mt-4 text-center text-sm">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="font-semibold text-primary underline-offset-4 hover:underline"
-            >
-              {isLogin ? "Sign up" : "Log in"}
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+
+  
