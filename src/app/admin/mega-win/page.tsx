@@ -126,11 +126,13 @@ export default function ManageMegaWinTournamentsPage() {
             imageUrl = await getDownloadURL(snapshot.ref);
         }
         
+        const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
+
         const tournamentData = {
             ...formData,
             imageUrl,
             isMega: true, 
-            date: new Date(formData.date!).toISOString(),
+            date: tournamentDateTime.toISOString(),
             rules: formData.rules ? (Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n')) : [],
         } as Omit<Tournament, 'id'>;
 
