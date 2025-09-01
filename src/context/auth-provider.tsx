@@ -26,14 +26,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        // Don't set loading to false here, wait for profile
-      } else {
-        setUser(null);
+      setUser(firebaseUser);
+      if (!firebaseUser) {
+        // If there's no user, we are done loading.
         setUserProfile(null);
         setLoading(false);
       }
+      // If there IS a user, loading will be handled by the profile listener useEffect
     });
 
     return () => unsubscribeAuth();
@@ -41,17 +40,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (user) {
-      setLoading(true); // Set loading to true while fetching profile
+      // Start loading profile data
+      setLoading(true);
       const userDocRef = doc(db, 'users', user.uid);
       const unsubscribeProfile = onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
           setUserProfile(doc.data() as UserProfile);
         } else {
-          // This case might happen if user exists in Auth but not Firestore
           setUserProfile(null); 
         }
-        setLoading(false); // Set loading to false after profile is fetched
+        // Finished loading profile data
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching user profile:", error);
+        setUserProfile(null);
+        setLoading(false);
       });
+
       return () => unsubscribeProfile();
     }
   }, [user]);

@@ -18,7 +18,6 @@ export default function ProfileScreen() {
     await signOut(auth);
   };
 
-  // While auth state is resolving, show a spinner.
   if (loading) {
     return (
       <div className="flex h-64 w-full items-center justify-center">
@@ -27,14 +26,16 @@ export default function ProfileScreen() {
     );
   }
 
-  // If after loading, there's no user or profile, something is wrong.
-  // This could be a logged-out user, or a Firestore data issue.
   if (!user || !userProfile) {
-    // We can show an error or just a spinner again while the main page redirects.
     return (
-      <div className="flex h-64 w-full items-center justify-center">
-        <Spinner size="lg" />
-      </div>
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card p-12 text-center">
+            <h3 className="text-lg font-semibold">Could not load profile</h3>
+            <p className="text-sm text-muted-foreground">Please try logging out and logging back in.</p>
+             <Button variant="destructive" className="mt-4 w-full" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+            </Button>
+        </div>
     );
   }
 
