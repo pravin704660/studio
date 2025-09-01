@@ -8,6 +8,7 @@ import type { Tournament } from "@/lib/types";
 import TournamentCard from "@/components/tournament-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
+import Image from "next/image";
 
 export default function HomeScreen() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -39,6 +40,24 @@ export default function HomeScreen() {
 
   return (
     <div>
+      <div className="relative mb-6 h-40 w-full overflow-hidden rounded-lg">
+          <Image 
+              src="https://picsum.photos/800/300"
+              alt="Tournament Banner" 
+              fill
+              className="object-cover"
+              data-ai-hint="game tournament"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                  <h2 className="text-4xl font-black text-yellow-400">
+                    PUBG 1 STAR
+                  </h2>
+              </div>
+          </div>
+      </div>
+
       <h1 className="text-3xl font-bold tracking-tight">Tournaments</h1>
       <p className="text-muted-foreground">Join and compete in daily tournaments.</p>
 
