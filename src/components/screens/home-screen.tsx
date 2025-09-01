@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,13 +7,16 @@ import { db } from "@/lib/firebase";
 import type { Tournament } from "@/lib/types";
 import TournamentCard from "@/components/tournament-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function HomeScreen() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchTournaments = async () => {
+      setLoading(true); // Set loading to true when fetching starts
       try {
         const q = query(collection(db, "tournaments"), where("status", "==", "published"));
         const querySnapshot = await getDocs(q);
@@ -25,8 +29,13 @@ export default function HomeScreen() {
       }
     };
 
-    fetchTournaments();
-  }, []);
+    if (user) {
+      fetchTournaments();
+    } else {
+      // If there's no user, we shouldn't be on this screen, but as a fallback, stop loading.
+      setLoading(false);
+    }
+  }, [user]); // Re-run the effect when the user changes
 
   return (
     <div>
