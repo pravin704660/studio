@@ -14,6 +14,7 @@ export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // This effect handles redirection once loading is complete.
     if (!loading) {
       if (!user || userProfile?.role !== 'admin') {
         router.push('/');
@@ -21,9 +22,9 @@ export default function AdminPage() {
     }
   }, [user, userProfile, loading, router]);
 
-  // We show a spinner while loading or if the user/profile is not yet available.
-  // This prevents a flash of the admin content or a premature redirect.
-  if (loading || !user || !userProfile) {
+  // Show a spinner while the authentication status and user profile are being loaded.
+  // This prevents a premature redirect before the user's role can be confirmed.
+  if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Spinner size="lg" />
@@ -31,12 +32,13 @@ export default function AdminPage() {
     );
   }
 
-  // If after loading, the user is not an admin, they will be redirected by the useEffect.
-  // We can also add a check here to avoid rendering anything for non-admins.
-  if (userProfile.role !== 'admin') {
-    return null; // Or another spinner, or a message. Null is fine as redirection is imminent.
+  // If, after loading, the user is not an admin, they will be redirected by the useEffect.
+  // We can also return null here to prevent rendering the admin content for a brief moment before redirection.
+  if (!user || userProfile?.role !== 'admin') {
+    return null; 
   }
   
+  // If loading is false and the user is an admin, render the admin panel.
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-md">
