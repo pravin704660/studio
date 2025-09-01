@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Tournament } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -65,7 +65,8 @@ export default function ManageTournamentsPage() {
     setLoading(true);
     try {
       const tournamentsCollection = collection(db, "tournaments");
-      const tournamentsSnapshot = await getDocs(tournamentsCollection);
+      const q = query(tournamentsCollection, where("isMega", "!=", true));
+      const tournamentsSnapshot = await getDocs(q);
       const tournamentsList = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
       setTournaments(tournamentsList);
     } catch (error) {
@@ -100,6 +101,7 @@ export default function ManageTournamentsPage() {
     
     const tournamentData = {
         ...formData,
+        isMega: false,
         date: new Date(formData.date).toISOString(),
         rules: formData.rules?.length ? (Array.isArray(formData.rules) ? formData.rules : (formData.rules as string).split('\n')) : [],
     } as Omit<Tournament, 'id'>;
@@ -254,3 +256,5 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
+
+    

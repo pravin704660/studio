@@ -23,6 +23,7 @@ export interface Tournament {
   rules: string[];
   imageUrl: string;
   status: 'published' | 'draft' | 'cancelled' | 'completed' | 'live';
+  isMega?: boolean;
 }
 
 export interface Entry {
@@ -65,3 +66,5 @@ export interface Notification {
     timestamp: Timestamp;
     isRead: boolean;
 }
+
+    

@@ -61,13 +61,12 @@ export default function ManageMegaWinTournamentsPage() {
     }
   }, [user, userProfile, authLoading, router]);
 
-  // This will be adapted to fetch only mega tournaments
   const fetchTournaments = async () => {
     setLoading(true);
     try {
-      // In a real scenario, you'd filter for mega tournaments, e.g., where("isMega", "==", true)
       const tournamentsCollection = collection(db, "tournaments");
-      const tournamentsSnapshot = await getDocs(tournamentsCollection);
+      const q = query(tournamentsCollection, where("isMega", "==", true));
+      const tournamentsSnapshot = await getDocs(q);
       const tournamentsList = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
       setTournaments(tournamentsList);
     } catch (error) {
@@ -100,7 +99,6 @@ export default function ManageMegaWinTournamentsPage() {
         return;
     }
     
-    // Add a flag to identify it as a mega tournament
     const tournamentData = {
         ...formData,
         isMega: true, 
@@ -270,3 +268,5 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
+
+    
