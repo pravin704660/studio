@@ -48,22 +48,26 @@ export default function NotificationBell() {
 
     const combineAndSetNotifications = () => {
       const combined = [...userNotifications, ...allNotifications];
-      // Sort by timestamp descending
-      combined.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+      // Sort by timestamp descending, ensuring timestamp exists
+      combined.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
       setNotifications(combined);
 
-      const unread = combined.filter(n => !n.isRead && n.userId === user.uid).length;
+      const unread = userNotifications.filter(n => !n.isRead).length;
       setUnreadCount(unread);
     };
 
     const unsubUser = onSnapshot(userNotifsQuery, (snapshot) => {
       userNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
       combineAndSetNotifications();
+    }, (error) => {
+        console.error("Error fetching user notifications:", error);
     });
 
     const unsubAll = onSnapshot(allNotifsQuery, (snapshot) => {
       allNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
       combineAndSetNotifications();
+    }, (error) => {
+        console.error("Error fetching all-user notifications:", error);
     });
 
     return () => {
@@ -74,15 +78,19 @@ export default function NotificationBell() {
 
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
-    if (open && unreadCount > 0) {
+    if (open && unreadCount > 0 && user) {
       // Mark all user-specific unread notifications as read
       const unreadNotifications = notifications.filter(n => !n.isRead && n.userId === user.uid);
       const updatePromises = unreadNotifications.map(n => {
           const notifRef = doc(db, "notifications", n.id);
           return updateDoc(notifRef, { isRead: true });
       });
-      await Promise.all(updatePromises);
-      setUnreadCount(0); // Optimistically update the count
+      try {
+        await Promise.all(updatePromises);
+        setUnreadCount(0); // Optimistically update the count
+      } catch (error) {
+        console.error("Error marking notifications as read:", error);
+      }
     }
   };
 
