@@ -21,7 +21,9 @@ export default function AdminPage() {
     }
   }, [user, userProfile, loading, router]);
 
-  if (loading || !user || userProfile?.role !== 'admin') {
+  // We show a spinner while loading or if the user/profile is not yet available.
+  // This prevents a flash of the admin content or a premature redirect.
+  if (loading || !user || !userProfile) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Spinner size="lg" />
@@ -29,6 +31,12 @@ export default function AdminPage() {
     );
   }
 
+  // If after loading, the user is not an admin, they will be redirected by the useEffect.
+  // We can also add a check here to avoid rendering anything for non-admins.
+  if (userProfile.role !== 'admin') {
+    return null; // Or another spinner, or a message. Null is fine as redirection is imminent.
+  }
+  
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-md">
