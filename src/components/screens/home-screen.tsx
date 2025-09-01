@@ -17,7 +17,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const fetchTournaments = async () => {
-      setLoading(true); // Set loading to true when fetching starts
+      setLoading(true);
       try {
         const q = query(collection(db, "tournaments"), where("status", "==", "published"));
         const querySnapshot = await getDocs(q);
@@ -33,14 +33,33 @@ export default function HomeScreen() {
     if (user) {
       fetchTournaments();
     }
-  }, [user]); // Re-run the effect when the user changes
+  }, [user]);
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold tracking-tight">Tournaments</h1>
-      <p className="text-muted-foreground">Join and compete in daily tournaments.</p>
+    <div className="space-y-6">
+      <div className="relative h-48 w-full overflow-hidden rounded-lg">
+        <Image
+            src="https://picsum.photos/800/400"
+            alt="PUBG Banner"
+            fill
+            className="object-cover"
+            data-ai-hint="game battle player"
+        />
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 flex items-center justify-center">
+            <h2 className="text-4xl font-black text-yellow-400 drop-shadow-lg">
+              PUBG 1 STAR
+            </h2>
+        </div>
+      </div>
 
-      <div className="mt-6 space-y-4">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Tournaments</h1>
+        <p className="text-muted-foreground">Join and compete in daily tournaments.</p>
+      </div>
+
+
+      <div className="space-y-4">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="space-y-3 rounded-lg border bg-card p-4">
