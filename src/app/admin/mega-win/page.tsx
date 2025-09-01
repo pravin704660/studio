@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { Tournament } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
@@ -43,7 +44,7 @@ const initialFormData: Partial<TournamentFormData> = {
   slots: 100,
   prize: 0,
   rules: "",
-  imageUrl: "https://picsum.photos/600/400",
+  imageUrl: "",
   status: "draft",
 };
 
@@ -57,6 +58,8 @@ export default function ManageMegaWinTournamentsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<Partial<TournamentFormData>>(initialFormData);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || userProfile?.role !== "admin")) {
@@ -93,6 +96,12 @@ export default function ManageMegaWinTournamentsPage() {
         [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value 
     }));
   };
+  
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        setImageFile(e.target.files[0]);
+    }
+  };
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -101,23 +110,42 @@ export default function ManageMegaWinTournamentsPage() {
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.date || !formData.time) {
-        toast({ variant: "destructive", title: "Missing Fields", description: "Please fill out all required fields." });
+        toast({ variant: "destructive", title: "Missing Fields", description: "Please fill out title, date and time." });
         return;
+    }
+    
+    setIsUploading(true);
+    let imageUrl = "https://picsum.photos/600/400";
+
+    if (imageFile) {
+        try {
+            const storageRef = ref(storage, `tournaments/mega/${Date.now()}_${imageFile.name}`);
+            const snapshot = await uploadBytes(storageRef, imageFile);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            toast({ variant: "destructive", title: "Image Upload Failed", description: "Could not upload the tournament image." });
+            setIsUploading(false);
+            return;
+        }
     }
     
     const tournamentData = {
         ...formData,
+        imageUrl,
         isMega: true, 
         date: new Date(formData.date).toISOString(),
         rules: formData.rules ? (formData.rules as string).split('\n') : [],
     } as Omit<Tournament, 'id'>;
 
     const result = await createOrUpdateTournament(tournamentData);
+    setIsUploading(false);
 
     if (result.success) {
         toast({ title: "Success", description: "Mega Tournament saved successfully." });
         setIsDialogOpen(false);
         setFormData(initialFormData);
+        setImageFile(null);
         fetchTournaments(); // Refresh list
     } else {
         toast({ variant: "destructive", title: "Error", description: result.error });
@@ -171,6 +199,10 @@ export default function ManageMegaWinTournamentsPage() {
                         <Label htmlFor="title" className="text-right">Title</Label>
                         <Input id="title" name="title" value={formData.title} onChange={handleFormChange} className="col-span-3" />
                     </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="image" className="text-right">Image</Label>
+                        <Input id="image" name="image" type="file" onChange={handleImageChange} className="col-span-3" />
+                    </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="date" className="text-right">Date</Label>
                         <Input id="date" name="date" type="date" value={formData.date} onChange={handleFormChange} className="col-span-3" />
@@ -201,7 +233,9 @@ export default function ManageMegaWinTournamentsPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <Button type="submit">Save Tournament</Button>
+                     <Button type="submit" disabled={isUploading}>
+                        {isUploading ? <><Spinner size="sm" className="mr-2" /> Uploading...</> : 'Save Tournament'}
+                    </Button>
                 </form>
             </DialogContent>
           </Dialog>
