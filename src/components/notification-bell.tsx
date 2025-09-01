@@ -52,6 +52,7 @@ export default function NotificationBell() {
       combined.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
       setNotifications(combined);
 
+      // Correctly calculate unread count from user-specific notifications
       const unread = userNotifications.filter(n => !n.isRead).length;
       setUnreadCount(unread);
     };
