@@ -15,31 +15,26 @@ export default function AdminPage() {
 
   useEffect(() => {
     // જ્યારે લોડિંગ પૂર્ણ થાય ત્યારે જ રીડાયરેક્શન હેન્ડલ કરો.
-    if (!loading) {
-      // જો વપરાશકર્તા લૉગ ઇન નથી અથવા એડમિન નથી, તો તેમને હોમ પેજ પર મોકલો.
-      if (!user || userProfile?.role !== 'admin') {
-        router.push('/');
-      }
+    if (!loading && (!user || userProfile?.role !== 'admin')) {
+      router.push('/');
     }
   }, [user, userProfile, loading, router]);
 
   // જ્યાં સુધી ઓથેન્ટિકેશન સ્ટેટસ અને યુઝર પ્રોફાઇલ લોડ ન થાય ત્યાં સુધી સ્પિનર બતાવો.
-  // આનાથી યુઝરની ભૂમિકા કન્ફર્મ થયા પહેલાં અકાળે રીડાયરેક્ટ થતું અટકાવવામાં આવશે.
-  if (loading) {
+  if (loading || !userProfile) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Spinner size="lg" />
       </div>
     );
   }
-
-  // લોડિંગ પછી, જો વપરાશકર્તા એડમિન ન હોય, તો તેમને useEffect દ્વારા રીડાયરેક્ટ કરવામાં આવશે.
-  // રીડાયરેક્શન પહેલાં એડમિન કન્ટેન્ટને ક્ષણભર માટે રેન્ડર થતું અટકાવવા માટે આપણે અહીં null રિટર્ન કરી શકીએ છીએ.
-  if (!user || userProfile?.role !== 'admin') {
-    return null; 
-  }
   
-  // જો લોડિંગ false હોય અને વપરાશકર્તા એડમિન હોય, તો એડમિન પેનલ રેન્ડર કરો.
+  // જો વપરાશકર્તા એડમિન હોય તો જ એડમિન પેનલ રેન્ડર કરો.
+  if (userProfile.role !== 'admin') {
+    // રીડાયરેક્શન થવા માટે ખાલી કન્ટેનર રીટર્ન કરો.
+    return null;
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-md">
@@ -54,7 +49,8 @@ export default function AdminPage() {
         <div className="container mx-auto">
             <h2 className="mb-6 text-3xl font-bold tracking-tight">Dashboard</h2>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
+              <Link href="/admin/users">
+                <Card className="cursor-pointer hover:border-primary">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Manage Users</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground" />
@@ -63,6 +59,7 @@ export default function AdminPage() {
                         <p className="text-xs text-muted-foreground">View and manage all registered users.</p>
                     </CardContent>
                 </Card>
+              </Link>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Manage Tournaments</CardTitle>
