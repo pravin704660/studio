@@ -117,9 +117,9 @@ export default function ManageMegaWinTournamentsPage() {
     }
     
     setIsUploading(true);
-    let imageUrl = formData.imageUrl || "https://picsum.photos/600/400";
-
+    
     try {
+        let imageUrl = formData.imageUrl || "https://picsum.photos/600/400";
         if (imageFile) {
             const storageRef = ref(storage, `tournaments/mega/${Date.now()}_${imageFile.name}`);
             const snapshot = await uploadBytes(storageRef, imageFile);
@@ -134,7 +134,7 @@ export default function ManageMegaWinTournamentsPage() {
             isMega: true, 
             date: tournamentDateTime.toISOString(),
             rules: formData.rules ? (Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n')) : [],
-        } as Omit<Tournament, 'id' | 'date'> & { date: string };
+        };
 
         const result = await createOrUpdateTournament(tournamentData);
 
@@ -317,3 +317,5 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
+
+    

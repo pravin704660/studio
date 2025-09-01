@@ -117,9 +117,9 @@ export default function ManageTournamentsPage() {
     }
     
     setIsUploading(true);
-    let imageUrl = formData.imageUrl || "https://picsum.photos/600/400";
-
+    
     try {
+        let imageUrl = formData.imageUrl || "https://picsum.photos/600/400";
         if (imageFile) {
             const storageRef = ref(storage, `tournaments/${Date.now()}_${imageFile.name}`);
             const snapshot = await uploadBytes(storageRef, imageFile);
@@ -134,7 +134,7 @@ export default function ManageTournamentsPage() {
             isMega: false,
             date: tournamentDateTime.toISOString(),
             rules: formData.rules ? (Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n')) : [],
-        } as Omit<Tournament, 'id' | 'date'> & { date: string };
+        };
 
         const result = await createOrUpdateTournament(tournamentData);
 
@@ -305,3 +305,5 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
+
+    
