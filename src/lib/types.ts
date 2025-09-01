@@ -15,7 +15,7 @@ export interface Tournament {
   id: string;
   title: string;
   gameType: string;
-  date: string;
+  date: Timestamp;
   time: string;
   entryFee: number;
   slots: number;

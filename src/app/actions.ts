@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   setDoc,
   deleteDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type { Tournament, UserProfile } from "./lib/types";
@@ -98,14 +99,18 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 }
 
 export async function createOrUpdateTournament(
-  tournamentData: Omit<Tournament, 'id'>
+  tournamentData: Omit<Tournament, 'id' | 'date'> & { date: string }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const tournamentCollection = collection(db, 'tournaments');
-    const newTournamentRef = doc(tournamentCollection); // Create a reference for a new document
-    
+    const newTournamentRef = doc(tournamentCollection);
+
+    // Convert the ISO string date back to a Firestore Timestamp
+    const firestoreDate = Timestamp.fromDate(new Date(tournamentData.date));
+
     await setDoc(newTournamentRef, {
       ...tournamentData,
+      date: firestoreDate, // Save as a Timestamp
       id: newTournamentRef.id, // Storing id in the document as well
     });
     

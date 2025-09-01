@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Tournament } from "@/lib/types";
 import TournamentCard from "@/components/tournament-card";
@@ -19,7 +19,11 @@ export default function HomeScreen() {
     const fetchTournaments = async () => {
       setLoading(true);
       try {
-        const q = query(collection(db, "tournaments"), where("status", "==", "published"));
+        const q = query(
+          collection(db, "tournaments"), 
+          where("status", "==", "published"),
+          orderBy("date", "desc")
+        );
         const querySnapshot = await getDocs(q);
         const tournamentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
         setTournaments(tournamentsData);

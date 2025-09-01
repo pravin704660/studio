@@ -134,7 +134,7 @@ export default function ManageTournamentsPage() {
             isMega: false,
             date: tournamentDateTime.toISOString(),
             rules: formData.rules ? (Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n')) : [],
-        } as Omit<Tournament, 'id'>;
+        } as Omit<Tournament, 'id' | 'date'> & { date: string };
 
         const result = await createOrUpdateTournament(tournamentData);
 
@@ -266,7 +266,7 @@ export default function ManageTournamentsPage() {
               {tournaments.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.title}</TableCell>
-                  <TableCell>{new Date(t.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{t.date.toDate().toLocaleDateString()}</TableCell>
                   <TableCell>₹{t.entryFee}</TableCell>
                   <TableCell>₹{t.prize}</TableCell>
                   <TableCell>
@@ -305,5 +305,3 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
-
-    

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -85,7 +86,7 @@ export default function TournamentCard({ tournament }: { tournament: Tournament 
             <div className="flex flex-col items-center">
                 <Calendar className="h-6 w-6 text-green-400" />
                 <span className="mt-1 text-sm font-semibold">Starts</span>
-                <span className="text-lg font-bold">{new Date(tournament.date).toLocaleDateString()}</span>
+                <span className="text-lg font-bold">{tournament.date.toDate().toLocaleDateString()}</span>
             </div>
         </div>
       </CardContent>
