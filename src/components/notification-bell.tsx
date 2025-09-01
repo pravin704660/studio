@@ -29,21 +29,47 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
+    // Query for user-specific notifications
+    const userNotifsQuery = query(
       collection(db, "notifications"),
-      where("userId", "in", [user.uid, "all"]),
+      where("userId", "==", user.uid),
       orderBy("timestamp", "desc")
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
-      setNotifications(notifs);
-      
-      const unread = notifs.filter(n => !n.isRead && n.userId === user.uid).length;
+    // Query for global "all" notifications
+    const allNotifsQuery = query(
+      collection(db, "notifications"),
+      where("userId", "==", "all"),
+      orderBy("timestamp", "desc")
+    );
+
+    let userNotifications: Notification[] = [];
+    let allNotifications: Notification[] = [];
+
+    const combineAndSetNotifications = () => {
+      const combined = [...userNotifications, ...allNotifications];
+      // Sort by timestamp descending
+      combined.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+      setNotifications(combined);
+
+      const unread = combined.filter(n => !n.isRead && n.userId === user.uid).length;
       setUnreadCount(unread);
+    };
+
+    const unsubUser = onSnapshot(userNotifsQuery, (snapshot) => {
+      userNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+      combineAndSetNotifications();
     });
 
-    return () => unsubscribe();
+    const unsubAll = onSnapshot(allNotifsQuery, (snapshot) => {
+      allNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+      combineAndSetNotifications();
+    });
+
+    return () => {
+      unsubUser();
+      unsubAll();
+    };
   }, [user]);
 
   const handleOpenChange = async (open: boolean) => {
@@ -90,7 +116,7 @@ export default function NotificationBell() {
                       <p className="font-semibold">{n.title}</p>
                       <p className="text-sm text-muted-foreground">{n.message}</p>
                       <p className="text-xs text-muted-foreground/70 mt-1">
-                        {formatDistanceToNow(n.timestamp.toDate(), { addSuffix: true })}
+                        {n.timestamp ? formatDistanceToNow(n.timestamp.toDate(), { addSuffix: true }) : 'Just now'}
                       </p>
                     </div>
                   </div>
