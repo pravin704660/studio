@@ -1,3 +1,4 @@
+
 "use server";
 
 import { db } from "@/lib/firebase";
@@ -7,6 +8,7 @@ import {
   collection,
   addDoc,
   serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type { Tournament, UserProfile } from "./lib/types";
@@ -92,4 +94,23 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
         console.error("Error in GenAI flow:", error);
         return "We've noticed your payment request is still pending. Please contact support for assistance.";
     }
+}
+
+export async function createOrUpdateTournament(
+  tournamentData: Omit<Tournament, 'id'>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tournamentCollection = collection(db, 'tournaments');
+    const newTournamentRef = doc(tournamentCollection);
+    
+    await setDoc(newTournamentRef, {
+      ...tournamentData,
+      id: newTournamentRef.id, // Storing id in the document as well
+    });
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error creating tournament:', error);
+    return { success: false, error: 'Failed to create tournament.' };
+  }
 }

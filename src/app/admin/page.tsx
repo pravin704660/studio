@@ -14,13 +14,13 @@ export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // જ્યારે લોડિંગ પૂર્ણ થાય ત્યારે જ રીડાયરેક્શન હેન્ડલ કરો.
+    // Wait until loading is finished before handling redirection.
     if (!loading && (!user || userProfile?.role !== 'admin')) {
       router.push('/');
     }
   }, [user, userProfile, loading, router]);
 
-  // જ્યાં સુધી ઓથેન્ટિકેશન સ્ટેટસ અને યુઝર પ્રોફાઇલ લોડ ન થાય ત્યાં સુધી સ્પિનર બતાવો.
+  // Show a spinner until authentication status and user profile are loaded.
   if (loading || !userProfile) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -29,9 +29,9 @@ export default function AdminPage() {
     );
   }
   
-  // જો વપરાશકર્તા એડમિન હોય તો જ એડમિન પેનલ રેન્ડર કરો.
+  // Render the admin panel only if the user is an admin.
   if (userProfile.role !== 'admin') {
-    // રીડાયરેક્શન થવા માટે ખાલી કન્ટેનર રીટર્ન કરો.
+    // Return an empty container to allow for redirection.
     return null;
   }
 
@@ -50,7 +50,7 @@ export default function AdminPage() {
             <h2 className="mb-6 text-3xl font-bold tracking-tight">Dashboard</h2>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               <Link href="/admin/users">
-                <Card className="cursor-pointer hover:border-primary">
+                <Card className="cursor-pointer transition-colors hover:border-primary">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Manage Users</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground" />
@@ -60,7 +60,8 @@ export default function AdminPage() {
                     </CardContent>
                 </Card>
               </Link>
-                <Card>
+               <Link href="/admin/tournaments">
+                <Card className="cursor-pointer transition-colors hover:border-primary">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Manage Tournaments</CardTitle>
                         <Swords className="h-4 w-4 text-muted-foreground" />
@@ -69,6 +70,7 @@ export default function AdminPage() {
                         <p className="text-xs text-muted-foreground">Create, edit, and publish tournaments.</p>
                     </CardContent>
                 </Card>
+              </Link>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Wallet Requests</CardTitle>

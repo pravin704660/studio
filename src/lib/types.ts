@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export interface UserProfile {
@@ -21,7 +22,7 @@ export interface Tournament {
   prize: number;
   rules: string[];
   imageUrl: string;
-  status: 'published' | 'draft' | 'cancelled' | 'completed';
+  status: 'published' | 'draft' | 'cancelled' | 'completed' | 'live';
 }
 
 export interface Entry {
