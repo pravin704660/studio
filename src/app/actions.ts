@@ -3,12 +3,10 @@
 import { db } from "@/lib/firebase";
 import {
   doc,
-  getDoc,
   runTransaction,
   collection,
   addDoc,
   serverTimestamp,
-  writeBatch
 } from "firebase/firestore";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type { Tournament, UserProfile } from "./lib/types";
@@ -18,8 +16,7 @@ export async function joinTournament(tournamentId: string, userId: string): Prom
     await runTransaction(db, async (transaction) => {
       const userDocRef = doc(db, "users", userId);
       const tournamentDocRef = doc(db, "tournaments", tournamentId);
-      const entryQuery = collection(db, "entries");
-
+      
       const [userDoc, tournamentDoc] = await Promise.all([
         transaction.get(userDocRef),
         transaction.get(tournamentDocRef),
