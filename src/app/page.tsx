@@ -22,9 +22,9 @@ export default function Home() {
 
   useEffect(() => {
     if (!loading && !user) {
-      // Redirect to a login page or show AuthForm
-      // To prevent showing a flash of the home screen before redirecting,
-      // we handle the auth state here.
+      // The AuthForm is already rendered when user is not present,
+      // so no explicit redirect is needed here.
+      // This hook handles state changes, like after logout.
     }
   }, [user, loading, router]);
 
