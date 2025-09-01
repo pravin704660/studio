@@ -121,7 +121,7 @@ export default function ManageMegaWinTournamentsPage() {
         ...formData,
         isMega: true,
         date: tournamentDateTime.toISOString(),
-        rules: formData.rules ? (Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n')) : [],
+        rules: Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n'),
     };
 
     submissionData.append('tournamentData', JSON.stringify(tournamentDataForAction));
