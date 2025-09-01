@@ -36,7 +36,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 type TournamentFormData = Omit<Tournament, 'id' | 'date'> & { date: string };
 
-const initialFormData: Partial<TournamentFormData> = {
+const initialFormData: TournamentFormData = {
   title: "",
   gameType: "Solo",
   date: "",
@@ -44,9 +44,10 @@ const initialFormData: Partial<TournamentFormData> = {
   entryFee: 0,
   slots: 100,
   prize: 0,
-  rules: "",
+  rules: [],
   imageUrl: "",
   status: "draft",
+  isMega: true,
 };
 
 export default function ManageMegaWinTournamentsPage() {
@@ -58,7 +59,7 @@ export default function ManageMegaWinTournamentsPage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [formData, setFormData] = useState<Partial<TournamentFormData>>(initialFormData);
+  const [formData, setFormData] = useState<TournamentFormData>(initialFormData);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -130,7 +131,7 @@ export default function ManageMegaWinTournamentsPage() {
             imageUrl,
             isMega: true, 
             date: new Date(formData.date!).toISOString(),
-            rules: formData.rules ? (formData.rules as string).split('\n') : [],
+            rules: formData.rules ? (Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n')) : [],
         } as Omit<Tournament, 'id'>;
 
         const result = await createOrUpdateTournament(tournamentData);
@@ -194,52 +195,54 @@ export default function ManageMegaWinTournamentsPage() {
                 <DialogHeader>
                     <DialogTitle>Create New Mega Tournament</DialogTitle>
                 </DialogHeader>
-                <ScrollArea className="pr-4">
-                    <form onSubmit={handleFormSubmit} className="grid gap-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="title">Title</Label>
-                            <Input id="title" name="title" value={formData.title} onChange={handleFormChange} />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="image">Image</Label>
-                            <Input id="image" name="image" type="file" onChange={handleImageChange} />
-                             <p className="text-xs text-muted-foreground">Upload an image file from your computer.</p>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="date">Date</Label>
-                            <Input id="date" name="date" type="date" value={formData.date} onChange={handleFormChange} />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="time">Time</Label>
-                            <Input id="time" name="time" type="time" value={formData.time} onChange={handleFormChange} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="entryFee">Entry Fee</Label>
-                            <Input id="entryFee" name="entryFee" type="number" value={formData.entryFee} onChange={handleFormChange} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="prize">Prize Pool</Label>
-                            <Input id="prize" name="prize" type="number" value={formData.prize} onChange={handleFormChange} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="status">Status</Label>
-                            <Select onValueChange={(v) => handleSelectChange('status', v)} defaultValue={formData.status}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="draft">Draft</SelectItem>
-                                    <SelectItem value="published">Published</SelectItem>
-                                    <SelectItem value="completed">Completed</SelectItem>
-                                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                         <Button type="submit" disabled={isUploading}>
-                            {isUploading ? <><Spinner size="sm" className="mr-2" /> Uploading...</> : 'Save Tournament'}
-                        </Button>
-                    </form>
-                </ScrollArea>
+                <div className="flex-1 overflow-y-auto pr-2">
+                    <ScrollArea className="h-full pr-4">
+                        <form onSubmit={handleFormSubmit} className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="title">Title</Label>
+                                <Input id="title" name="title" value={formData.title} onChange={handleFormChange} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="image">Image</Label>
+                                <Input id="image" name="image" type="file" onChange={handleImageChange} />
+                                 <p className="text-xs text-muted-foreground">Upload an image file from your computer.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="date">Date</Label>
+                                <Input id="date" name="date" type="date" value={formData.date} onChange={handleFormChange} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="time">Time</Label>
+                                <Input id="time" name="time" type="time" value={formData.time} onChange={handleFormChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="entryFee">Entry Fee</Label>
+                                <Input id="entryFee" name="entryFee" type="number" value={formData.entryFee} onChange={handleFormChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="prize">Prize Pool</Label>
+                                <Input id="prize" name="prize" type="number" value={formData.prize} onChange={handleFormChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="status">Status</Label>
+                                <Select onValueChange={(v) => handleSelectChange('status', v)} defaultValue={formData.status}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="draft">Draft</SelectItem>
+                                        <SelectItem value="published">Published</SelectItem>
+                                        <SelectItem value="completed">Completed</SelectItem>
+                                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <Button type="submit" disabled={isUploading}>
+                                {isUploading ? <><Spinner size="sm" className="mr-2" /> Uploading...</> : 'Save Tournament'}
+                            </Button>
+                        </form>
+                    </ScrollArea>
+                </div>
             </DialogContent>
           </Dialog>
         </div>
