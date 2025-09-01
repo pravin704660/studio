@@ -18,17 +18,7 @@ export default function ProfileScreen() {
     await signOut(auth);
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-64 w-full items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
-  // It's possible for loading to be false but user/userProfile to still be null briefly.
-  // We show a spinner in that case as well to prevent flicker or returning null.
-  if (!user || !userProfile) {
+  if (loading || !user || !userProfile) {
     return (
       <div className="flex h-64 w-full items-center justify-center">
         <Spinner size="lg" />
