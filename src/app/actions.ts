@@ -114,3 +114,54 @@ export async function createOrUpdateTournament(
     return { success: false, error: 'Failed to create tournament.' };
   }
 }
+
+export async function updateWalletBalance(
+  userId: string,
+  amount: number,
+  type: 'credit' | 'debit'
+): Promise<{ success: boolean; error?: string }> {
+  if (amount <= 0) {
+    return { success: false, error: 'Amount must be positive.' };
+  }
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const userDocRef = doc(db, 'users', userId);
+      const userDoc = await transaction.get(userDocRef);
+
+      if (!userDoc.exists()) {
+        throw new Error('User not found.');
+      }
+
+      const userProfile = userDoc.data() as UserProfile;
+      let newBalance: number;
+
+      if (type === 'credit') {
+        newBalance = userProfile.walletBalance + amount;
+      } else {
+        if (userProfile.walletBalance < amount) {
+          throw new Error('Insufficient funds for debit.');
+        }
+        newBalance = userProfile.walletBalance - amount;
+      }
+      
+      transaction.update(userDocRef, { walletBalance: newBalance });
+
+      const transactionDocRef = doc(collection(db, 'transactions'));
+      transaction.set(transactionDocRef, {
+        txnId: transactionDocRef.id,
+        userId,
+        amount,
+        type,
+        status: 'success',
+        timestamp: serverTimestamp(),
+        description: `Admin ${type}`,
+      });
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating wallet balance:', error);
+    return { success: false, error: error.message };
+  }
+}

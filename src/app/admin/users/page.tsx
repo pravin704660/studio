@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import Link from "next/link";
-import { ArrowLeft, User, Shield, ShieldCheck } from "lucide-react";
+import { ArrowLeft, User, Shield, ShieldCheck, Wallet } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -21,6 +21,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { updateWalletBalance } from "@/app/actions";
 
 export default function ManageUsersPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -29,6 +42,11 @@ export default function ManageUsersPage() {
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [amount, setAmount] = useState<number>(0);
+  const [transactionType, setTransactionType] = useState<'credit' | 'debit'>('credit');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || userProfile?.role !== "admin")) {
@@ -92,6 +110,41 @@ export default function ManageUsersPage() {
     }
   };
 
+  const handleOpenDialog = (user: UserProfile) => {
+    setSelectedUser(user);
+    setIsDialogOpen(true);
+    setAmount(0);
+    setTransactionType('credit');
+  };
+
+  const handleWalletUpdate = async () => {
+    if (!selectedUser || amount <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Input',
+        description: 'Please select a user and enter a valid amount.',
+      });
+      return;
+    }
+    setIsSubmitting(true);
+    const result = await updateWalletBalance(selectedUser.uid, amount, transactionType);
+    if (result.success) {
+      toast({
+        title: 'Success',
+        description: `Wallet balance updated for ${selectedUser.name}.`,
+      });
+      fetchUsers();
+      setIsDialogOpen(false);
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: result.error,
+      });
+    }
+    setIsSubmitting(false);
+  };
+
   if (authLoading || loading || userProfile?.role !== "admin") {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -122,8 +175,9 @@ export default function ManageUsersPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Wallet Balance</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -131,13 +185,17 @@ export default function ManageUsersPage() {
                 <TableRow key={u.uid}>
                   <TableCell>{u.name}</TableCell>
                   <TableCell>{u.email}</TableCell>
+                  <TableCell>₹{u.walletBalance.toFixed(2)}</TableCell>
                   <TableCell>
                     <Badge variant={u.role === "admin" ? "default" : "secondary"}>
                       {u.role === "admin" ? <ShieldCheck className="mr-1 h-3 w-3"/> : <User className="mr-1 h-3 w-3"/>}
                       {u.role}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="space-x-2 text-right">
+                    <Button size="sm" variant="outline" onClick={() => handleOpenDialog(u)}>
+                        <Wallet className="mr-2 h-4 w-4" /> Manage Balance
+                    </Button>
                     <Button
                       size="sm"
                       onClick={() => toggleAdminRole(u)}
@@ -153,6 +211,48 @@ export default function ManageUsersPage() {
           </Table>
         </div>
       </main>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Manage Wallet for {selectedUser?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="amount">Amount</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(Number(e.target.value))}
+                  placeholder="Enter amount"
+                />
+              </div>
+              <RadioGroup
+                defaultValue="credit"
+                value={transactionType}
+                onValueChange={(value: 'credit' | 'debit') => setTransactionType(value)}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="credit" id="credit" />
+                  <Label htmlFor="credit">Credit (Add)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="debit" id="debit" />
+                  <Label htmlFor="debit">Debit (Subtract)</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleWalletUpdate} disabled={isSubmitting}>
+                    {isSubmitting ? <Spinner /> : 'Update Balance'}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
