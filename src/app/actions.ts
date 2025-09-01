@@ -111,6 +111,7 @@ export async function createOrUpdateTournament(
     const imageFile = formData.get('imageFile') as File | null;
     
     let imageUrl = tournamentData.imageUrl || "https://picsum.photos/600/400";
+
     if (imageFile) {
         const storageRef = ref(storage, `tournaments/${Date.now()}_${imageFile.name}`);
         const snapshot = await uploadBytes(storageRef, imageFile);

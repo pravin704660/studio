@@ -126,24 +126,19 @@ export default function ManageTournamentsPage() {
     
     submissionData.append('tournamentData', JSON.stringify(tournamentDataForAction));
     
-    try {
-        const result = await createOrUpdateTournament(submissionData);
+    const result = await createOrUpdateTournament(submissionData);
 
-        if (result.success) {
-            toast({ title: "Success", description: "Tournament saved successfully." });
-            setIsDialogOpen(false);
-            setFormData(initialFormData);
-            if (imageInput) imageInput.value = ""; // Clear file input
-            await fetchTournaments();
-        } else {
-            toast({ variant: "destructive", title: "Error", description: result.error });
-        }
-    } catch (error) {
-        console.error("Error saving tournament:", error);
-        toast({ variant: "destructive", title: "Save Failed", description: "Could not save the tournament." });
-    } finally {
-        setIsUploading(false);
+    if (result.success) {
+        toast({ title: "Success", description: "Tournament saved successfully." });
+        setIsDialogOpen(false);
+        setFormData(initialFormData);
+        if (imageInput) imageInput.value = ""; // Clear file input
+        await fetchTournaments();
+    } else {
+        toast({ variant: "destructive", title: "Error", description: result.error });
     }
+    
+    setIsUploading(false);
   };
 
   const handleDelete = async (tournamentId: string) => {
@@ -166,6 +161,22 @@ export default function ManageTournamentsPage() {
       </div>
     );
   }
+
+  const getDisplayDate = (date: any) => {
+    if (!date) return 'N/A';
+    if (date instanceof Timestamp) {
+      return date.toDate().toLocaleDateString();
+    }
+    if (date instanceof Date) {
+      return date.toLocaleDateString();
+    }
+    // Handle ISO string or other string formats
+    const parsedDate = new Date(date);
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toLocaleDateString();
+    }
+    return 'Invalid Date';
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -257,7 +268,7 @@ export default function ManageTournamentsPage() {
               {tournaments.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.title}</TableCell>
-                  <TableCell>{t.date && (typeof (t.date as any).toDate === 'function' ? (t.date as Timestamp).toDate().toLocaleDateString() : new Date(t.date as any).toLocaleDateString())}</TableCell>
+                  <TableCell>{getDisplayDate(t.date)}</TableCell>
                   <TableCell>₹{t.entryFee}</TableCell>
                   <TableCell>₹{t.prize}</TableCell>
                   <TableCell>
@@ -296,5 +307,3 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
-
-    
