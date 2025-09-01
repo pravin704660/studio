@@ -7,7 +7,7 @@ import { signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, User, Mail, Shield } from "lucide-react";
+import { LogOut, User, Mail, Shield, Gamepad2 } from "lucide-react";
 import Link from "next/link";
 import { Spinner } from "../ui/spinner";
 
@@ -18,7 +18,7 @@ export default function ProfileScreen() {
     await signOut(auth);
   };
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="flex h-64 w-full items-center justify-center">
         <Spinner size="lg" />
@@ -26,7 +26,7 @@ export default function ProfileScreen() {
     );
   }
 
-  if (!user || !userProfile) {
+  if (!userProfile) {
     return (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card p-12 text-center">
             <h3 className="text-lg font-semibold">Could not load profile</h3>
@@ -67,6 +67,12 @@ export default function ProfileScreen() {
                 <User className="h-5 w-5 text-muted-foreground"/>
                 <span className="text-sm capitalize">{userProfile.role}</span>
             </div>
+            {userProfile.pubgId && (
+              <div className="flex items-center space-x-3 rounded-md bg-muted p-3">
+                  <Gamepad2 className="h-5 w-5 text-muted-foreground"/>
+                  <span className="text-sm">{userProfile.pubgId}</span>
+              </div>
+            )}
 
             {userProfile.role === 'admin' && (
                 <Link href="/admin" passHref>

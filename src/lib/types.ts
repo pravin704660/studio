@@ -7,6 +7,7 @@ export interface UserProfile {
   photoUrl: string | null;
   walletBalance: number;
   role: 'user' | 'admin';
+  pubgId?: string;
 }
 
 export interface Tournament {

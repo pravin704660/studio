@@ -23,6 +23,7 @@ export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [pubgId, setPubgId] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -45,6 +46,7 @@ export default function AuthForm() {
             photoUrl: user.photoURL,
             walletBalance: 0,
             role: 'user',
+            pubgId: pubgId,
         });
       }
     } catch (error: any) {
@@ -75,6 +77,7 @@ export default function AuthForm() {
                 photoUrl: user.photoURL,
                 walletBalance: 0,
                 role: 'user',
+                pubgId: '',
             });
         }
     } catch (error: any) {
@@ -136,6 +139,19 @@ export default function AuthForm() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+            {!isLogin && (
+                <div className="space-y-2">
+                    <Label htmlFor="pubgId">PUBG ID</Label>
+                    <Input 
+                        id="pubgId" 
+                        type="text" 
+                        placeholder="Your PUBG ID"
+                        required 
+                        value={pubgId}
+                        onChange={(e) => setPubgId(e.target.value)}
+                    />
+                </div>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Spinner /> : isLogin ? "Login" : "Sign Up"}
             </Button>
