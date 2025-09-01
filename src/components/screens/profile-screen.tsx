@@ -26,8 +26,14 @@ export default function ProfileScreen() {
     );
   }
 
+  // It's possible for loading to be false but user/userProfile to still be null briefly.
+  // We show a spinner in that case as well to prevent flicker or returning null.
   if (!user || !userProfile) {
-    return null;
+    return (
+      <div className="flex h-64 w-full items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   const getInitials = (name: string | null | undefined) => {
