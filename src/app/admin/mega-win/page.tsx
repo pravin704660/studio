@@ -89,7 +89,7 @@ export default function ManageMegaWinTournamentsPage() {
     if (userProfile?.role === "admin") {
       fetchTournaments();
     }
-  }, [userProfile]);
+  }, [userProfile, toast]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
@@ -141,14 +141,6 @@ export default function ManageMegaWinTournamentsPage() {
         if (result.success) {
             toast({ title: "Success", description: "Mega Tournament saved successfully." });
             setIsDialogOpen(false);
-            
-            const newTournamentForState = {
-                ...tournamentDataForAction,
-                id: `temp-${Date.now()}`, // temp id
-                date: new Date(tournamentDateTime)
-            };
-            setTournaments(prev => [newTournamentForState, ...prev]);
-
             setFormData(initialFormData);
             setImageFile(null);
             await fetchTournaments();
@@ -325,5 +317,3 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
-
-    

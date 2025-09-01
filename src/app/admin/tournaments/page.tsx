@@ -89,7 +89,7 @@ export default function ManageTournamentsPage() {
     if (userProfile?.role === "admin") {
       fetchTournaments();
     }
-  }, [userProfile]);
+  }, [userProfile, toast]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -141,14 +141,6 @@ export default function ManageTournamentsPage() {
         if (result.success) {
             toast({ title: "Success", description: "Tournament saved successfully." });
             setIsDialogOpen(false);
-            
-            const newTournamentForState = {
-                ...tournamentDataForAction,
-                id: `temp-${Date.now()}`, // temp id
-                date: new Date(tournamentDateTime)
-            };
-            setTournaments(prev => [newTournamentForState, ...prev]);
-
             setFormData(initialFormData);
             setImageFile(null);
             await fetchTournaments();
@@ -313,5 +305,3 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
-
-    
