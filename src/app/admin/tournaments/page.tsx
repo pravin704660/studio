@@ -15,7 +15,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -91,9 +91,9 @@ export default function ManageTournamentsPage() {
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({ 
-        ...prev, 
-        [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value 
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value
     }));
   };
   
@@ -194,34 +194,35 @@ export default function ManageTournamentsPage() {
                     <DialogTitle>Create New Tournament</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleFormSubmit} className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="title" className="text-right">Title</Label>
-                        <Input id="title" name="title" value={formData.title} onChange={handleFormChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="title">Title</Label>
+                        <Input id="title" name="title" value={formData.title} onChange={handleFormChange} />
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="image" className="text-right">Image</Label>
-                        <Input id="image" name="image" type="file" onChange={handleImageChange} className="col-span-3" />
+                     <div className="space-y-2">
+                        <Label htmlFor="image">Image</Label>
+                        <Input id="image" name="image" type="file" onChange={handleImageChange} />
+                         <p className="text-xs text-muted-foreground">Upload an image file from your computer.</p>
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="date" className="text-right">Date</Label>
-                        <Input id="date" name="date" type="date" value={formData.date} onChange={handleFormChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="date">Date</Label>
+                        <Input id="date" name="date" type="date" value={formData.date} onChange={handleFormChange} />
                     </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="time" className="text-right">Time</Label>
-                        <Input id="time" name="time" type="time" value={formData.time} onChange={handleFormChange} className="col-span-3" />
+                     <div className="space-y-2">
+                        <Label htmlFor="time">Time</Label>
+                        <Input id="time" name="time" type="time" value={formData.time} onChange={handleFormChange} />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="entryFee" className="text-right">Entry Fee</Label>
-                        <Input id="entryFee" name="entryFee" type="number" value={formData.entryFee} onChange={handleFormChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="entryFee">Entry Fee</Label>
+                        <Input id="entryFee" name="entryFee" type="number" value={formData.entryFee} onChange={handleFormChange} />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="prize" className="text-right">Prize Pool</Label>
-                        <Input id="prize" name="prize" type="number" value={formData.prize} onChange={handleFormChange} className="col-span-3" />
+                    <div className="space-y-2">
+                        <Label htmlFor="prize">Prize Pool</Label>
+                        <Input id="prize" name="prize" type="number" value={formData.prize} onChange={handleFormChange} />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="status" className="text-right">Status</Label>
+                    <div className="space-y-2">
+                        <Label htmlFor="status">Status</Label>
                         <Select onValueChange={(v) => handleSelectChange('status', v)} defaultValue={formData.status}>
-                            <SelectTrigger className="col-span-3">
+                            <SelectTrigger>
                                 <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
