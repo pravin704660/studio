@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import AuthForm from "@/components/auth-form";
 import BottomNav from "@/components/bottom-nav";
@@ -11,7 +11,6 @@ import MyTournamentsScreen from "@/components/screens/my-tournaments-screen";
 import ProfileScreen from "@/components/screens/profile-screen";
 import { Spinner } from "@/components/ui/spinner";
 import { Gamepad2, Wallet, Swords, User } from "lucide-react";
-import { useRouter } from "next/navigation";
 import NotificationBell from "@/components/notification-bell";
 
 type Screen = "home" | "wallet" | "tournaments" | "profile";
@@ -19,15 +18,6 @@ type Screen = "home" | "wallet" | "tournaments" | "profile";
 export default function Home() {
   const { user, loading } = useAuth();
   const [activeScreen, setActiveScreen] = useState<Screen>("home");
-  const router = useRouter();
-
-  useEffect(() => {
-    // This effect handles the redirection after a user logs out.
-    // When the user logs out, `user` becomes null and `loading` becomes false,
-    // which triggers the rendering of the AuthForm.
-    // No explicit router.push is needed because the component's render logic handles it.
-  }, [user, loading]);
-
 
   const navItems = [
     { name: "home" as Screen, icon: Gamepad2, label: "Home" },
