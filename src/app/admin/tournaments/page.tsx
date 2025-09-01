@@ -73,7 +73,7 @@ export default function ManageTournamentsPage() {
     setLoading(true);
     try {
       const tournamentsCollection = collection(db, "tournaments");
-      const q = query(tournamentsCollection, where("isMega", "in", [false, null]));
+      const q = query(tournamentsCollection, where("isMega", "==", false));
       const tournamentsSnapshot = await getDocs(q);
       const tournamentsList = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
       setTournaments(tournamentsList);
@@ -305,5 +305,3 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
-
-    
