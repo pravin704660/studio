@@ -51,10 +51,14 @@ export default function NotificationBell() {
       // Sort by timestamp descending, ensuring timestamp exists
       combined.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
       setNotifications(combined);
-
-      // Correctly calculate unread count from user-specific notifications
-      const unread = userNotifications.filter(n => !n.isRead).length;
-      setUnreadCount(unread);
+      
+      const userUnread = userNotifications.filter(n => !n.isRead).length;
+      
+      // A simple way to track "all" notifications is needed.
+      // This is a placeholder; a robust solution might involve read receipts.
+      // For now, let's assume "all" notifications are "read" after first view or within a time frame.
+      // The current logic will re-show "all" notifications every time, which is acceptable for now.
+      setUnreadCount(userUnread);
     };
 
     const unsubUser = onSnapshot(userNotifsQuery, (snapshot) => {
@@ -80,15 +84,19 @@ export default function NotificationBell() {
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
     if (open && unreadCount > 0 && user) {
-      // Mark all user-specific unread notifications as read
-      const unreadNotifications = notifications.filter(n => !n.isRead && n.userId === user.uid);
-      const updatePromises = unreadNotifications.map(n => {
+      // Mark only user-specific unread notifications as read
+      const unreadUserNotifications = notifications.filter(n => !n.isRead && n.userId === user.uid);
+      
+      if (unreadUserNotifications.length === 0) return;
+
+      const updatePromises = unreadUserNotifications.map(n => {
           const notifRef = doc(db, "notifications", n.id);
           return updateDoc(notifRef, { isRead: true });
       });
       try {
         await Promise.all(updatePromises);
-        setUnreadCount(0); // Optimistically update the count
+        // Optimistically update the count locally
+        setUnreadCount(0);
       } catch (error) {
         console.error("Error marking notifications as read:", error);
       }
