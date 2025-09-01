@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -40,17 +41,15 @@ export default function AdminPage() {
         <div className="container mx-auto">
             <h2 className="mb-6 text-3xl font-bold tracking-tight">Dashboard</h2>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <Link href="/admin/users">
-                  <Card className="hover:bg-muted/50 cursor-pointer transition-colors">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <CardTitle className="text-sm font-medium">Manage Users</CardTitle>
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                          <p className="text-xs text-muted-foreground">View and manage all registered users.</p>
-                      </CardContent>
-                  </Card>
-                </Link>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Manage Users</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-xs text-muted-foreground">View and manage all registered users.</p>
+                    </CardContent>
+                </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Manage Tournaments</CardTitle>
