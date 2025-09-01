@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -32,6 +33,7 @@ export default function MyTournamentsScreen() {
 
         if (entries.length === 0) {
             setJoinedTournaments([]);
+            setLoading(false); // Fix: Set loading to false when no entries are found
             return;
         }
         
