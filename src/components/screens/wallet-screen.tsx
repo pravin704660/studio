@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -17,8 +18,8 @@ import { submitWalletRequest } from "@/app/actions";
 import { Spinner } from "../ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
-import type { AppConfig, Transaction } from "@/lib/types";
-import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from "firebase/firestore";
+import type { Transaction } from "@/lib/types";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import UtrFollowUpNotifier from "../utr-follow-up-notifier";
 
@@ -28,18 +29,10 @@ export default function WalletScreen() {
   const [amount, setAmount] = useState("");
   const [utr, setUtr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [config, setConfig] = useState<AppConfig | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     if (!user) return;
-    const fetchConfig = async () => {
-        const configDoc = await getDoc(doc(db, "config", "default"));
-        if(configDoc.exists()) {
-            setConfig(configDoc.data() as AppConfig);
-        }
-    }
-    fetchConfig();
     
     const q = query(collection(db, "transactions"), where("userId", "==", user.uid));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -118,12 +111,10 @@ export default function WalletScreen() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {config?.qrImageUrl && (
-                <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
-                    <Image src={config.qrImageUrl} alt="QR Code" width={200} height={200} className="rounded-md" data-ai-hint="qr code"/>
-                    <p className="font-mono text-sm">{config.upiId}</p>
-                </div>
-              )}
+              <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
+                  <Image src="/done.png" alt="QR Code" width={200} height={200} className="rounded-md" data-ai-hint="qr code"/>
+                  <p className="font-mono text-sm">sankhatpravin121@oksbi</p>
+              </div>
               <form onSubmit={handleAddMoney} className="space-y-4">
                 <div className="space-y-1">
                   <Label htmlFor="amount">Amount</Label>
