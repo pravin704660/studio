@@ -142,18 +142,16 @@ export default function ManageMegaWinTournamentsPage() {
             toast({ title: "Success", description: "Mega Tournament saved successfully." });
             setIsDialogOpen(false);
             
-            // Optimistically update UI
             const newTournamentForState = {
                 ...tournamentDataForAction,
                 id: `temp-${Date.now()}`, // temp id
-                date: Timestamp.fromDate(tournamentDateTime) // Use Timestamp for local state
+                date: new Date(tournamentDateTime)
             };
             setTournaments(prev => [newTournamentForState, ...prev]);
 
             setFormData(initialFormData);
             setImageFile(null);
-            // Optionally re-fetch to get correct ID from server
-            fetchTournaments(); 
+            await fetchTournaments();
         } else {
             toast({ variant: "destructive", title: "Error", description: result.error });
         }
@@ -287,7 +285,7 @@ export default function ManageMegaWinTournamentsPage() {
                     {tournaments.map((t) => (
                         <TableRow key={t.id}>
                         <TableCell className="font-medium">{t.title}</TableCell>
-                        <TableCell>{t.date && typeof t.date.toDate === 'function' ? t.date.toDate().toLocaleDateString() : 'Invalid Date'}</TableCell>
+                        <TableCell>{t.date && typeof (t.date as any).toDate === 'function' ? (t.date as Timestamp).toDate().toLocaleDateString() : (t.date instanceof Date ? t.date.toLocaleDateString() : 'Invalid Date')}</TableCell>
                         <TableCell>₹{t.entryFee}</TableCell>
                         <TableCell>₹{t.prize}</TableCell>
                         <TableCell>
@@ -327,3 +325,5 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
+
+    
