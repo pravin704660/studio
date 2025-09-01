@@ -14,16 +14,17 @@ export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // This effect handles redirection once loading is complete.
+    // જ્યારે લોડિંગ પૂર્ણ થાય ત્યારે જ રીડાયરેક્શન હેન્ડલ કરો.
     if (!loading) {
+      // જો વપરાશકર્તા લૉગ ઇન નથી અથવા એડમિન નથી, તો તેમને હોમ પેજ પર મોકલો.
       if (!user || userProfile?.role !== 'admin') {
         router.push('/');
       }
     }
   }, [user, userProfile, loading, router]);
 
-  // Show a spinner while the authentication status and user profile are being loaded.
-  // This prevents a premature redirect before the user's role can be confirmed.
+  // જ્યાં સુધી ઓથેન્ટિકેશન સ્ટેટસ અને યુઝર પ્રોફાઇલ લોડ ન થાય ત્યાં સુધી સ્પિનર બતાવો.
+  // આનાથી યુઝરની ભૂમિકા કન્ફર્મ થયા પહેલાં અકાળે રીડાયરેક્ટ થતું અટકાવવામાં આવશે.
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -32,13 +33,13 @@ export default function AdminPage() {
     );
   }
 
-  // If, after loading, the user is not an admin, they will be redirected by the useEffect.
-  // We can also return null here to prevent rendering the admin content for a brief moment before redirection.
+  // લોડિંગ પછી, જો વપરાશકર્તા એડમિન ન હોય, તો તેમને useEffect દ્વારા રીડાયરેક્ટ કરવામાં આવશે.
+  // રીડાયરેક્શન પહેલાં એડમિન કન્ટેન્ટને ક્ષણભર માટે રેન્ડર થતું અટકાવવા માટે આપણે અહીં null રિટર્ન કરી શકીએ છીએ.
   if (!user || userProfile?.role !== 'admin') {
     return null; 
   }
   
-  // If loading is false and the user is an admin, render the admin panel.
+  // જો લોડિંગ false હોય અને વપરાશકર્તા એડમિન હોય, તો એડમિન પેનલ રેન્ડર કરો.
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-md">
