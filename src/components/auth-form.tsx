@@ -105,7 +105,7 @@ export default function AuthForm() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute bottom-4 left-4">
-                <h2 className="text-lg font-bold bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-600 bg-clip-text text-transparent">
+                <h2 className="text-lg font-bold text-yellow-400">
                   PUBG 1 STAR
                 </h2>
                 <CardTitle className="text-3xl font-bold text-white">Arena Ace</CardTitle>
