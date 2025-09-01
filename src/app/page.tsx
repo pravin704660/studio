@@ -21,12 +21,11 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      // The AuthForm is already rendered when user is not present,
-      // so no explicit redirect is needed here.
-      // This hook handles state changes, like after logout.
-    }
-  }, [user, loading, router]);
+    // This effect handles the redirection after a user logs out.
+    // When the user logs out, `user` becomes null and `loading` becomes false,
+    // which triggers the rendering of the AuthForm.
+    // No explicit router.push is needed because the component's render logic handles it.
+  }, [user, loading]);
 
 
   const navItems = [
