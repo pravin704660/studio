@@ -102,7 +102,7 @@ export async function createOrUpdateTournament(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const tournamentCollection = collection(db, 'tournaments');
-    const newTournamentRef = doc(tournamentCollection);
+    const newTournamentRef = doc(tournamentCollection); // Create a reference for a new document
     
     await setDoc(newTournamentRef, {
       ...tournamentData,
