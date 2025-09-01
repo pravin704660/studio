@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -8,16 +9,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, User, Mail, Shield } from "lucide-react";
 import Link from "next/link";
+import { Spinner } from "../ui/spinner";
 
 export default function ProfileScreen() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading } = useAuth();
 
   const handleLogout = async () => {
     await signOut(auth);
   };
 
+  if (loading) {
+    return (
+      <div className="flex h-64 w-full items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
   if (!user || !userProfile) {
-    return null; // or a loading spinner
+    return null;
   }
 
   const getInitials = (name: string | null | undefined) => {
