@@ -144,8 +144,8 @@ export default function ManageTournamentsPage() {
             toast({ variant: "destructive", title: "Error", description: result.error });
         }
     } catch (error) {
-        console.error("Error uploading image:", error);
-        toast({ variant: "destructive", title: "Image Upload Failed", description: "Could not upload the tournament image." });
+        console.error("Error saving tournament:", error);
+        toast({ variant: "destructive", title: "Save Failed", description: "Could not save the tournament." });
     } finally {
         setIsUploading(false);
     }
@@ -296,5 +296,3 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
-
-    
