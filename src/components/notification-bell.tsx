@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, orderBy, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, getDocs } from "firebase/firestore";
 import type { Notification } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Bell, Mail } from "lucide-react";
@@ -29,74 +29,59 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!user) return;
 
-    // Query for user-specific notifications
     const userNotifsQuery = query(
       collection(db, "notifications"),
       where("userId", "==", user.uid),
       orderBy("timestamp", "desc")
     );
 
-    // Query for global "all" notifications
     const allNotifsQuery = query(
       collection(db, "notifications"),
       where("userId", "==", "all"),
       orderBy("timestamp", "desc")
     );
 
-    let userNotifications: Notification[] = [];
-    let allNotifications: Notification[] = [];
+    const unsubUser = onSnapshot(userNotifsQuery, async (userSnapshot) => {
+        const allSnapshot = await getDocs(allNotifsQuery);
+        
+        const userNotifications = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+        const allNotifications = allSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
 
-    const combineAndSetNotifications = () => {
-      const combined = [...userNotifications, ...allNotifications];
-      // Sort by timestamp descending, ensuring timestamp exists
-      combined.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
-      setNotifications(combined);
-      
-      const userUnread = userNotifications.filter(n => !n.isRead).length;
-      
-      // A simple way to track "all" notifications is needed.
-      // This is a placeholder; a robust solution might involve read receipts.
-      // For now, let's assume "all" notifications are "read" after first view or within a time frame.
-      // The current logic will re-show "all" notifications every time, which is acceptable for now.
-      setUnreadCount(userUnread);
-    };
+        const combined = [...userNotifications, ...allNotifications];
+        combined.sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0));
+        
+        setNotifications(combined);
+        
+        // This needs a more robust way to track read status for "all" notifications
+        // For now, we only count unread for user-specific ones. A local storage solution could work for "all".
+        const userUnreadCount = combined.filter(n => !n.isRead && n.userId === user.uid).length;
+        setUnreadCount(userUnreadCount);
 
-    const unsubUser = onSnapshot(userNotifsQuery, (snapshot) => {
-      userNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
-      combineAndSetNotifications();
     }, (error) => {
-        console.error("Error fetching user notifications:", error);
-    });
-
-    const unsubAll = onSnapshot(allNotifsQuery, (snapshot) => {
-      allNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
-      combineAndSetNotifications();
-    }, (error) => {
-        console.error("Error fetching all-user notifications:", error);
+        console.error("Error fetching notifications:", error);
     });
 
     return () => {
       unsubUser();
-      unsubAll();
     };
   }, [user]);
 
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
-    if (open && unreadCount > 0 && user) {
-      // Mark only user-specific unread notifications as read
-      const unreadUserNotifications = notifications.filter(n => !n.isRead && n.userId === user.uid);
+    if (open && user) {
+      const unreadUserNotifications = notifications.filter(
+        (n) => n.userId === user.uid && !n.isRead
+      );
       
       if (unreadUserNotifications.length === 0) return;
 
-      const updatePromises = unreadUserNotifications.map(n => {
-          const notifRef = doc(db, "notifications", n.id);
-          return updateDoc(notifRef, { isRead: true });
+      const updatePromises = unreadUserNotifications.map((n) => {
+        const notifRef = doc(db, "notifications", n.id);
+        return updateDoc(notifRef, { isRead: true });
       });
+
       try {
         await Promise.all(updatePromises);
-        // Optimistically update the count locally
-        setUnreadCount(0);
       } catch (error) {
         console.error("Error marking notifications as read:", error);
       }
