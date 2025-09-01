@@ -6,7 +6,8 @@ import { signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, User, Mail } from "lucide-react";
+import { LogOut, User, Mail, Shield } from "lucide-react";
+import Link from "next/link";
 
 export default function ProfileScreen() {
   const { user, userProfile } = useAuth();
@@ -47,6 +48,16 @@ export default function ProfileScreen() {
                 <User className="h-5 w-5 text-muted-foreground"/>
                 <span className="text-sm capitalize">{userProfile.role}</span>
             </div>
+
+            {userProfile.role === 'admin' && (
+                <Link href="/admin" passHref>
+                    <Button variant="outline" className="w-full">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin Panel
+                    </Button>
+                </Link>
+            )}
+
           <Button variant="destructive" className="w-full" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             Logout
