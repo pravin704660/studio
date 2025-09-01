@@ -12,6 +12,7 @@ import ProfileScreen from "@/components/screens/profile-screen";
 import { Spinner } from "@/components/ui/spinner";
 import { Gamepad2, Wallet, Swords, User } from "lucide-react";
 import { useRouter } from "next/navigation";
+import NotificationBell from "@/components/notification-bell";
 
 type Screen = "home" | "wallet" | "tournaments" | "profile";
 
@@ -46,6 +47,13 @@ export default function Home() {
   if (!user) {
     return <AuthForm />;
   }
+  
+  const screenTitles: Record<Screen, string> = {
+      home: "Arena Ace",
+      wallet: "My Wallet",
+      tournaments: "My Tournaments",
+      profile: "My Profile"
+  }
 
   const renderScreen = () => {
     switch (activeScreen) {
@@ -64,6 +72,12 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background font-body text-foreground">
+      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <h1 className="text-xl font-bold tracking-tight">{screenTitles[activeScreen]}</h1>
+          <NotificationBell />
+        </div>
+      </header>
       <main className="flex-1 pb-20">
         <div className="container mx-auto px-4 py-6">
             {renderScreen()}

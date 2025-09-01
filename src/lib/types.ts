@@ -56,3 +56,12 @@ export interface AppConfig {
   upiId: string;
   qrImageUrl: string;
 }
+
+export interface Notification {
+    id: string;
+    userId: string; // "all" for global notifications
+    title: string;
+    message: string;
+    timestamp: Timestamp;
+    isRead: boolean;
+}
