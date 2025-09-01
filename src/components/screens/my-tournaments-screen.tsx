@@ -26,6 +26,7 @@ export default function MyTournamentsScreen() {
     };
 
     const fetchJoinedTournaments = async () => {
+      setLoading(true); // Reset loading state on fetch
       try {
         const entriesQuery = query(collection(db, "entries"), where("userId", "==", user.uid));
         const entriesSnapshot = await getDocs(entriesQuery);
@@ -33,24 +34,33 @@ export default function MyTournamentsScreen() {
 
         if (entries.length === 0) {
             setJoinedTournaments([]);
-            setLoading(false); // Fix: Set loading to false when no entries are found
+            setLoading(false);
             return;
         }
         
         const tournamentPromises = entries.map(async (entry) => {
-            const tourneyDoc = await getDoc(doc(db, "tournaments", entry.tournamentId));
-            if (tourneyDoc.exists()) {
-                return { ...tourneyDoc.data() as Tournament, id: tourneyDoc.id, entryStatus: entry.status };
+            try {
+                const tourneyDoc = await getDoc(doc(db, "tournaments", entry.tournamentId));
+                if (tourneyDoc.exists()) {
+                    return { ...tourneyDoc.data() as Tournament, id: tourneyDoc.id, entryStatus: entry.status };
+                }
+            } catch (error) {
+                console.error(`Failed to fetch tournament ${entry.tournamentId}:`, error);
             }
-            return null;
+            return null; // Return null if tournament not found or error occurs
         });
 
-        const tournamentsData = (await Promise.all(tournamentPromises)).filter(t => t !== null) as JoinedTournament[];
+        // Wait for all promises to resolve
+        const resolvedTournaments = await Promise.all(tournamentPromises);
+        // Filter out any null results
+        const tournamentsData = resolvedTournaments.filter(t => t !== null) as JoinedTournament[];
+        
         setJoinedTournaments(tournamentsData);
       } catch (error) {
         console.error("Error fetching joined tournaments:", error);
+        setJoinedTournaments([]); // Clear tournaments on error
       } finally {
-        setLoading(false);
+        setLoading(false); // Always set loading to false in the end
       }
     };
 
