@@ -115,40 +115,39 @@ export default function ManageMegaWinTournamentsPage() {
     }
     
     setIsUploading(true);
-    let imageUrl = "https://picsum.photos/600/400";
+    let imageUrl = formData.imageUrl || "https://picsum.photos/600/400";
 
-    if (imageFile) {
-        try {
+    try {
+        if (imageFile) {
             const storageRef = ref(storage, `tournaments/mega/${Date.now()}_${imageFile.name}`);
             const snapshot = await uploadBytes(storageRef, imageFile);
             imageUrl = await getDownloadURL(snapshot.ref);
-        } catch (error) {
-            console.error("Error uploading image:", error);
-            toast({ variant: "destructive", title: "Image Upload Failed", description: "Could not upload the tournament image." });
-            setIsUploading(false);
-            return;
         }
-    }
-    
-    const tournamentData = {
-        ...formData,
-        imageUrl,
-        isMega: true, 
-        date: new Date(formData.date).toISOString(),
-        rules: formData.rules ? (formData.rules as string).split('\n') : [],
-    } as Omit<Tournament, 'id'>;
+        
+        const tournamentData = {
+            ...formData,
+            imageUrl,
+            isMega: true, 
+            date: new Date(formData.date!).toISOString(),
+            rules: formData.rules ? (formData.rules as string).split('\n') : [],
+        } as Omit<Tournament, 'id'>;
 
-    const result = await createOrUpdateTournament(tournamentData);
-    setIsUploading(false);
+        const result = await createOrUpdateTournament(tournamentData);
 
-    if (result.success) {
-        toast({ title: "Success", description: "Mega Tournament saved successfully." });
-        setIsDialogOpen(false);
-        setFormData(initialFormData);
-        setImageFile(null);
-        fetchTournaments(); // Refresh list
-    } else {
-        toast({ variant: "destructive", title: "Error", description: result.error });
+        if (result.success) {
+            toast({ title: "Success", description: "Mega Tournament saved successfully." });
+            setIsDialogOpen(false);
+            setFormData(initialFormData);
+            setImageFile(null);
+            fetchTournaments();
+        } else {
+            toast({ variant: "destructive", title: "Error", description: result.error });
+        }
+    } catch (error) {
+        console.error("Error uploading image:", error);
+        toast({ variant: "destructive", title: "Image Upload Failed", description: "Could not upload the tournament image." });
+    } finally {
+        setIsUploading(false);
     }
   };
 
@@ -309,3 +308,5 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
+
+    
