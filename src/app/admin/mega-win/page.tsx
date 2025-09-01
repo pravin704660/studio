@@ -46,11 +46,12 @@ export default function ManageMegaWinTournamentsPage() {
   const [formData, setFormData] = useState<Partial<TournamentFormData>>({
       title: "",
       gameType: "Solo",
+      date: "",
       time: "",
       entryFee: 0,
       slots: 100,
       prize: 0,
-      rules: [],
+      rules: "",
       imageUrl: "https://picsum.photos/600/400",
       status: "draft",
   });
@@ -103,7 +104,7 @@ export default function ManageMegaWinTournamentsPage() {
         ...formData,
         isMega: true, 
         date: new Date(formData.date).toISOString(),
-        rules: formData.rules?.length ? (Array.isArray(formData.rules) ? formData.rules : (formData.rules as string).split('\n')) : [],
+        rules: formData.rules ? (formData.rules as string).split('\n') : [],
     } as Omit<Tournament, 'id'>;
 
     const result = await createOrUpdateTournament(tournamentData);
@@ -268,5 +269,3 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
-
-    
