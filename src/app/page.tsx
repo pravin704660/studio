@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import AuthForm from "@/components/auth-form";
 import BottomNav from "@/components/bottom-nav";
@@ -10,12 +11,23 @@ import MyTournamentsScreen from "@/components/screens/my-tournaments-screen";
 import ProfileScreen from "@/components/screens/profile-screen";
 import { Spinner } from "@/components/ui/spinner";
 import { Gamepad2, Wallet, Swords, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type Screen = "home" | "wallet" | "tournaments" | "profile";
 
 export default function Home() {
   const { user, loading } = useAuth();
   const [activeScreen, setActiveScreen] = useState<Screen>("home");
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      // Redirect to a login page or show AuthForm
+      // To prevent showing a flash of the home screen before redirecting,
+      // we handle the auth state here.
+    }
+  }, [user, loading, router]);
+
 
   const navItems = [
     { name: "home" as Screen, icon: Gamepad2, label: "Home" },
