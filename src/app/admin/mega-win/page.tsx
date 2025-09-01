@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { Tournament } from "@/lib/types";
@@ -89,7 +89,7 @@ export default function ManageMegaWinTournamentsPage() {
     if (userProfile?.role === "admin") {
       fetchTournaments();
     }
-  }, [userProfile, toast]);
+  }, [userProfile]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
@@ -128,7 +128,7 @@ export default function ManageMegaWinTournamentsPage() {
         
         const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
 
-        const tournamentData = {
+        const tournamentDataForAction = {
             ...formData,
             imageUrl,
             isMega: true, 
@@ -136,14 +136,24 @@ export default function ManageMegaWinTournamentsPage() {
             rules: formData.rules ? (Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n')) : [],
         };
 
-        const result = await createOrUpdateTournament(tournamentData);
+        const result = await createOrUpdateTournament(tournamentDataForAction);
 
         if (result.success) {
             toast({ title: "Success", description: "Mega Tournament saved successfully." });
             setIsDialogOpen(false);
+            
+            // Optimistically update UI
+            const newTournamentForState = {
+                ...tournamentDataForAction,
+                id: `temp-${Date.now()}`, // temp id
+                date: Timestamp.fromDate(tournamentDateTime) // Use Timestamp for local state
+            };
+            setTournaments(prev => [newTournamentForState, ...prev]);
+
             setFormData(initialFormData);
             setImageFile(null);
-            fetchTournaments();
+            // Optionally re-fetch to get correct ID from server
+            fetchTournaments(); 
         } else {
             toast({ variant: "destructive", title: "Error", description: result.error });
         }
@@ -277,7 +287,7 @@ export default function ManageMegaWinTournamentsPage() {
                     {tournaments.map((t) => (
                         <TableRow key={t.id}>
                         <TableCell className="font-medium">{t.title}</TableCell>
-                        <TableCell>{t.date.toDate().toLocaleDateString()}</TableCell>
+                        <TableCell>{t.date && typeof t.date.toDate === 'function' ? t.date.toDate().toLocaleDateString() : 'Invalid Date'}</TableCell>
                         <TableCell>₹{t.entryFee}</TableCell>
                         <TableCell>₹{t.prize}</TableCell>
                         <TableCell>
@@ -317,5 +327,3 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
-
-    

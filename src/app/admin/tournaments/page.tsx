@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { Tournament } from "@/lib/types";
@@ -89,7 +89,7 @@ export default function ManageTournamentsPage() {
     if (userProfile?.role === "admin") {
       fetchTournaments();
     }
-  }, [userProfile, toast]);
+  }, [userProfile]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -128,7 +128,7 @@ export default function ManageTournamentsPage() {
 
         const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
 
-        const tournamentData = {
+        const tournamentDataForAction = {
             ...formData,
             imageUrl,
             isMega: false,
@@ -136,11 +136,19 @@ export default function ManageTournamentsPage() {
             rules: formData.rules ? (Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n')) : [],
         };
 
-        const result = await createOrUpdateTournament(tournamentData);
+        const result = await createOrUpdateTournament(tournamentDataForAction);
 
         if (result.success) {
             toast({ title: "Success", description: "Tournament saved successfully." });
             setIsDialogOpen(false);
+            
+            const newTournamentForState = {
+                ...tournamentDataForAction,
+                id: `temp-${Date.now()}`, // temp id
+                date: Timestamp.fromDate(tournamentDateTime) // Use Timestamp for local state
+            };
+            setTournaments(prev => [newTournamentForState, ...prev]);
+
             setFormData(initialFormData);
             setImageFile(null);
             fetchTournaments();
@@ -266,7 +274,7 @@ export default function ManageTournamentsPage() {
               {tournaments.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.title}</TableCell>
-                  <TableCell>{t.date.toDate().toLocaleDateString()}</TableCell>
+                  <TableCell>{t.date && typeof t.date.toDate === 'function' ? t.date.toDate().toLocaleDateString() : 'Invalid Date'}</TableCell>
                   <TableCell>₹{t.entryFee}</TableCell>
                   <TableCell>₹{t.prize}</TableCell>
                   <TableCell>
