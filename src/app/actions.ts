@@ -9,6 +9,7 @@ import {
   addDoc,
   serverTimestamp,
   setDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type { Tournament, UserProfile } from "./lib/types";
@@ -112,6 +113,17 @@ export async function createOrUpdateTournament(
   } catch (error: any) {
     console.error('Error creating tournament:', error);
     return { success: false, error: 'Failed to create tournament.' };
+  }
+}
+
+export async function deleteTournament(tournamentId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tournamentDocRef = doc(db, "tournaments", tournamentId);
+    await deleteDoc(tournamentDocRef);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting tournament:', error);
+    return { success: false, error: 'Failed to delete tournament.' };
   }
 }
 

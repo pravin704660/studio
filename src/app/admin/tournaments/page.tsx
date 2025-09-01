@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import Link from "next/link";
-import { ArrowLeft, PlusCircle } from "lucide-react";
+import { ArrowLeft, PlusCircle, Trash2 } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createOrUpdateTournament } from "@/app/actions";
+import { createOrUpdateTournament, deleteTournament } from "@/app/actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 type TournamentFormData = Omit<Tournament, 'id' | 'date'> & { date: string };
 
@@ -31,6 +42,7 @@ export default function ManageTournamentsPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<Partial<TournamentFormData>>({
       title: "",
       gameType: "Solo",
@@ -101,6 +113,18 @@ export default function ManageTournamentsPage() {
     } else {
         toast({ variant: "destructive", title: "Error", description: result.error });
     }
+  };
+
+  const handleDelete = async (tournamentId: string) => {
+    setIsDeleting(true);
+    const result = await deleteTournament(tournamentId);
+    if (result.success) {
+      toast({ title: "Success", description: "Tournament deleted successfully." });
+      fetchTournaments();
+    } else {
+      toast({ variant: "destructive", title: "Error", description: result.error });
+    }
+    setIsDeleting(false);
   };
 
 
@@ -184,6 +208,7 @@ export default function ManageTournamentsPage() {
                 <TableHead>Entry Fee</TableHead>
                 <TableHead>Prize</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -195,6 +220,30 @@ export default function ManageTournamentsPage() {
                   <TableCell>₹{t.prize}</TableCell>
                   <TableCell>
                     <Badge variant={t.status === "published" ? "default" : "secondary"}>{t.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon" disabled={isDeleting}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the
+                            tournament and remove all related data.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(t.id)}>
+                            {isDeleting ? <Spinner /> : "Delete"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}
