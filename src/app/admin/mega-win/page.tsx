@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { FirebaseError } from "firebase/app";
 
 const initialFormData: TournamentFormData = {
   title: "",
@@ -115,7 +116,7 @@ export default function ManageMegaWinTournamentsPage() {
     }
     
     setIsUploading(true);
-    let imageUrl = "https://picsum.photos/600/400";
+    let imageUrl = formData.imageUrl || "https://picsum.photos/600/400";
 
     try {
       if (imageFile) {
@@ -146,7 +147,13 @@ export default function ManageMegaWinTournamentsPage() {
         throw new Error(result.error || "Failed to create tournament.");
       }
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+        let description = "An unknown error occurred.";
+        if (error.code && error.code.includes('storage')) {
+            description = "Image upload failed. Please check your network and Firebase Storage rules.";
+        } else if (error.message) {
+            description = error.message;
+        }
+        toast({ variant: "destructive", title: "Error", description });
     } finally {
       setIsUploading(false);
     }
@@ -328,3 +335,5 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
+
+    

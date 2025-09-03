@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TournamentFormData } from "@/lib/types";
+import type { FirebaseError } from "firebase/app";
 
 const initialFormData: TournamentFormData = {
   title: "",
@@ -116,7 +117,7 @@ export default function ManageTournamentsPage() {
     }
     
     setIsUploading(true);
-    let imageUrl = "https://picsum.photos/600/400";
+    let imageUrl = formData.imageUrl || "https://picsum.photos/600/400";
 
     try {
       if (imageFile) {
@@ -147,7 +148,13 @@ export default function ManageTournamentsPage() {
         throw new Error(result.error || "Failed to create tournament.");
       }
     } catch(error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+        let description = "An unknown error occurred.";
+        if (error.code && error.code.includes('storage')) {
+            description = "Image upload failed. Please check your network and Firebase Storage rules.";
+        } else if (error.message) {
+            description = error.message;
+        }
+        toast({ variant: "destructive", title: "Error", description });
     } finally {
       setIsUploading(false);
     }
@@ -319,3 +326,5 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
+
+    
