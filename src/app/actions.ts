@@ -15,6 +15,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type { Tournament, UserProfile, TournamentFormData } from "./lib/types";
+import { getAuth } from "firebase/auth";
 
 export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -113,7 +114,11 @@ export async function createOrUpdateTournament(
     let imageUrl = tournamentData.imageUrl || "https://picsum.photos/600/400";
 
     if (imageFile) {
-        const storageRef = ref(storage, `tournaments/${Date.now()}_${imageFile.name}`);
+        // We need to pass the auth instance to storage actions for security rules to work.
+        // This is a placeholder for getting the current user, in a real app you'd get this from your session
+        const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
+        const storageRef = ref(storage, storagePath);
+        
         const snapshot = await uploadBytes(storageRef, imageFile);
         imageUrl = await getDownloadURL(snapshot.ref);
     }
@@ -133,7 +138,7 @@ export async function createOrUpdateTournament(
     return { success: true };
   } catch (error: any) {
     console.error('Error creating tournament:', error);
-    return { success: false, error: 'Failed to create tournament.' };
+    return { success: false, error: error.message || 'Failed to create tournament.' };
   }
 }
 
