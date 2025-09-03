@@ -1,9 +1,10 @@
+
 "use client";
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/types';
 
@@ -28,11 +29,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       if (!firebaseUser) {
-        // If there's no user, we are done loading.
         setUserProfile(null);
         setLoading(false);
       }
-      // If there IS a user, loading will be handled by the profile listener useEffect
     });
 
     return () => unsubscribeAuth();
@@ -40,16 +39,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (user) {
-      // Start loading profile data
       setLoading(true);
       const userDocRef = doc(db, 'users', user.uid);
-      const unsubscribeProfile = onSnapshot(userDocRef, (doc) => {
-        if (doc.exists()) {
-          setUserProfile(doc.data() as UserProfile);
+      const unsubscribeProfile = onSnapshot(userDocRef, async (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          setUserProfile(docSnapshot.data() as UserProfile);
         } else {
-          setUserProfile(null); 
+          // If the user document doesn't exist, create it.
+          console.log(`User profile for ${user.uid} not found, creating one.`);
+          const newProfile: UserProfile = {
+            uid: user.uid,
+            email: user.email,
+            name: user.displayName || 'New User',
+            photoUrl: user.photoURL,
+            walletBalance: 0,
+            role: 'user',
+            pubgId: '',
+          };
+          try {
+            await setDoc(userDocRef, newProfile);
+            setUserProfile(newProfile);
+          } catch (error) {
+            console.error("Error creating user profile:", error);
+            setUserProfile(null);
+          }
         }
-        // Finished loading profile data
         setLoading(false);
       }, (error) => {
         console.error("Error fetching user profile:", error);
