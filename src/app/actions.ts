@@ -114,8 +114,6 @@ export async function createOrUpdateTournament(
     let imageUrl = tournamentData.imageUrl || "https://picsum.photos/600/400";
 
     if (imageFile) {
-        // We need to pass the auth instance to storage actions for security rules to work.
-        // This is a placeholder for getting the current user, in a real app you'd get this from your session
         const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
         const storageRef = ref(storage, storagePath);
         
@@ -228,5 +226,3 @@ export async function sendNotification(
     return { success: false, error: "Failed to send notification." };
   }
 }
-
-    
