@@ -3,9 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
-import { db, storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { Tournament } from "@/lib/types";
+import { db } from "@/lib/firebase";
+import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
@@ -15,7 +14,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,10 +31,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { TournamentFormData } from "@/lib/types";
-import type { FirebaseError } from "firebase/app";
 
-const initialFormData: TournamentFormData = {
+const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string } = {
   title: "",
   gameType: "Solo",
   date: "",
@@ -43,7 +40,7 @@ const initialFormData: TournamentFormData = {
   entryFee: 0,
   slots: 100,
   prize: 0,
-  rules: [],
+  rules: '',
   imageUrl: "",
   status: "draft",
   isMega: false,
@@ -58,8 +55,8 @@ export default function ManageTournamentsPage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [formData, setFormData] = useState<TournamentFormData>(initialFormData);
-  const [isUploading, setIsUploading] = useState(false);
+  const [formData, setFormData] = useState(initialFormData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
 
@@ -116,27 +113,22 @@ export default function ManageTournamentsPage() {
         return;
     }
     
-    setIsUploading(true);
-    let imageUrl = formData.imageUrl || "https://picsum.photos/600/400";
+    setIsSubmitting(true);
 
     try {
+      const data = new FormData();
       if (imageFile) {
-        const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
-        const storageRef = ref(storage, storagePath);
-        const snapshot = await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(snapshot.ref);
+        data.append('imageFile', imageFile);
       }
-
-      const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
+      
       const tournamentDataForAction = {
         ...formData,
         isMega: false, // Explicitly set isMega for this page
-        date: tournamentDateTime.toISOString(),
         rules: Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n'),
-        imageUrl: imageUrl,
       };
+      data.append('tournamentData', JSON.stringify(tournamentDataForAction));
       
-      const result = await createOrUpdateTournament(tournamentDataForAction);
+      const result = await createOrUpdateTournament(data);
 
       if (result.success) {
         toast({ title: "Success", description: "Tournament saved successfully." });
@@ -149,14 +141,12 @@ export default function ManageTournamentsPage() {
       }
     } catch(error: any) {
         let description = "An unknown error occurred.";
-        if (error.code && error.code.includes('storage')) {
-            description = "Image upload failed. Please check your network and Firebase Storage rules.";
-        } else if (error.message) {
+        if (error.message) {
             description = error.message;
         }
-        toast({ variant: "destructive", title: "Error", description });
+        toast({ variant: "destructive", title: "Error creating tournament", description });
     } finally {
-      setIsUploading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -260,8 +250,8 @@ export default function ManageTournamentsPage() {
                                   </SelectContent>
                               </Select>
                           </div>
-                          <Button type="submit" disabled={isUploading}>
-                              {isUploading ? <><Spinner size="sm" className="mr-2" /> Uploading...</> : 'Save Tournament'}
+                          <Button type="submit" disabled={isSubmitting}>
+                              {isSubmitting ? <><Spinner size="sm" className="mr-2" /> Submitting...</> : 'Save Tournament'}
                           </Button>
                       </form>
                   </ScrollArea>

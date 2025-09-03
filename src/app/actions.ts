@@ -15,7 +15,6 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type { Tournament, UserProfile, TournamentFormData } from "./lib/types";
-import { getAuth } from "firebase/auth";
 
 export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -101,23 +100,46 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 }
 
 export async function createOrUpdateTournament(
-  tournamentData: Omit<TournamentFormData, 'rules'> & { rules: string[], imageUrl: string }
+  formData: FormData
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const tournamentDataString = formData.get('tournamentData') as string | null;
+    if (!tournamentDataString) {
+      return { success: false, error: 'Tournament data is missing.' };
+    }
+    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
+    
+    const imageFile = formData.get('imageFile') as File | null;
+    let imageUrl = tournamentData.imageUrl || "https://picsum.photos/600/400";
+
+    if (imageFile && imageFile.size > 0) {
+      const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
+      const storageRef = ref(storage, storagePath);
+      const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+      const snapshot = await uploadBytes(storageRef, imageBuffer, {
+        contentType: imageFile.type,
+      });
+      imageUrl = await getDownloadURL(snapshot.ref);
+    }
+    
     const tournamentCollection = collection(db, 'tournaments');
     const newTournamentRef = doc(tournamentCollection);
 
-    const firestoreDate = Timestamp.fromDate(new Date(tournamentData.date));
-
-    await setDoc(newTournamentRef, {
+    const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
+    
+    const finalData = {
       ...tournamentData,
+      rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules).split('\n'),
+      imageUrl,
       date: firestoreDate,
       id: newTournamentRef.id,
-    });
+    };
+
+    await setDoc(newTournamentRef, finalData);
     
     return { success: true };
   } catch (error: any) {
-    console.error('Error creating tournament:', error);
+    console.error('Error creating/updating tournament:', error);
     return { success: false, error: error.message || 'Failed to create tournament.' };
   }
 }
@@ -208,3 +230,5 @@ export async function sendNotification(
     return { success: false, error: "Failed to send notification." };
   }
 }
+
+    

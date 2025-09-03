@@ -3,8 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
-import { db, storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db } from "@/lib/firebase";
 import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
@@ -33,9 +32,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { FirebaseError } from "firebase/app";
 
-const initialFormData: TournamentFormData = {
+const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string } = {
   title: "",
   gameType: "Solo",
   date: "",
@@ -43,11 +41,12 @@ const initialFormData: TournamentFormData = {
   entryFee: 0,
   slots: 100,
   prize: 0,
-  rules: [],
+  rules: '',
   imageUrl: "",
   status: "draft",
   isMega: true,
 };
+
 
 export default function ManageMegaWinTournamentsPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -58,8 +57,8 @@ export default function ManageMegaWinTournamentsPage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [formData, setFormData] = useState<TournamentFormData>(initialFormData);
-  const [isUploading, setIsUploading] = useState(false);
+  const [formData, setFormData] = useState(initialFormData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -111,31 +110,26 @@ export default function ManageMegaWinTournamentsPage() {
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.title || !formData.date || !formData.time) {
-        toast({ variant: "destructive", title: "Missing Fields", description: "Please fill out title, date and time." });
-        return;
+      toast({ variant: "destructive", title: "Missing Fields", description: "Please fill out title, date and time." });
+      return;
     }
     
-    setIsUploading(true);
-    let imageUrl = formData.imageUrl || "https://picsum.photos/600/400";
+    setIsSubmitting(true);
 
     try {
+      const data = new FormData();
       if (imageFile) {
-        const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
-        const storageRef = ref(storage, storagePath);
-        const snapshot = await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(snapshot.ref);
+        data.append('imageFile', imageFile);
       }
-
-      const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
+      
       const tournamentDataForAction = {
         ...formData,
         isMega: true, // Explicitly set isMega for this page
-        date: tournamentDateTime.toISOString(),
         rules: Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n'),
-        imageUrl: imageUrl,
       };
+      data.append('tournamentData', JSON.stringify(tournamentDataForAction));
       
-      const result = await createOrUpdateTournament(tournamentDataForAction);
+      const result = await createOrUpdateTournament(data);
 
       if (result.success) {
         toast({ title: "Success", description: "Mega Tournament saved successfully." });
@@ -148,14 +142,12 @@ export default function ManageMegaWinTournamentsPage() {
       }
     } catch (error: any) {
         let description = "An unknown error occurred.";
-        if (error.code && error.code.includes('storage')) {
-            description = "Image upload failed. Please check your network and Firebase Storage rules.";
-        } else if (error.message) {
+        if (error.message) {
             description = error.message;
         }
-        toast({ variant: "destructive", title: "Error", description });
+        toast({ variant: "destructive", title: "Error creating tournament", description });
     } finally {
-      setIsUploading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -257,8 +249,8 @@ export default function ManageMegaWinTournamentsPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                             <Button type="submit" disabled={isUploading}>
-                                {isUploading ? <><Spinner size="sm" className="mr-2" /> Uploading...</> : 'Save Tournament'}
+                             <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? <><Spinner size="sm" className="mr-2" /> Submitting...</> : 'Save Tournament'}
                             </Button>
                         </form>
                     </ScrollArea>
