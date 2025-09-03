@@ -119,37 +119,37 @@ export default function ManageTournamentsPage() {
     let imageUrl = "https://picsum.photos/600/400";
 
     try {
-        if (imageFile) {
-            const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
-            const storageRef = ref(storage, storagePath);
-            const snapshot = await uploadBytes(storageRef, imageFile);
-            imageUrl = await getDownloadURL(snapshot.ref);
-        }
+      if (imageFile) {
+        const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
+        const storageRef = ref(storage, storagePath);
+        const snapshot = await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      }
 
-        const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
-        const tournamentDataForAction = {
-          ...formData,
-          date: tournamentDateTime.toISOString(),
-          rules: Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n'),
-          imageUrl: imageUrl,
-        };
-        
-        const result = await createOrUpdateTournament(tournamentDataForAction);
+      const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
+      const tournamentDataForAction = {
+        ...formData,
+        isMega: false, // Explicitly set isMega for this page
+        date: tournamentDateTime.toISOString(),
+        rules: Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n'),
+        imageUrl: imageUrl,
+      };
+      
+      const result = await createOrUpdateTournament(tournamentDataForAction);
 
-        if (result.success) {
-            toast({ title: "Success", description: "Tournament saved successfully." });
-            setIsDialogOpen(false);
-            setFormData(initialFormData);
-            setImageFile(null);
-            await fetchTournaments();
-        } else {
-            throw new Error(result.error || "Failed to create tournament.");
-        }
-
+      if (result.success) {
+        toast({ title: "Success", description: "Tournament saved successfully." });
+        setIsDialogOpen(false);
+        setFormData(initialFormData);
+        setImageFile(null);
+        await fetchTournaments();
+      } else {
+        throw new Error(result.error || "Failed to create tournament.");
+      }
     } catch(error: any) {
-        toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({ variant: "destructive", title: "Error", description: error.message });
     } finally {
-        setIsUploading(false);
+      setIsUploading(false);
     }
   };
 
