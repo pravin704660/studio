@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -33,6 +33,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+const PAGE_SIZE = 10;
+
 const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string } = {
   title: "",
   gameType: "Solo",
@@ -55,6 +57,10 @@ export default function ManageMegaWinTournamentsPage() {
 
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
@@ -67,27 +73,55 @@ export default function ManageMegaWinTournamentsPage() {
     }
   }, [user, userProfile, authLoading, router]);
 
-  const fetchTournaments = async () => {
-    setLoading(true);
+  const fetchTournaments = async (initial = false) => {
+    if (initial) {
+      setLoading(true);
+      setTournaments([]);
+      setLastDoc(null);
+      setHasMore(true);
+    } else {
+      setLoadingMore(true);
+    }
+    
     try {
       const tournamentsCollection = collection(db, "tournaments");
-      const q = query(tournamentsCollection, where("isMega", "==", true));
+      let q;
+      if (lastDoc && !initial) {
+        q = query(tournamentsCollection, where("isMega", "==", true), orderBy("date", "desc"), startAfter(lastDoc), limit(PAGE_SIZE));
+      } else {
+        q = query(tournamentsCollection, where("isMega", "==", true), orderBy("date", "desc"), limit(PAGE_SIZE));
+      }
+      
       const tournamentsSnapshot = await getDocs(q);
-      const tournamentsList = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
-      setTournaments(tournamentsList);
+      const newTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+
+      const lastVisible = tournamentsSnapshot.docs[tournamentsSnapshot.docs.length - 1];
+      setLastDoc(lastVisible);
+
+      if (newTournaments.length < PAGE_SIZE) {
+        setHasMore(false);
+      }
+
+      setTournaments(prev => initial ? newTournaments : [...prev, ...newTournaments]);
+
     } catch (error) {
       console.error("Error fetching mega tournaments:", error);
       toast({ variant: "destructive", title: "Error", description: "Failed to fetch mega tournaments." });
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
+  
+  const refreshTournaments = () => {
+      fetchTournaments(true);
+  }
 
   useEffect(() => {
     if (userProfile?.role === "admin") {
-      fetchTournaments();
+      fetchTournaments(true);
     }
-  }, [userProfile, toast]);
+  }, [userProfile]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
@@ -124,8 +158,7 @@ export default function ManageMegaWinTournamentsPage() {
       
       const tournamentDataForAction = {
         ...formData,
-        isMega: true, // Explicitly set isMega for this page
-        rules: Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n'),
+        isMega: true,
       };
       data.append('tournamentData', JSON.stringify(tournamentDataForAction));
       
@@ -136,11 +169,12 @@ export default function ManageMegaWinTournamentsPage() {
         setIsDialogOpen(false);
         setFormData(initialFormData);
         setImageFile(null);
-        await fetchTournaments();
+        refreshTournaments();
       } else {
         throw new Error(result.error || "Failed to create tournament.");
       }
     } catch (error: any) {
+        console.error("Error creating tournament:", error);
         let description = "An unknown error occurred.";
         if (error.message) {
             description = error.message;
@@ -156,14 +190,14 @@ export default function ManageMegaWinTournamentsPage() {
     const result = await deleteTournament(tournamentId);
     if (result.success) {
       toast({ title: "Success", description: "Tournament deleted successfully." });
-      fetchTournaments();
+      refreshTournaments();
     } else {
       toast({ variant: "destructive", title: "Error", description: result.error });
     }
     setIsDeleting(false);
   };
 
-  if (authLoading || loading || userProfile?.role !== "admin") {
+  if (authLoading || userProfile?.role !== "admin") {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Spinner size="lg" />
@@ -261,7 +295,9 @@ export default function ManageMegaWinTournamentsPage() {
       </header>
       <main className="flex-1 p-4 md:p-8">
         <div className="container mx-auto">
-            {tournaments.length === 0 && !loading ? (
+            {loading ? (
+                <div className="flex justify-center"><Spinner size="lg" /></div>
+            ) : tournaments.length === 0 ? (
                  <Card className="mt-6">
                     <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                         <Trophy className="h-12 w-12 text-muted-foreground" />
@@ -272,6 +308,7 @@ export default function ManageMegaWinTournamentsPage() {
                     </CardContent>
                  </Card>
             ) : (
+              <>
                 <Table>
                     <TableHeader>
                     <TableRow>
@@ -321,6 +358,14 @@ export default function ManageMegaWinTournamentsPage() {
                     ))}
                     </TableBody>
                 </Table>
+                {hasMore && (
+                  <div className="mt-6 flex justify-center">
+                      <Button onClick={() => fetchTournaments()} disabled={loadingMore}>
+                          {loadingMore ? <Spinner /> : "Load More"}
+                      </Button>
+                  </div>
+                )}
+              </>
             )}
         </div>
       </main>

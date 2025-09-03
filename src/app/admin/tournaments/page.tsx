@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, orderBy, limit, startAfter, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+const PAGE_SIZE = 10;
+
 const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string } = {
   title: "",
   gameType: "Solo",
@@ -53,6 +55,10 @@ export default function ManageTournamentsPage() {
 
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
@@ -66,27 +72,54 @@ export default function ManageTournamentsPage() {
     }
   }, [user, userProfile, authLoading, router]);
 
-  const fetchTournaments = async () => {
-    setLoading(true);
+  const fetchTournaments = async (initial = false) => {
+    if (initial) {
+        setLoading(true);
+        setTournaments([]);
+        setLastDoc(null);
+        setHasMore(true);
+    } else {
+        setLoadingMore(true);
+    }
+
     try {
-      const tournamentsCollection = collection(db, "tournaments");
-      const q = query(tournamentsCollection, where("isMega", "==", false));
-      const tournamentsSnapshot = await getDocs(q);
-      const tournamentsList = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
-      setTournaments(tournamentsList);
+        const tournamentsCollection = collection(db, "tournaments");
+        let q;
+        if (lastDoc && !initial) {
+            q = query(tournamentsCollection, where("isMega", "==", false), orderBy("date", "desc"), startAfter(lastDoc), limit(PAGE_SIZE));
+        } else {
+            q = query(tournamentsCollection, where("isMega", "==", false), orderBy("date", "desc"), limit(PAGE_SIZE));
+        }
+
+        const tournamentsSnapshot = await getDocs(q);
+        const newTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+
+        const lastVisible = tournamentsSnapshot.docs[tournamentsSnapshot.docs.length - 1];
+        setLastDoc(lastVisible);
+
+        if (newTournaments.length < PAGE_SIZE) {
+            setHasMore(false);
+        }
+
+        setTournaments(prev => initial ? newTournaments : [...prev, ...newTournaments]);
     } catch (error) {
-      console.error("Error fetching tournaments:", error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to fetch tournaments." });
+        console.error("Error fetching tournaments:", error);
+        toast({ variant: "destructive", title: "Error", description: "Failed to fetch tournaments." });
     } finally {
-      setLoading(false);
+        setLoading(false);
+        setLoadingMore(false);
     }
   };
+  
+  const refreshTournaments = () => {
+    fetchTournaments(true);
+  }
 
   useEffect(() => {
     if (userProfile?.role === "admin") {
-      fetchTournaments();
+      refreshTournaments();
     }
-  }, [userProfile, toast]);
+  }, [userProfile]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -123,8 +156,7 @@ export default function ManageTournamentsPage() {
       
       const tournamentDataForAction = {
         ...formData,
-        isMega: false, // Explicitly set isMega for this page
-        rules: Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n'),
+        isMega: false,
       };
       data.append('tournamentData', JSON.stringify(tournamentDataForAction));
       
@@ -135,11 +167,12 @@ export default function ManageTournamentsPage() {
         setIsDialogOpen(false);
         setFormData(initialFormData);
         setImageFile(null);
-        await fetchTournaments();
+        refreshTournaments();
       } else {
         throw new Error(result.error || "Failed to create tournament.");
       }
     } catch(error: any) {
+        console.error("Error creating tournament:", error);
         let description = "An unknown error occurred.";
         if (error.message) {
             description = error.message;
@@ -155,7 +188,7 @@ export default function ManageTournamentsPage() {
     const result = await deleteTournament(tournamentId);
     if (result.success) {
       toast({ title: "Success", description: "Tournament deleted successfully." });
-      fetchTournaments();
+      refreshTournaments();
     } else {
       toast({ variant: "destructive", title: "Error", description: result.error });
     }
@@ -163,7 +196,7 @@ export default function ManageTournamentsPage() {
   };
 
 
-  if (authLoading || loading || userProfile?.role !== "admin") {
+  if (authLoading || userProfile?.role !== "admin") {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Spinner size="lg" />
@@ -262,55 +295,68 @@ export default function ManageTournamentsPage() {
       </header>
       <main className="flex-1 p-4 md:p-8">
         <div className="container mx-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Entry Fee</TableHead>
-                <TableHead>Prize</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tournaments.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">{t.title}</TableCell>
-                  <TableCell>{getDisplayDate(t.date)}</TableCell>
-                  <TableCell>₹{t.entryFee}</TableCell>
-                  <TableCell>₹{t.prize}</TableCell>
-                  <TableCell>
-                    <Badge variant={t.status === "published" ? "default" : "secondary"}>{t.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon" disabled={isDeleting}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the
-                            tournament and remove all related data.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(t.id)}>
-                            {isDeleting ? <Spinner /> : "Delete"}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          {loading ? (
+            <div className="flex justify-center"><Spinner size="lg" /></div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Entry Fee</TableHead>
+                    <TableHead>Prize</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tournaments.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="font-medium">{t.title}</TableCell>
+                      <TableCell>{getDisplayDate(t.date)}</TableCell>
+                      <TableCell>₹{t.entryFee}</TableCell>
+                      <TableCell>₹{t.prize}</TableCell>
+                      <TableCell>
+                        <Badge variant={t.status === "published" ? "default" : "secondary"}>{t.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon" disabled={isDeleting}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the
+                                tournament and remove all related data.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(t.id)}>
+                                {isDeleting ? <Spinner /> : "Delete"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {hasMore && (
+                <div className="mt-6 flex justify-center">
+                    <Button onClick={() => fetchTournaments()} disabled={loadingMore}>
+                        {loadingMore ? <Spinner /> : "Load More"}
+                    </Button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </main>
     </div>
