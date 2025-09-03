@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { Tournament } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
@@ -58,6 +59,7 @@ export default function ManageTournamentsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<TournamentFormData>(initialFormData);
   const [isUploading, setIsUploading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
 
   useEffect(() => {
@@ -99,6 +101,12 @@ export default function ManageTournamentsPage() {
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        setImageFile(e.target.files[0]);
+    }
+  };
   
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -108,37 +116,41 @@ export default function ManageTournamentsPage() {
     }
     
     setIsUploading(true);
+    let imageUrl = "https://picsum.photos/600/400";
 
-    const submissionData = new FormData();
-    const form = e.currentTarget;
-    const imageInput = form.querySelector('input[type="file"]') as HTMLInputElement;
+    try {
+        if (imageFile) {
+            const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
+            const storageRef = ref(storage, storagePath);
+            const snapshot = await uploadBytes(storageRef, imageFile);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        }
 
-    if (imageInput && imageInput.files && imageInput.files[0]) {
-        submissionData.append('imageFile', imageInput.files[0]);
+        const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
+        const tournamentDataForAction = {
+          ...formData,
+          date: tournamentDateTime.toISOString(),
+          rules: Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n'),
+          imageUrl: imageUrl,
+        };
+        
+        const result = await createOrUpdateTournament(tournamentDataForAction);
+
+        if (result.success) {
+            toast({ title: "Success", description: "Tournament saved successfully." });
+            setIsDialogOpen(false);
+            setFormData(initialFormData);
+            setImageFile(null);
+            await fetchTournaments();
+        } else {
+            throw new Error(result.error || "Failed to create tournament.");
+        }
+
+    } catch(error: any) {
+        toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally {
+        setIsUploading(false);
     }
-
-    const tournamentDateTime = new Date(`${formData.date}T${formData.time}`);
-    const tournamentDataForAction = {
-      ...formData,
-      date: tournamentDateTime.toISOString(),
-      rules: Array.isArray(formData.rules) ? formData.rules : String(formData.rules).split('\n'),
-    };
-    
-    submissionData.append('tournamentData', JSON.stringify(tournamentDataForAction));
-    
-    const result = await createOrUpdateTournament(submissionData);
-
-    if (result.success) {
-        toast({ title: "Success", description: "Tournament saved successfully." });
-        setIsDialogOpen(false);
-        setFormData(initialFormData);
-        if (imageInput) imageInput.value = ""; // Clear file input
-        await fetchTournaments();
-    } else {
-        toast({ variant: "destructive", title: "Error", description: result.error });
-    }
-    
-    setIsUploading(false);
   };
 
   const handleDelete = async (tournamentId: string) => {
@@ -208,7 +220,7 @@ export default function ManageTournamentsPage() {
                           </div>
                            <div className="space-y-2">
                               <Label htmlFor="image">Image</Label>
-                              <Input id="image" name="imageFile" type="file" accept="image/*" />
+                              <Input id="image" name="imageFile" type="file" accept="image/*" onChange={handleImageChange} />
                                <p className="text-xs text-muted-foreground">Upload an image file from your computer.</p>
                           </div>
                           <div className="space-y-2">

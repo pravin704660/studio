@@ -101,26 +101,9 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 }
 
 export async function createOrUpdateTournament(
-  formData: FormData
+  tournamentData: Omit<TournamentFormData, 'rules'> & { rules: string[], imageUrl: string }
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const tournamentDataString = formData.get('tournamentData') as string;
-    if (!tournamentDataString) {
-      throw new Error("Tournament data is missing.");
-    }
-    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
-    const imageFile = formData.get('imageFile') as File | null;
-    
-    let imageUrl = tournamentData.imageUrl || "https://picsum.photos/600/400";
-
-    if (imageFile) {
-        const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
-        const storageRef = ref(storage, storagePath);
-        
-        const snapshot = await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(snapshot.ref);
-    }
-    
     const tournamentCollection = collection(db, 'tournaments');
     const newTournamentRef = doc(tournamentCollection);
 
@@ -128,7 +111,6 @@ export async function createOrUpdateTournament(
 
     await setDoc(newTournamentRef, {
       ...tournamentData,
-      imageUrl,
       date: firestoreDate,
       id: newTournamentRef.id,
     });
