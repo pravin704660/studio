@@ -22,14 +22,13 @@ import { formatDistanceToNow } from 'date-fns';
 const SEEN_GLOBAL_NOTIFS_KEY = "seenGlobalNotifIds";
 
 export default function NotificationBell() {
-  const { user } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [seenGlobalIds, setSeenGlobalIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-      // Load seen global notification IDs from local storage on component mount
       try {
           const storedIds = localStorage.getItem(SEEN_GLOBAL_NOTIFS_KEY);
           if (storedIds) {
@@ -41,16 +40,14 @@ export default function NotificationBell() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading || !user || !userProfile) return;
 
-    // Listener for user-specific notifications
     const userNotifsQuery = query(
       collection(db, "notifications"),
       where("userId", "==", user.uid),
       orderBy("timestamp", "desc")
     );
 
-    // Listener for global notifications
     const allNotifsQuery = query(
       collection(db, "notifications"),
       where("userId", "==", "all"),
@@ -59,6 +56,15 @@ export default function NotificationBell() {
     
     let userNotifications: Notification[] = [];
     let allNotifications: Notification[] = [];
+    let localSeenGlobalIds = new Set<string>();
+    try {
+        const storedIds = localStorage.getItem(SEEN_GLOBAL_NOTIFS_KEY);
+        if (storedIds) {
+            localSeenGlobalIds = new Set(JSON.parse(storedIds));
+        }
+    } catch (error) {
+        console.error("Failed to parse seen notifications from localStorage on init", error);
+    }
 
     const mergeAndSetNotifications = () => {
         const combined = [...userNotifications, ...allNotifications].sort(
@@ -67,7 +73,7 @@ export default function NotificationBell() {
         setNotifications(combined);
         
         const unreadUserNotifs = userNotifications.filter(n => !n.isRead).length;
-        const unreadGlobalNotifs = allNotifications.filter(n => !seenGlobalIds.has(n.id)).length;
+        const unreadGlobalNotifs = allNotifications.filter(n => !localSeenGlobalIds.has(n.id)).length;
         
         setUnreadCount(unreadUserNotifs + unreadGlobalNotifs);
     }
@@ -86,12 +92,11 @@ export default function NotificationBell() {
       unsubUser();
       unsubAll();
     };
-  }, [user, seenGlobalIds]);
+  }, [user, userProfile, authLoading]);
 
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
     if (open && user) {
-        // Mark user-specific notifications as read in Firestore
         const unreadUserNotifications = notifications.filter(
             (n) => n.userId === user.uid && !n.isRead
         );
@@ -106,13 +111,13 @@ export default function NotificationBell() {
             }
         }
 
-        // Mark global notifications as seen in local state and storage
+        const currentSeenIds = new Set(seenGlobalIds);
         const newGlobalIdsToSee = notifications
-            .filter(n => n.userId === "all" && !seenGlobalIds.has(n.id))
+            .filter(n => n.userId === "all" && !currentSeenIds.has(n.id))
             .map(n => n.id);
 
         if (newGlobalIdsToSee.length > 0) {
-            const newSeenSet = new Set([...seenGlobalIds, ...newGlobalIdsToSee]);
+            const newSeenSet = new Set([...currentSeenIds, ...newGlobalIdsToSee]);
             setSeenGlobalIds(newSeenSet);
             try {
                 localStorage.setItem(SEEN_GLOBAL_NOTIFS_KEY, JSON.stringify(Array.from(newSeenSet)));
