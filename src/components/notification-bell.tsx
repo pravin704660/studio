@@ -19,91 +19,116 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from 'date-fns';
 
+const SEEN_GLOBAL_NOTIFS_KEY = "seenGlobalNotifIds";
 
 export default function NotificationBell() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [seenGlobalIds, setSeenGlobalIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+      // Load seen global notification IDs from local storage on component mount
+      try {
+          const storedIds = localStorage.getItem(SEEN_GLOBAL_NOTIFS_KEY);
+          if (storedIds) {
+              setSeenGlobalIds(new Set(JSON.parse(storedIds)));
+          }
+      } catch (error) {
+          console.error("Failed to parse seen notifications from localStorage", error);
+      }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
 
+    // Listener for user-specific notifications
     const userNotifsQuery = query(
       collection(db, "notifications"),
       where("userId", "==", user.uid),
       orderBy("timestamp", "desc")
     );
 
+    // Listener for global notifications
     const allNotifsQuery = query(
       collection(db, "notifications"),
       where("userId", "==", "all"),
       orderBy("timestamp", "desc")
     );
     
-    let combinedNotifications: Notification[] = [];
     let userNotifications: Notification[] = [];
     let allNotifications: Notification[] = [];
 
-    const updateUserNotifications = (newNotifications: Notification[]) => {
-        userNotifications = newNotifications;
-        mergeAndSetNotifications();
-    };
-    
-    const updateAllNotifications = (newNotifications: Notification[]) => {
-        allNotifications = newNotifications;
-        mergeAndSetNotifications();
-    }
-
     const mergeAndSetNotifications = () => {
-        combinedNotifications = [...userNotifications, ...allNotifications].sort(
+        const combined = [...userNotifications, ...allNotifications].sort(
             (a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0)
         );
-        setNotifications(combinedNotifications);
-        const unread = combinedNotifications.filter(n => !n.isRead).length;
-        setUnreadCount(unread);
+        setNotifications(combined);
+        
+        const unreadUserNotifs = userNotifications.filter(n => !n.isRead).length;
+        const unreadGlobalNotifs = allNotifications.filter(n => !seenGlobalIds.has(n.id)).length;
+        
+        setUnreadCount(unreadUserNotifs + unreadGlobalNotifs);
     }
-
+    
     const unsubUser = onSnapshot(userNotifsQuery, (snapshot) => {
-        const userNotifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
-        updateUserNotifications(userNotifs);
+        userNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+        mergeAndSetNotifications();
     }, (error) => console.error("Error fetching user notifications:", error));
 
     const unsubAll = onSnapshot(allNotifsQuery, (snapshot) => {
-        const allNotifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
-        updateAllNotifications(allNotifs);
-    }, (error) => console.error("Error fetching all user notifications:", error));
+        allNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+        mergeAndSetNotifications();
+    }, (error) => console.error("Error fetching global notifications:", error));
 
     return () => {
       unsubUser();
       unsubAll();
     };
-  }, [user]);
+  }, [user, seenGlobalIds]);
 
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
     if (open && user) {
-      // We only mark user-specific notifications as read. 
-      // Global notifications' read status is managed locally by the user's client if needed.
-      const unreadUserNotifications = notifications.filter(
-        (n) => n.userId === user.uid && !n.isRead
-      );
-      
-      if (unreadUserNotifications.length === 0) return;
+        // Mark user-specific notifications as read in Firestore
+        const unreadUserNotifications = notifications.filter(
+            (n) => n.userId === user.uid && !n.isRead
+        );
+        if (unreadUserNotifications.length > 0) {
+            const updatePromises = unreadUserNotifications.map((n) => 
+                updateDoc(doc(db, "notifications", n.id), { isRead: true })
+            );
+            try {
+                await Promise.all(updatePromises);
+            } catch (error) {
+                console.error("Error marking user notifications as read:", error);
+            }
+        }
 
-      const updatePromises = unreadUserNotifications.map((n) => {
-        const notifRef = doc(db, "notifications", n.id);
-        return updateDoc(notifRef, { isRead: true });
-      });
+        // Mark global notifications as seen in local state and storage
+        const newGlobalIdsToSee = notifications
+            .filter(n => n.userId === "all" && !seenGlobalIds.has(n.id))
+            .map(n => n.id);
 
-      try {
-        await Promise.all(updatePromises);
-      } catch (error) {
-        console.error("Error marking notifications as read:", error);
-      }
+        if (newGlobalIdsToSee.length > 0) {
+            const newSeenSet = new Set([...seenGlobalIds, ...newGlobalIdsToSee]);
+            setSeenGlobalIds(newSeenSet);
+            try {
+                localStorage.setItem(SEEN_GLOBAL_NOTIFS_KEY, JSON.stringify(Array.from(newSeenSet)));
+            } catch (error) {
+                console.error("Failed to save seen notifications to localStorage", error);
+            }
+        }
     }
   };
 
+  const isNotificationUnread = (n: Notification) => {
+    if (n.userId === 'all') {
+      return !seenGlobalIds.has(n.id);
+    }
+    return !n.isRead;
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
@@ -126,7 +151,7 @@ export default function NotificationBell() {
             {notifications.length > 0 ? (
               <div className="space-y-4">
                 {notifications.map((n) => (
-                  <div key={n.id} className="flex items-start space-x-3 rounded-lg bg-muted/50 p-3">
+                  <div key={n.id} className={`flex items-start space-x-3 rounded-lg p-3 ${isNotificationUnread(n) ? 'bg-primary/10' : 'bg-muted/50'}`}>
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
                         <Mail className="h-5 w-5" />
                     </div>
