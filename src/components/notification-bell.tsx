@@ -27,6 +27,7 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [seenGlobalIds, setSeenGlobalIds] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
       try {
@@ -50,6 +51,7 @@ export default function NotificationBell() {
     );
 
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+        setError(null); // Clear previous errors on new data
         const fetchedNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
         setNotifications(fetchedNotifications);
         
@@ -69,7 +71,10 @@ export default function NotificationBell() {
         
         setUnreadCount(unreadUserNotifs + unreadGlobalNotifs);
 
-    }, (error) => console.error("Error fetching notifications:", error));
+    }, (err) => {
+        console.error("Error fetching notifications:", err);
+        setError("Could not fetch notifications. You might need to create a Firestore index.");
+    });
 
     return () => unsubscribe();
   }, [user, userProfile, authLoading]);
@@ -139,7 +144,9 @@ export default function NotificationBell() {
         </SheetHeader>
         <ScrollArea className="h-[calc(100vh-80px)] pr-4">
           <div className="py-4">
-            {notifications.length > 0 ? (
+            {error ? (
+              <p className="text-center text-destructive">{error}</p>
+            ) : notifications.length > 0 ? (
               <div className="space-y-4">
                 {notifications.map((n) => (
                   <div key={n.id} className={`flex items-start space-x-3 rounded-lg p-3 ${isNotificationUnreadOnOpen(n) ? 'bg-primary/10' : 'bg-muted/50'}`}>
