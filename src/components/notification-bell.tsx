@@ -38,65 +38,47 @@ export default function NotificationBell() {
           console.error("Failed to parse seen notifications from localStorage", error);
       }
   }, []);
-
+  
   useEffect(() => {
     if (authLoading || !user || !userProfile) return;
 
-    const userNotifsQuery = query(
+    // Use a single query with 'in' to fetch both user-specific and global notifications
+    const notificationsQuery = query(
       collection(db, "notifications"),
-      where("userId", "==", user.uid),
+      where("userId", "in", [user.uid, "all"]),
       orderBy("timestamp", "desc")
     );
 
-    const allNotifsQuery = query(
-      collection(db, "notifications"),
-      where("userId", "==", "all"),
-      orderBy("timestamp", "desc")
-    );
-    
-    let userNotifications: Notification[] = [];
-    let allNotifications: Notification[] = [];
-    let localSeenGlobalIds = new Set<string>();
-    try {
-        const storedIds = localStorage.getItem(SEEN_GLOBAL_NOTIFS_KEY);
-        if (storedIds) {
-            localSeenGlobalIds = new Set(JSON.parse(storedIds));
-        }
-    } catch (error) {
-        console.error("Failed to parse seen notifications from localStorage on init", error);
-    }
-
-    const mergeAndSetNotifications = () => {
-        const combined = [...userNotifications, ...allNotifications].sort(
-            (a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0)
-        );
-        setNotifications(combined);
+    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+        const fetchedNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+        setNotifications(fetchedNotifications);
         
-        const unreadUserNotifs = userNotifications.filter(n => !n.isRead).length;
-        const unreadGlobalNotifs = allNotifications.filter(n => !localSeenGlobalIds.has(n.id)).length;
+        // Recalculate unread count based on the new data
+        let localSeenGlobalIds = new Set<string>();
+        try {
+            const storedIds = localStorage.getItem(SEEN_GLOBAL_NOTIFS_KEY);
+            if (storedIds) {
+                localSeenGlobalIds = new Set(JSON.parse(storedIds));
+            }
+        } catch (error) {
+            console.error("Failed to parse seen notifications from localStorage on init", error);
+        }
+
+        const unreadUserNotifs = fetchedNotifications.filter(n => n.userId === user.uid && !n.isRead).length;
+        const unreadGlobalNotifs = fetchedNotifications.filter(n => n.userId === 'all' && !localSeenGlobalIds.has(n.id)).length;
         
         setUnreadCount(unreadUserNotifs + unreadGlobalNotifs);
-    }
-    
-    const unsubUser = onSnapshot(userNotifsQuery, (snapshot) => {
-        userNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
-        mergeAndSetNotifications();
-    }, (error) => console.error("Error fetching user notifications:", error));
 
-    const unsubAll = onSnapshot(allNotifsQuery, (snapshot) => {
-        allNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
-        mergeAndSetNotifications();
-    }, (error) => console.error("Error fetching global notifications:", error));
+    }, (error) => console.error("Error fetching notifications:", error));
 
-    return () => {
-      unsubUser();
-      unsubAll();
-    };
+    return () => unsubscribe();
   }, [user, userProfile, authLoading]);
+
 
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
     if (open && user) {
+        // Mark user-specific notifications as read in Firestore
         const unreadUserNotifications = notifications.filter(
             (n) => n.userId === user.uid && !n.isRead
         );
@@ -111,6 +93,7 @@ export default function NotificationBell() {
             }
         }
 
+        // Mark global notifications as seen in localStorage
         const currentSeenIds = new Set(seenGlobalIds);
         const newGlobalIdsToSee = notifications
             .filter(n => n.userId === "all" && !currentSeenIds.has(n.id))
@@ -125,15 +108,18 @@ export default function NotificationBell() {
                 console.error("Failed to save seen notifications to localStorage", error);
             }
         }
+        
+        // After opening, the count should be zero
+        setUnreadCount(0);
     }
   };
-
-  const isNotificationUnread = (n: Notification) => {
-    if (n.userId === 'all') {
-      return !seenGlobalIds.has(n.id);
-    }
-    return !n.isRead;
-  };
+  
+    const isNotificationUnreadOnOpen = (n: Notification) => {
+        if (n.userId === 'all') {
+            return !seenGlobalIds.has(n.id);
+        }
+        return !n.isRead;
+    };
 
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
@@ -156,7 +142,7 @@ export default function NotificationBell() {
             {notifications.length > 0 ? (
               <div className="space-y-4">
                 {notifications.map((n) => (
-                  <div key={n.id} className={`flex items-start space-x-3 rounded-lg p-3 ${isNotificationUnread(n) ? 'bg-primary/10' : 'bg-muted/50'}`}>
+                  <div key={n.id} className={`flex items-start space-x-3 rounded-lg p-3 ${isNotificationUnreadOnOpen(n) ? 'bg-primary/10' : 'bg-muted/50'}`}>
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
                         <Mail className="h-5 w-5" />
                     </div>
