@@ -1,7 +1,8 @@
 
 "use server";
 
-import { db, adminStorage } from "@/lib/firebase";
+import { db } from "@/lib/firebase/client";
+import { adminStorage } from "@/lib/firebase/server";
 import {
   doc,
   runTransaction,
