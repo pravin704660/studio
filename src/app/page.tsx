@@ -50,7 +50,7 @@ export default function Home() {
   }
 
   const getInitials = (name: string | null | undefined) => {
-    if (!name) return "U";
+    if (!name || name === 'New User') return null;
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
@@ -70,6 +70,8 @@ export default function Home() {
         return <HomeScreen />;
     }
   };
+  
+  const initials = getInitials(userProfile?.name);
 
   return (
     <div className="flex min-h-screen flex-col bg-background font-body text-foreground">
@@ -79,7 +81,9 @@ export default function Home() {
              <Button variant="ghost" className="h-10 w-10 p-0 rounded-full" onClick={() => setActiveScreen("profile")}>
               <Avatar className="h-9 w-9">
                 <AvatarImage src={userProfile?.photoUrl || ''} alt={userProfile?.name || 'User'} />
-                <AvatarFallback>{getInitials(userProfile?.name)}</AvatarFallback>
+                <AvatarFallback>
+                    {initials ? initials : <User className="h-5 w-5" />}
+                </AvatarFallback>
               </Avatar>
             </Button>
           </div>

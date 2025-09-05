@@ -67,9 +67,11 @@ export default function ProfileScreen() {
   }
 
   const getInitials = (name: string | null | undefined) => {
-    if (!name) return "U";
+    if (!name || name === "New User") return null;
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
+
+  const initials = getInitials(userProfile.name);
 
   return (
     <div className="space-y-6">
@@ -80,7 +82,7 @@ export default function ProfileScreen() {
           <Avatar className="h-24 w-24 border-4 border-primary">
             <AvatarImage src={userProfile.photoUrl || ''} alt={userProfile.name || 'User'} />
             <AvatarFallback className="text-3xl font-bold">
-                {getInitials(userProfile.name)}
+                {initials ? initials : <User className="h-12 w-12" />}
             </AvatarFallback>
           </Avatar>
           <div className="mt-4 flex items-center gap-2">
