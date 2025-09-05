@@ -24,9 +24,9 @@ export default function Home() {
 
   const navItems = [
     { name: "home" as Screen, icon: Gamepad2, label: "Home" },
-    { name: "wallet" as Screen, icon: Wallet, label: "Wallet" },
-    { name: "mega-result" as Screen, icon: Trophy, label: "Mega Result" },
     { name: "tournaments" as Screen, icon: Swords, label: "My Tournaments" },
+    { name: "mega-result" as Screen, icon: Trophy, label: "Mega Result" },
+    { name: "wallet" as Screen, icon: Wallet, label: "Wallet" },
   ];
 
   if (loading) {
