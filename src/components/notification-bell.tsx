@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc } from "firebase/firestore";
 import type { Notification } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Bell, Mail } from "lucide-react";
+import { Bell, Mail, Trash2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -18,16 +18,22 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from 'date-fns';
+import { deleteUserNotification } from "@/app/actions";
+import { useToast } from "@/hooks/use-toast";
+import { Spinner } from "./ui/spinner";
 
 const SEEN_GLOBAL_NOTIFS_KEY = "seenGlobalNotifIds";
 
 export default function NotificationBell() {
   const { user, userProfile, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [seenGlobalIds, setSeenGlobalIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
 
   useEffect(() => {
       try {
@@ -126,6 +132,18 @@ export default function NotificationBell() {
         return !n.isRead;
     };
 
+    const handleDelete = async (notificationId: string) => {
+        if (!user) return;
+        setDeletingId(notificationId);
+        const result = await deleteUserNotification(notificationId, user.uid);
+        if (result.success) {
+            toast({ title: "Notification deleted." });
+        } else {
+            toast({ variant: "destructive", title: "Error", description: result.error });
+        }
+        setDeletingId(null);
+    }
+
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
@@ -149,17 +167,28 @@ export default function NotificationBell() {
             ) : notifications.length > 0 ? (
               <div className="space-y-4">
                 {notifications.map((n) => (
-                  <div key={n.id} className={`flex items-start space-x-3 rounded-lg p-3 ${isNotificationUnreadOnOpen(n) ? 'bg-primary/10' : 'bg-muted/50'}`}>
+                  <div key={n.id} className={`group relative flex items-start space-x-3 rounded-lg p-3 ${isNotificationUnreadOnOpen(n) ? 'bg-primary/10' : 'bg-muted/50'}`}>
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
                         <Mail className="h-5 w-5" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="font-semibold">{n.title}</p>
                       <p className="text-sm text-muted-foreground">{n.message}</p>
                       <p className="text-xs text-muted-foreground/70 mt-1">
                         {n.timestamp ? formatDistanceToNow(n.timestamp.toDate(), { addSuffix: true }) : 'Just now'}
                       </p>
                     </div>
+                     {n.userId !== 'all' && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleDelete(n.id)}
+                            disabled={deletingId === n.id}
+                        >
+                            {deletingId === n.id ? <Spinner size="sm" /> : <Trash2 className="h-4 w-4 text-destructive" />}
+                        </Button>
+                    )}
                   </div>
                 ))}
               </div>

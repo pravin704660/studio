@@ -11,10 +11,11 @@ import {
   setDoc,
   deleteDoc,
   Timestamp,
+  getDoc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
-import type { Tournament, UserProfile, TournamentFormData } from "./lib/types";
+import type { Tournament, UserProfile, TournamentFormData, Notification } from "./lib/types";
 
 export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -231,4 +232,27 @@ export async function sendNotification(
   }
 }
 
-    
+
+export async function deleteUserNotification(notificationId: string, userId: string): Promise<{ success: boolean, error?: string }> {
+    try {
+        const notifDocRef = doc(db, "notifications", notificationId);
+        const notifDoc = await getDoc(notifDocRef);
+
+        if (!notifDoc.exists()) {
+            return { success: false, error: "Notification not found." };
+        }
+
+        const notification = notifDoc.data() as Notification;
+
+        if (notification.userId !== userId) {
+            return { success: false, error: "You do not have permission to delete this notification." };
+        }
+
+        await deleteDoc(notifDocRef);
+        return { success: true };
+
+    } catch (error: any) {
+        console.error("Error deleting notification:", error);
+        return { success: false, error: "Failed to delete notification." };
+    }
+}
