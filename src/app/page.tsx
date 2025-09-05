@@ -10,14 +10,15 @@ import WalletScreen from "@/components/screens/wallet-screen";
 import MyTournamentsScreen from "@/components/screens/my-tournaments-screen";
 import ProfileScreen from "@/components/screens/profile-screen";
 import { Spinner } from "@/components/ui/spinner";
-import { Gamepad2, Wallet, Swords, User, Trophy, Youtube } from "lucide-react";
+import { Gamepad2, Wallet, Swords, Trophy, Youtube } from "lucide-react";
 import NotificationBell from "@/components/notification-bell";
 import MegaResultScreen from "@/components/screens/mega-result-screen";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { User } from "lucide-react";
+import RulesScreen from "@/components/screens/rules-screen";
 
-type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile";
+type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile" | "rules";
 
 export default function Home() {
   const { user, userProfile, loading } = useAuth();
@@ -47,7 +48,8 @@ export default function Home() {
       wallet: "My Wallet",
       "mega-result": "Mega Results",
       tournaments: "My Tournaments",
-      profile: ""
+      profile: "",
+      rules: "Rules & Regulations"
   }
 
   const getInitials = (name: string | null | undefined) => {
@@ -66,7 +68,9 @@ export default function Home() {
       case "tournaments":
         return <MyTournamentsScreen />;
       case "profile":
-        return <ProfileScreen />;
+        return <ProfileScreen setActiveScreen={setActiveScreen} />;
+      case "rules":
+        return <RulesScreen setActiveScreen={setActiveScreen} />;
       default:
         return <HomeScreen />;
     }

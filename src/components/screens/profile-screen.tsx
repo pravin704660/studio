@@ -3,19 +3,25 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, User, Mail, Shield, Gamepad2, Edit, Save, X } from "lucide-react";
+import { LogOut, User, Mail, Shield, Gamepad2, Edit, Save, X, FileText } from "lucide-react";
 import Link from "next/link";
 import { Spinner } from "../ui/spinner";
 import { Input } from "../ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfileName } from "@/app/actions";
 
-export default function ProfileScreen() {
+type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile" | "rules";
+
+interface ProfileScreenProps {
+  setActiveScreen: (screen: Screen) => void;
+}
+
+export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
   const { user, userProfile, loading } = useAuth();
   const { toast } = useToast();
   const [isEditingName, setIsEditingName] = useState(false);
@@ -134,6 +140,11 @@ export default function ProfileScreen() {
                     </Button>
                 </Link>
             )}
+
+            <Button variant="outline" className="w-full" onClick={() => setActiveScreen('rules')}>
+                <FileText className="mr-2 h-4 w-4" />
+                Rules
+            </Button>
 
           <Button variant="destructive" className="w-full" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
