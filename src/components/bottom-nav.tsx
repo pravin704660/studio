@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
-type Screen = "home" | "wallet" | "tournaments" | "profile";
+type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile";
 
 interface NavItem {
   name: Screen;
@@ -20,7 +20,7 @@ interface BottomNavProps {
 export default function BottomNav({ items, activeScreen, setActiveScreen }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/80 bg-background/80 backdrop-blur-lg">
-      <div className="mx-auto grid h-16 max-w-md grid-cols-4">
+      <div className={`mx-auto grid h-16 max-w-md grid-cols-${items.length}`}>
         {items.map((item) => (
           <button
             key={item.name}

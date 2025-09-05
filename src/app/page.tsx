@@ -10,10 +10,11 @@ import WalletScreen from "@/components/screens/wallet-screen";
 import MyTournamentsScreen from "@/components/screens/my-tournaments-screen";
 import ProfileScreen from "@/components/screens/profile-screen";
 import { Spinner } from "@/components/ui/spinner";
-import { Gamepad2, Wallet, Swords, User } from "lucide-react";
+import { Gamepad2, Wallet, Swords, User, Trophy } from "lucide-react";
 import NotificationBell from "@/components/notification-bell";
+import MegaResultScreen from "@/components/screens/mega-result-screen";
 
-type Screen = "home" | "wallet" | "tournaments" | "profile";
+type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -22,6 +23,7 @@ export default function Home() {
   const navItems = [
     { name: "home" as Screen, icon: Gamepad2, label: "Home" },
     { name: "wallet" as Screen, icon: Wallet, label: "Wallet" },
+    { name: "mega-result" as Screen, icon: Trophy, label: "Mega Result" },
     { name: "tournaments" as Screen, icon: Swords, label: "My Tournaments" },
     { name: "profile" as Screen, icon: User, label: "Profile" },
   ];
@@ -39,8 +41,9 @@ export default function Home() {
   }
   
   const screenTitles: Record<Screen, string> = {
-      home: "Arena Ace",
+      home: "",
       wallet: "My Wallet",
+      "mega-result": "Mega Results",
       tournaments: "My Tournaments",
       profile: "My Profile"
   }
@@ -51,6 +54,8 @@ export default function Home() {
         return <HomeScreen />;
       case "wallet":
         return <WalletScreen />;
+      case "mega-result":
+        return <MegaResultScreen />;
       case "tournaments":
         return <MyTournamentsScreen />;
       case "profile":

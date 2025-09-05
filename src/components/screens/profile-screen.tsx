@@ -1,21 +1,48 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, User, Mail, Shield, Gamepad2 } from "lucide-react";
+import { LogOut, User, Mail, Shield, Gamepad2, Edit, Save, X } from "lucide-react";
 import Link from "next/link";
 import { Spinner } from "../ui/spinner";
+import { Input } from "../ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { updateUserProfileName } from "@/app/actions";
 
 export default function ProfileScreen() {
   const { user, userProfile, loading } = useAuth();
+  const { toast } = useToast();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [name, setName] = useState(userProfile?.name || "");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (userProfile?.name) {
+      setName(userProfile.name);
+    }
+  }, [userProfile?.name]);
 
   const handleLogout = async () => {
     await signOut(auth);
+  };
+
+  const handleNameSave = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    const result = await updateUserProfileName(user.uid, name);
+    if (result.success) {
+      toast({ title: "Success", description: "Your name has been updated." });
+      setIsEditingName(false);
+    } else {
+      toast({ variant: "destructive", title: "Error", description: result.error });
+    }
+    setIsSaving(false);
   };
 
   if (loading || !user) {
@@ -56,7 +83,30 @@ export default function ProfileScreen() {
                 {getInitials(userProfile.name)}
             </AvatarFallback>
           </Avatar>
-          <CardTitle className="mt-4 text-2xl">{userProfile.name}</CardTitle>
+          <div className="mt-4 flex items-center gap-2">
+            {isEditingName ? (
+              <div className="flex items-center gap-2">
+                  <Input 
+                      value={name} 
+                      onChange={(e) => setName(e.target.value)} 
+                      className="text-2xl font-bold text-center"
+                  />
+                  <Button size="icon" onClick={handleNameSave} disabled={isSaving}>
+                      {isSaving ? <Spinner size="sm" /> : <Save className="h-5 w-5" />}
+                  </Button>
+                  <Button size="icon" variant="outline" onClick={() => { setIsEditingName(false); setName(userProfile.name || ""); }}>
+                      <X className="h-5 w-5" />
+                  </Button>
+              </div>
+            ) : (
+              <>
+                <CardTitle className="text-2xl">{userProfile.name}</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setIsEditingName(true)}>
+                    <Edit className="h-5 w-5" />
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
             <div className="flex items-center space-x-3 rounded-md bg-muted p-3">

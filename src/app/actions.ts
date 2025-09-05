@@ -12,6 +12,7 @@ import {
   deleteDoc,
   Timestamp,
   getDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
@@ -255,4 +256,18 @@ export async function deleteUserNotification(notificationId: string, userId: str
         console.error("Error deleting notification:", error);
         return { success: false, error: "Failed to delete notification." };
     }
+}
+
+export async function updateUserProfileName(userId: string, newName: string): Promise<{ success: boolean, error?: string }> {
+  if (!newName || newName.trim().length === 0) {
+    return { success: false, error: "Name cannot be empty." };
+  }
+  try {
+    const userDocRef = doc(db, "users", userId);
+    await updateDoc(userDocRef, { name: newName.trim() });
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating user name:", error);
+    return { success: false, error: "Failed to update name." };
+  }
 }
