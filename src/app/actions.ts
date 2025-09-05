@@ -1,7 +1,7 @@
 
 "use server";
 
-import { db, storage } from "@/lib/firebase";
+import { db, adminStorage } from "@/lib/firebase";
 import {
   doc,
   runTransaction,
@@ -14,9 +14,10 @@ import {
   getDoc,
   updateDoc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type { Tournament, UserProfile, TournamentFormData, Notification } from "./lib/types";
+import { v4 as uuidv4 } from 'uuid';
+
 
 export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -116,12 +117,27 @@ export async function createOrUpdateTournament(
 
     if (imageFile && imageFile.size > 0) {
       const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
-      const storageRef = ref(storage, storagePath);
       const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
-      const snapshot = await uploadBytes(storageRef, imageBuffer, {
-        contentType: imageFile.type,
+      
+      const bucket = adminStorage.bucket();
+      const file = bucket.file(storagePath);
+
+      // We use a write stream to upload the buffer
+      const stream = file.createWriteStream({
+        metadata: {
+          contentType: imageFile.type,
+        },
       });
-      imageUrl = await getDownloadURL(snapshot.ref);
+      
+      await new Promise((resolve, reject) => {
+          stream.on('error', reject);
+          stream.on('finish', resolve);
+          stream.end(imageBuffer);
+      });
+      
+      // Make the file public and get the URL
+      await file.makePublic();
+      imageUrl = file.publicUrl();
     }
     
     const tournamentCollection = collection(db, 'tournaments');
