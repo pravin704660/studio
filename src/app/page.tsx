@@ -10,11 +10,12 @@ import WalletScreen from "@/components/screens/wallet-screen";
 import MyTournamentsScreen from "@/components/screens/my-tournaments-screen";
 import ProfileScreen from "@/components/screens/profile-screen";
 import { Spinner } from "@/components/ui/spinner";
-import { Gamepad2, Wallet, Swords, User, Trophy } from "lucide-react";
+import { Gamepad2, Wallet, Swords, User, Trophy, Youtube } from "lucide-react";
 import NotificationBell from "@/components/notification-bell";
 import MegaResultScreen from "@/components/screens/mega-result-screen";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile";
 
@@ -91,6 +92,11 @@ export default function Home() {
             <h1 className="text-xl font-bold tracking-tight">{screenTitles[activeScreen]}</h1>
           </div>
           <div className="flex-1 flex justify-end items-center gap-2">
+            <a href="https://shorturl.at/NbYgS" target="_blank" rel="noopener noreferrer">
+              <Button variant="ghost" size="icon">
+                <Youtube className="h-6 w-6 text-red-600" />
+              </Button>
+            </a>
             <NotificationBell />
           </div>
         </div>
