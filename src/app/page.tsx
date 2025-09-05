@@ -45,7 +45,7 @@ export default function Home() {
       wallet: "My Wallet",
       "mega-result": "Mega Results",
       tournaments: "My Tournaments",
-      profile: "My Profile"
+      profile: ""
   }
 
   const renderScreen = () => {
