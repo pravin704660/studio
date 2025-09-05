@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, updateDoc, query, orderBy, limit, startAfter, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase/client";
 import type { UserProfile } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
@@ -304,5 +304,3 @@ export default function ManageUsersPage() {
     </div>
   );
 }
-
-    

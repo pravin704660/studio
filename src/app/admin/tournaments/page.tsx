@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where, Timestamp, orderBy, limit, startAfter, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase/client";
 import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
@@ -362,5 +362,3 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
-
-    
