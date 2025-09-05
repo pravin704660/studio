@@ -13,11 +13,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { Gamepad2, Wallet, Swords, User, Trophy } from "lucide-react";
 import NotificationBell from "@/components/notification-bell";
 import MegaResultScreen from "@/components/screens/mega-result-screen";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
 type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile";
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const [activeScreen, setActiveScreen] = useState<Screen>("home");
 
   const navItems = [
@@ -25,7 +27,6 @@ export default function Home() {
     { name: "wallet" as Screen, icon: Wallet, label: "Wallet" },
     { name: "mega-result" as Screen, icon: Trophy, label: "Mega Result" },
     { name: "tournaments" as Screen, icon: Swords, label: "My Tournaments" },
-    { name: "profile" as Screen, icon: User, label: "Profile" },
   ];
 
   if (loading) {
@@ -46,6 +47,11 @@ export default function Home() {
       "mega-result": "Mega Results",
       tournaments: "My Tournaments",
       profile: ""
+  }
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "U";
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
   const renderScreen = () => {
@@ -70,7 +76,15 @@ export default function Home() {
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <h1 className="text-xl font-bold tracking-tight">{screenTitles[activeScreen]}</h1>
-          <NotificationBell />
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <Button variant="ghost" className="h-10 w-10 p-0 rounded-full" onClick={() => setActiveScreen("profile")}>
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={userProfile?.photoUrl || ''} alt={userProfile?.name || 'User'} />
+                <AvatarFallback>{getInitials(userProfile?.name)}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </div>
         </div>
       </header>
       <main className="flex-1 pb-20">
