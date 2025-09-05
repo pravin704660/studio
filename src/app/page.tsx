@@ -75,15 +75,19 @@ export default function Home() {
     <div className="flex min-h-screen flex-col bg-background font-body text-foreground">
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <h1 className="text-xl font-bold tracking-tight">{screenTitles[activeScreen]}</h1>
-          <div className="flex items-center gap-2">
-            <NotificationBell />
-            <Button variant="ghost" className="h-10 w-10 p-0 rounded-full" onClick={() => setActiveScreen("profile")}>
+          <div className="flex-1 flex justify-start">
+             <Button variant="ghost" className="h-10 w-10 p-0 rounded-full" onClick={() => setActiveScreen("profile")}>
               <Avatar className="h-9 w-9">
                 <AvatarImage src={userProfile?.photoUrl || ''} alt={userProfile?.name || 'User'} />
                 <AvatarFallback>{getInitials(userProfile?.name)}</AvatarFallback>
               </Avatar>
             </Button>
+          </div>
+          <div className="flex-1 text-center">
+            <h1 className="text-xl font-bold tracking-tight">{screenTitles[activeScreen]}</h1>
+          </div>
+          <div className="flex-1 flex justify-end items-center gap-2">
+            <NotificationBell />
           </div>
         </div>
       </header>
