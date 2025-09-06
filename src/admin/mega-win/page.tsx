@@ -85,9 +85,9 @@ export default function ManageMegaWinTournamentsPage() {
       const tournamentsCollection = collection(db, "tournaments");
       let q;
       if (lastDoc && !initial) {
-        q = query(tournamentsCollection, where("isMega", "==", true), orderBy("date", "desc"), startAfter(lastDoc), limit(PAGE_SIZE));
+        q = query(tournamentsCollection, where("isMega", "==", true), startAfter(lastDoc), limit(PAGE_SIZE));
       } else {
-        q = query(tournamentsCollection, where("isMega", "==", true), orderBy("date", "desc"), limit(PAGE_SIZE));
+        q = query(tournamentsCollection, where("isMega", "==", true), limit(PAGE_SIZE));
       }
       
       const tournamentsSnapshot = await getDocs(q);
@@ -352,3 +352,5 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
+
+    

@@ -83,9 +83,9 @@ export default function ManageTournamentsPage() {
         const tournamentsCollection = collection(db, "tournaments");
         let q;
         if (lastDoc && !initial) {
-            q = query(tournamentsCollection, where("isMega", "==", false), orderBy("date", "desc"), startAfter(lastDoc), limit(PAGE_SIZE));
+            q = query(tournamentsCollection, where("isMega", "==", false), startAfter(lastDoc), limit(PAGE_SIZE));
         } else {
-            q = query(tournamentsCollection, where("isMega", "==", false), orderBy("date", "desc"), limit(PAGE_SIZE));
+            q = query(tournamentsCollection, where("isMega", "==", false), limit(PAGE_SIZE));
         }
 
         const tournamentsSnapshot = await getDocs(q);
@@ -341,3 +341,5 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
+
+    
