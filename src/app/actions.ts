@@ -1,7 +1,6 @@
 
 "use server";
 
-import { adminStorage, canInitializeAdmin } from "@/lib/firebase/server";
 import { db } from "@/lib/firebase/client";
 import {
   doc,
@@ -112,12 +111,20 @@ export async function createOrUpdateTournament(
 
     const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
     
+    // Create a new object for Firestore to avoid passing extraneous properties.
     const finalData = {
-      ...tournamentData,
-      imageUrl: "https://picsum.photos/600/400",
-      rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules).split('\n'),
+      title: tournamentData.title,
+      gameType: tournamentData.gameType,
       date: firestoreDate,
-      id: newTournamentRef.id,
+      time: tournamentData.time,
+      entryFee: tournamentData.entryFee,
+      slots: tournamentData.slots,
+      prize: tournamentData.prize,
+      rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules).split('\n'),
+      status: tournamentData.status,
+      isMega: tournamentData.isMega,
+      imageUrl: "https://picsum.photos/600/400",
+      id: newTournamentRef.id, // Assign the string ID
     };
 
     await setDoc(newTournamentRef, finalData);
