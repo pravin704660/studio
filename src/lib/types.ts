@@ -35,7 +35,6 @@ export interface TournamentFormData {
   slots: number;
   prize: number;
   rules: string[] | string;
-  imageUrl: string;
   status: 'published' | 'draft' | 'cancelled' | 'completed' | 'live';
   isMega?: boolean;
 }
