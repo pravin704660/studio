@@ -2,7 +2,7 @@
 "use server";
 
 import { db } from "@/lib/firebase/client";
-import { adminStorage } from "@/lib/firebase/server";
+import { adminStorage, canInitializeAdmin } from "@/lib/firebase/server";
 import {
   doc,
   runTransaction,
@@ -117,6 +117,9 @@ export async function createOrUpdateTournament(
     let imageUrl = tournamentData.imageUrl || "https://picsum.photos/600/400";
 
     if (imageFile && imageFile.size > 0) {
+      if (!canInitializeAdmin) {
+          return { success: false, error: "File upload is not configured on the server. Please contact support." };
+      }
       const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
       const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
       

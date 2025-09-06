@@ -44,4 +44,4 @@ const adminAuth = adminApp.auth();
 const adminDb = adminApp.firestore();
 const adminStorage = adminApp.storage();
 
-export { adminApp, adminAuth, adminDb, adminStorage };
+export { adminApp, adminAuth, adminDb, adminStorage, canInitializeAdmin };
