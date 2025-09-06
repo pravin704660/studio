@@ -108,7 +108,7 @@ export async function createOrUpdateTournament(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     
-    const tournamentCollection = collection(adminDb, 'tournaments');
+    const tournamentCollection = collection(db, 'tournaments');
     const newTournamentRef = doc(tournamentCollection);
 
     const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
