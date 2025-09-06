@@ -84,19 +84,21 @@ export default function ManageMegaWinTournamentsPage() {
     try {
       const tournamentsCollection = collection(db, "tournaments");
       let q;
-      if (lastDoc && !initial) {
-        q = query(tournamentsCollection, where("isMega", "==", true), startAfter(lastDoc), limit(PAGE_SIZE));
+       if (lastDoc && !initial) {
+        q = query(tournamentsCollection, startAfter(lastDoc), limit(PAGE_SIZE * 2)); // Fetch more to filter
       } else {
-        q = query(tournamentsCollection, where("isMega", "==", true), limit(PAGE_SIZE));
+        q = query(tournamentsCollection, limit(PAGE_SIZE * 2)); // Fetch more to filter
       }
       
       const tournamentsSnapshot = await getDocs(q);
-      const newTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+      const allFetchedTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+      
+      const newTournaments = allFetchedTournaments.filter(t => t.isMega === true);
 
       const lastVisible = tournamentsSnapshot.docs[tournamentsSnapshot.docs.length - 1];
       setLastDoc(lastVisible);
 
-      if (newTournaments.length < PAGE_SIZE) {
+      if (tournamentsSnapshot.docs.length < PAGE_SIZE * 2) { // Heuristic check
         setHasMore(false);
       }
 

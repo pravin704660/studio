@@ -83,18 +83,20 @@ export default function ManageTournamentsPage() {
         const tournamentsCollection = collection(db, "tournaments");
         let q;
         if (lastDoc && !initial) {
-            q = query(tournamentsCollection, where("isMega", "==", false), startAfter(lastDoc), limit(PAGE_SIZE));
+            q = query(tournamentsCollection, startAfter(lastDoc), limit(PAGE_SIZE * 2));
         } else {
-            q = query(tournamentsCollection, where("isMega", "==", false), limit(PAGE_SIZE));
+            q = query(tournamentsCollection, limit(PAGE_SIZE * 2));
         }
 
         const tournamentsSnapshot = await getDocs(q);
-        const newTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+        const allFetchedTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+
+        const newTournaments = allFetchedTournaments.filter(t => t.isMega === false || t.isMega === undefined);
 
         const lastVisible = tournamentsSnapshot.docs[tournamentsSnapshot.docs.length - 1];
         setLastDoc(lastVisible);
 
-        if (newTournaments.length < PAGE_SIZE) {
+        if (tournamentsSnapshot.docs.length < PAGE_SIZE * 2) {
             setHasMore(false);
         }
 
