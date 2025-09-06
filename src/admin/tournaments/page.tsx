@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where, Timestamp, orderBy, limit, startAfter, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -74,7 +74,17 @@ export default function ManageTournamentsPage() {
         setTournaments(newTournaments);
     } catch (error) {
         console.error("Error fetching tournaments:", error);
-        toast({ variant: "destructive", title: "Error", description: "Failed to fetch tournaments." });
+        // Fallback: Fetch all and filter client-side if query fails
+        try {
+            const tournamentsCollection = collection(db, "tournaments");
+            const tournamentsSnapshot = await getDocs(tournamentsCollection);
+            const allTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+            const regularTournaments = allTournaments.filter(t => !t.isMega);
+            setTournaments(regularTournaments);
+        } catch (fallbackError) {
+            console.error("Fallback error fetching tournaments:", fallbackError);
+            toast({ variant: "destructive", title: "Error", description: "Failed to fetch tournaments." });
+        }
     } finally {
         setLoading(false);
     }
@@ -306,5 +316,3 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
-
-    

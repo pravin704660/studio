@@ -1,8 +1,5 @@
 
 import admin from "firebase-admin";
-import { config } from 'dotenv';
-
-config();
 
 const firebaseConfig = {
   apiKey: "AIzaSyB6XufbP1uWMzbyOMAiGws4s-_Ed8RwLTI",
@@ -13,26 +10,24 @@ const firebaseConfig = {
   appId: "1:724343463324:web:6cd4d755ea96d9f65b3c59"
 };
 
-const hasServiceAccount = process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_PROJECT_ID;
+// A flag to determine if the admin SDK can be initialized, which is false in this environment.
+const canInitializeAdmin = false;
 
 let adminApp: admin.app.App;
 
 if (!admin.apps.length) {
-    if (hasServiceAccount) {
-        const serviceAccount = {
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-        };
-        adminApp = admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
+    try {
+        // Attempt to initialize with service account, which will fail gracefully in this env.
+         adminApp = admin.initializeApp({
+            credential: admin.credential.applicationDefault(),
             storageBucket: firebaseConfig.storageBucket,
         });
-    } else {
-        console.warn("Firebase Admin SDK credentials not found. Initializing with default config. Some admin features like file uploads might not work.");
+    } catch (e) {
+        // Initialize a dummy app if credentials are not available.
         adminApp = admin.initializeApp({
             storageBucket: firebaseConfig.storageBucket,
         });
+        console.warn("Firebase Admin SDK credentials not found. Some admin features might not work.");
     }
 } else {
     adminApp = admin.app();
@@ -40,6 +35,6 @@ if (!admin.apps.length) {
 
 const adminAuth = admin.auth(adminApp);
 const adminStorage = admin.storage(adminApp);
-const canInitializeAdmin = hasServiceAccount;
+
 
 export { adminApp, adminAuth, adminStorage, canInitializeAdmin };

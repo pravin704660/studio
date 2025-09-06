@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where, Timestamp, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -70,13 +70,25 @@ export default function ManageMegaWinTournamentsPage() {
     setLoading(true);
     try {
       const tournamentsCollection = collection(db, "tournaments");
+      // Query for mega tournaments specifically for efficiency, if indexing is not an issue.
+      // If it is, fetch all and filter client-side.
       const q = query(tournamentsCollection, where("isMega", "==", true));
       const tournamentsSnapshot = await getDocs(q);
       const newTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
       setTournaments(newTournaments);
     } catch (error) {
       console.error("Error fetching mega tournaments:", error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to fetch mega tournaments." });
+      // Fallback: Fetch all and filter client-side if query fails
+      try {
+        const tournamentsCollection = collection(db, "tournaments");
+        const tournamentsSnapshot = await getDocs(tournamentsCollection);
+        const allTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+        const megaTournaments = allTournaments.filter(t => t.isMega);
+        setTournaments(megaTournaments);
+      } catch (fallbackError) {
+         console.error("Fallback error fetching mega tournaments:", fallbackError);
+         toast({ variant: "destructive", title: "Error", description: "Failed to fetch mega tournaments." });
+      }
     } finally {
       setLoading(false);
     }
@@ -316,5 +328,3 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
-
-    
