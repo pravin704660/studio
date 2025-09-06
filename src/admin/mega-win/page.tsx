@@ -70,25 +70,14 @@ export default function ManageMegaWinTournamentsPage() {
     setLoading(true);
     try {
       const tournamentsCollection = collection(db, "tournaments");
-      // Query for mega tournaments specifically for efficiency, if indexing is not an issue.
-      // If it is, fetch all and filter client-side.
-      const q = query(tournamentsCollection, where("isMega", "==", true));
-      const tournamentsSnapshot = await getDocs(q);
-      const newTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
-      setTournaments(newTournaments);
+      // Fetch all documents and filter on the client side to avoid index issues.
+      const tournamentsSnapshot = await getDocs(tournamentsCollection);
+      const allTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+      const megaTournaments = allTournaments.filter(t => t.isMega);
+      setTournaments(megaTournaments);
     } catch (error) {
-      console.error("Error fetching mega tournaments:", error);
-      // Fallback: Fetch all and filter client-side if query fails
-      try {
-        const tournamentsCollection = collection(db, "tournaments");
-        const tournamentsSnapshot = await getDocs(tournamentsCollection);
-        const allTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
-        const megaTournaments = allTournaments.filter(t => t.isMega);
-        setTournaments(megaTournaments);
-      } catch (fallbackError) {
-         console.error("Fallback error fetching mega tournaments:", fallbackError);
-         toast({ variant: "destructive", title: "Error", description: "Failed to fetch mega tournaments." });
-      }
+       console.error("Error fetching mega tournaments:", error);
+       toast({ variant: "destructive", title: "Error", description: "Failed to fetch mega tournaments." });
     } finally {
       setLoading(false);
     }
