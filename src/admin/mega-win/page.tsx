@@ -3,8 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where, Timestamp, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
-import { db, storage } from "@/lib/firebase/client";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db } from "@/lib/firebase/client";
 import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
@@ -36,7 +35,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const PAGE_SIZE = 10;
 
-const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string } = {
+const initialFormData: Omit<TournamentFormData, 'id' | 'date' | 'imageUrl'> & { date: string } = {
   title: "",
   gameType: "Solo",
   date: "",
@@ -45,7 +44,6 @@ const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string 
   slots: 100,
   prize: 0,
   rules: '',
-  imageUrl: "",
   status: "draft",
   isMega: true,
 };
@@ -66,7 +64,6 @@ export default function ManageMegaWinTournamentsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || userProfile?.role !== "admin")) {
@@ -136,12 +133,6 @@ export default function ManageMegaWinTournamentsPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-          setImageFile(e.target.files[0]);
-      }
-  };
-
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.title || !formData.date || !formData.time) {
@@ -152,27 +143,17 @@ export default function ManageMegaWinTournamentsPage() {
     setIsSubmitting(true);
 
     try {
-      let imageUrl = "https://picsum.photos/600/400";
-      
-      if (imageFile) {
-        const storageRef = ref(storage, `tournaments/${Date.now()}_${imageFile.name}`);
-        const snapshot = await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(snapshot.ref);
-      }
-      
       const tournamentDataForAction = {
         ...formData,
-        imageUrl,
         isMega: true,
       };
       
-      const result = await createOrUpdateTournament(tournamentDataForAction);
+      const result = await createOrUpdateTournament(tournamentDataForAction as TournamentFormData);
 
       if (result.success) {
         toast({ title: "Success", description: "Mega Tournament saved successfully." });
         setIsDialogOpen(false);
         setFormData(initialFormData);
-        setImageFile(null);
         refreshTournaments();
       } else {
         throw new Error(result.error || "Failed to create tournament.");
@@ -251,11 +232,6 @@ export default function ManageMegaWinTournamentsPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="title">Title</Label>
                                 <Input id="title" name="title" value={formData.title} onChange={handleFormChange} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="image">Image</Label>
-                                <Input id="image" name="imageFile" type="file" accept="image/*" onChange={handleImageChange} />
-                                 <p className="text-xs text-muted-foreground">Upload an image file from your computer.</p>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="date">Date</Label>

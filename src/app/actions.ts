@@ -1,6 +1,7 @@
 
 "use server";
 
+import { adminDb, adminStorage, canInitializeAdmin } from "@/lib/firebase/server";
 import { db } from "@/lib/firebase/client";
 import {
   doc,
@@ -107,13 +108,14 @@ export async function createOrUpdateTournament(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     
-    const tournamentCollection = collection(db, 'tournaments');
+    const tournamentCollection = collection(adminDb, 'tournaments');
     const newTournamentRef = doc(tournamentCollection);
 
     const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
     
     const finalData = {
       ...tournamentData,
+      imageUrl: "https://picsum.photos/600/400", // Always use a placeholder
       rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules).split('\n'),
       date: firestoreDate,
       id: newTournamentRef.id,
@@ -227,8 +229,13 @@ export async function deleteUserNotification(notificationId: string, userId: str
 
         const notification = notifDoc.data() as Notification;
 
+        // Admins can delete any user's notification, users can only delete their own.
+        // This logic might need adjustment based on requirements.
         if (notification.userId !== userId) {
-            return { success: false, error: "You do not have permission to delete this notification." };
+            const userDoc = await getDoc(doc(db, "users", userId));
+            if (!userDoc.exists() || (userDoc.data() as UserProfile).role !== 'admin') {
+               return { success: false, error: "You do not have permission to delete this notification." };
+            }
         }
 
         await deleteDoc(notifDocRef);
