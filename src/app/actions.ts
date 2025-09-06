@@ -1,7 +1,7 @@
 
 "use server";
 
-import { adminDb, adminStorage, canInitializeAdmin } from "@/lib/firebase/server";
+import { adminStorage, canInitializeAdmin } from "@/lib/firebase/server";
 import { db } from "@/lib/firebase/client";
 import {
   doc,
@@ -107,7 +107,6 @@ export async function createOrUpdateTournament(
   tournamentData: TournamentFormData
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    
     const tournamentCollection = collection(db, 'tournaments');
     const newTournamentRef = doc(tournamentCollection);
 
@@ -115,7 +114,7 @@ export async function createOrUpdateTournament(
     
     const finalData = {
       ...tournamentData,
-      imageUrl: "https://picsum.photos/600/400", // Always use a placeholder
+      imageUrl: "https://picsum.photos/600/400",
       rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules).split('\n'),
       date: firestoreDate,
       id: newTournamentRef.id,

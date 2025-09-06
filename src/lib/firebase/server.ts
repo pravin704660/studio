@@ -13,26 +13,23 @@ const firebaseConfig = {
   appId: "1:724343463324:web:6cd4d755ea96d9f65b3c59"
 };
 
-// Check if the required environment variables are set.
-const hasServiceAccount = process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY;
+const hasServiceAccount = process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_PROJECT_ID;
 
 let adminApp: admin.app.App;
 
 if (!admin.apps.length) {
     if (hasServiceAccount) {
         const serviceAccount = {
-            project_id: firebaseConfig.projectId,
-            client_email: process.env.FIREBASE_CLIENT_EMAIL,
-            private_key: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
         };
-
         adminApp = admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
             storageBucket: firebaseConfig.storageBucket,
         });
     } else {
-        console.warn("Firebase Admin SDK not initialized with credentials. Using default initialization.");
-        // Initialize without credentials. Some admin features might not work.
+        console.warn("Firebase Admin SDK credentials not found. Initializing with default config. Some admin features like file uploads might not work.");
         adminApp = admin.initializeApp({
             storageBucket: firebaseConfig.storageBucket,
         });
@@ -41,11 +38,8 @@ if (!admin.apps.length) {
     adminApp = admin.app();
 }
 
-const adminAuth = adminApp.auth();
-const adminDb = adminApp.firestore();
-const adminStorage = adminApp.storage();
-
-// A flag to check if admin SDK was initialized with full credentials
+const adminAuth = admin.auth(adminApp);
+const adminStorage = admin.storage(adminApp);
 const canInitializeAdmin = hasServiceAccount;
 
-export { adminApp, adminAuth, adminDb, adminStorage, canInitializeAdmin };
+export { adminApp, adminAuth, adminStorage, canInitializeAdmin };
