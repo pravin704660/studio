@@ -32,8 +32,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const PAGE_SIZE = 10;
-
 const initialFormData: Omit<TournamentFormData, 'id' | 'date' | 'imageUrl'> & { date: string } = {
   title: "",
   gameType: "Solo",
@@ -54,10 +52,7 @@ export default function ManageTournamentsPage() {
 
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
@@ -69,49 +64,24 @@ export default function ManageTournamentsPage() {
     }
   }, [user, userProfile, authLoading, router]);
 
-  const fetchTournaments = async (initial = false) => {
-    if (initial) {
-        setLoading(true);
-        setTournaments([]);
-        setLastDoc(null);
-        setHasMore(true);
-    } else {
-        setLoadingMore(true);
-    }
-
+  const fetchTournaments = async () => {
+    setLoading(true);
     try {
         const tournamentsCollection = collection(db, "tournaments");
-        let q;
-        if (lastDoc && !initial) {
-            q = query(tournamentsCollection, startAfter(lastDoc), limit(PAGE_SIZE * 2));
-        } else {
-            q = query(tournamentsCollection, limit(PAGE_SIZE * 2));
-        }
-
+        const q = query(tournamentsCollection, where("isMega", "==", false));
         const tournamentsSnapshot = await getDocs(q);
-        const allFetchedTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
-
-        const newTournaments = allFetchedTournaments.filter(t => t.isMega === false || t.isMega === undefined);
-
-        const lastVisible = tournamentsSnapshot.docs[tournamentsSnapshot.docs.length - 1];
-        setLastDoc(lastVisible);
-
-        if (tournamentsSnapshot.docs.length < PAGE_SIZE * 2) {
-            setHasMore(false);
-        }
-
-        setTournaments(prev => initial ? newTournaments : [...prev, ...newTournaments]);
+        const newTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+        setTournaments(newTournaments);
     } catch (error) {
         console.error("Error fetching tournaments:", error);
         toast({ variant: "destructive", title: "Error", description: "Failed to fetch tournaments." });
     } finally {
         setLoading(false);
-        setLoadingMore(false);
     }
   };
   
   const refreshTournaments = () => {
-    fetchTournaments(true);
+    fetchTournaments();
   }
 
   useEffect(() => {
@@ -329,13 +299,6 @@ export default function ManageTournamentsPage() {
                   ))}
                 </TableBody>
               </Table>
-              {hasMore && (
-                <div className="mt-6 flex justify-center">
-                    <Button onClick={() => fetchTournaments()} disabled={loadingMore}>
-                        {loadingMore ? <Spinner /> : "Load More"}
-                    </Button>
-                </div>
-              )}
             </>
           )}
         </div>
