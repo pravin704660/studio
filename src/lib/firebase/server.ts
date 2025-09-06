@@ -14,15 +14,14 @@ const firebaseConfig = {
 };
 
 // Check if the required environment variables are set.
-// If not, we cannot initialize the admin SDK.
-const canInitializeAdmin = process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY;
+const hasServiceAccount = process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY;
 
 let adminApp: admin.app.App;
 
 if (!admin.apps.length) {
-    if (canInitializeAdmin) {
+    if (hasServiceAccount) {
         const serviceAccount = {
-            project_id: firebaseConfig.projectId, // Using projectId from firebaseConfig
+            project_id: firebaseConfig.projectId,
             client_email: process.env.FIREBASE_CLIENT_EMAIL,
             private_key: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
         };
@@ -32,9 +31,11 @@ if (!admin.apps.length) {
             storageBucket: firebaseConfig.storageBucket,
         });
     } else {
-        console.warn("Firebase Admin SDK not initialized. Missing FIREBASE_CLIENT_EMAIL or FIREBASE_PRIVATE_KEY.");
-        // Create a dummy app to avoid crashing the server, but it won't be functional.
-        adminApp = admin.initializeApp();
+        console.warn("Firebase Admin SDK not initialized with credentials. Using default initialization.");
+        // Initialize without credentials. Some admin features might not work.
+        adminApp = admin.initializeApp({
+            storageBucket: firebaseConfig.storageBucket,
+        });
     }
 } else {
     adminApp = admin.app();
@@ -43,5 +44,8 @@ if (!admin.apps.length) {
 const adminAuth = adminApp.auth();
 const adminDb = adminApp.firestore();
 const adminStorage = adminApp.storage();
+
+// A flag to check if admin SDK was initialized with full credentials
+const canInitializeAdmin = hasServiceAccount;
 
 export { adminApp, adminAuth, adminDb, adminStorage, canInitializeAdmin };
