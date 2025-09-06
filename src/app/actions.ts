@@ -2,7 +2,6 @@
 "use server";
 
 import { db } from "@/lib/firebase/client";
-import { adminStorage, canInitializeAdmin } from "@/lib/firebase/server";
 import {
   doc,
   runTransaction,
@@ -104,45 +103,9 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 }
 
 export async function createOrUpdateTournament(
-  formData: FormData
+  tournamentData: TournamentFormData
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const tournamentDataString = formData.get('tournamentData') as string | null;
-    if (!tournamentDataString) {
-      return { success: false, error: 'Tournament data is missing.' };
-    }
-    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
-    
-    const imageFile = formData.get('imageFile') as File | null;
-    let imageUrl = tournamentData.imageUrl || "https://picsum.photos/600/400";
-
-    if (imageFile && imageFile.size > 0) {
-      if (!canInitializeAdmin) {
-          return { success: false, error: "File upload is not configured on the server. Please contact support." };
-      }
-      const storagePath = `tournaments/${Date.now()}_${imageFile.name}`;
-      const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
-      
-      const bucket = adminStorage.bucket();
-      const file = bucket.file(storagePath);
-
-      // We use a write stream to upload the buffer
-      const stream = file.createWriteStream({
-        metadata: {
-          contentType: imageFile.type,
-        },
-      });
-      
-      await new Promise((resolve, reject) => {
-          stream.on('error', reject);
-          stream.on('finish', resolve);
-          stream.end(imageBuffer);
-      });
-      
-      // Make the file public and get the URL
-      await file.makePublic();
-      imageUrl = file.publicUrl();
-    }
     
     const tournamentCollection = collection(db, 'tournaments');
     const newTournamentRef = doc(tournamentCollection);
@@ -152,7 +115,6 @@ export async function createOrUpdateTournament(
     const finalData = {
       ...tournamentData,
       rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules).split('\n'),
-      imageUrl,
       date: firestoreDate,
       id: newTournamentRef.id,
     };

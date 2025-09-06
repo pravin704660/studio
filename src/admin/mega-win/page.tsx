@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where, Timestamp, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { db, storage } from "@/lib/firebase/client";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
@@ -151,18 +152,21 @@ export default function ManageMegaWinTournamentsPage() {
     setIsSubmitting(true);
 
     try {
-      const data = new FormData();
+      let imageUrl = "https://picsum.photos/600/400";
+      
       if (imageFile) {
-        data.append('imageFile', imageFile);
+        const storageRef = ref(storage, `tournaments/${Date.now()}_${imageFile.name}`);
+        const snapshot = await uploadBytes(storageRef, imageFile);
+        imageUrl = await getDownloadURL(snapshot.ref);
       }
       
       const tournamentDataForAction = {
         ...formData,
+        imageUrl,
         isMega: true,
       };
-      data.append('tournamentData', JSON.stringify(tournamentDataForAction));
       
-      const result = await createOrUpdateTournament(data);
+      const result = await createOrUpdateTournament(tournamentDataForAction);
 
       if (result.success) {
         toast({ title: "Success", description: "Mega Tournament saved successfully." });
