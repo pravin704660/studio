@@ -1,3 +1,4 @@
+
 import admin from "firebase-admin";
 import { config } from 'dotenv';
 
@@ -12,19 +13,29 @@ const firebaseConfig = {
   appId: "1:724343463324:web:6cd4d755ea96d9f65b3c59"
 };
 
-const serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-};
+// Check if the required environment variables are set.
+// If not, we cannot initialize the admin SDK.
+const canInitializeAdmin = process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY;
 
 let adminApp: admin.app.App;
 
 if (!admin.apps.length) {
-    adminApp = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        storageBucket: firebaseConfig.storageBucket,
-    });
+    if (canInitializeAdmin) {
+        const serviceAccount = {
+            project_id: firebaseConfig.projectId, // Using projectId from firebaseConfig
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
+            private_key: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+        };
+
+        adminApp = admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            storageBucket: firebaseConfig.storageBucket,
+        });
+    } else {
+        console.warn("Firebase Admin SDK not initialized. Missing FIREBASE_CLIENT_EMAIL or FIREBASE_PRIVATE_KEY.");
+        // Create a dummy app to avoid crashing the server, but it won't be functional.
+        adminApp = admin.initializeApp();
+    }
 } else {
     adminApp = admin.app();
 }
