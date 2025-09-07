@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase/client";
-import { collection, query, where, onSnapshot, orderBy, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, Timestamp } from "firebase/firestore";
 import type { Notification } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Bell, Mail, Trash2 } from "lucide-react";
@@ -49,19 +49,20 @@ export default function NotificationBell() {
   useEffect(() => {
     if (authLoading || !user || !userProfile) return;
 
-    // Use a single query with 'in' to fetch both user-specific and global notifications
+    const twentyFourHoursAgo = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
+
     const notificationsQuery = query(
       collection(db, "notifications"),
       where("userId", "in", [user.uid, "all"]),
+      where("timestamp", ">=", twentyFourHoursAgo),
       orderBy("timestamp", "desc")
     );
 
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-        setError(null); // Clear previous errors on new data
+        setError(null);
         const fetchedNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
         setNotifications(fetchedNotifications);
         
-        // Recalculate unread count based on the new data
         let localSeenGlobalIds = new Set<string>();
         try {
             const storedIds = localStorage.getItem(SEEN_GLOBAL_NOTIFS_KEY);
@@ -89,7 +90,6 @@ export default function NotificationBell() {
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
     if (open && user) {
-        // Mark user-specific notifications as read in Firestore
         const unreadUserNotifications = notifications.filter(
             (n) => n.userId === user.uid && !n.isRead
         );
@@ -104,7 +104,6 @@ export default function NotificationBell() {
             }
         }
 
-        // Mark global notifications as seen in localStorage
         const currentSeenIds = new Set(seenGlobalIds);
         const newGlobalIdsToSee = notifications
             .filter(n => n.userId === "all" && !currentSeenIds.has(n.id))
@@ -120,7 +119,6 @@ export default function NotificationBell() {
             }
         }
         
-        // After opening, the count should be zero
         setUnreadCount(0);
     }
   };
@@ -193,7 +191,7 @@ export default function NotificationBell() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground">No notifications yet.</p>
+              <p className="text-center text-muted-foreground">No new notifications.</p>
             )}
           </div>
         </ScrollArea>

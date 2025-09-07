@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase/client";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, Timestamp } from "firebase/firestore";
 import type { Notification } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,9 +44,12 @@ export default function InboxScreen({ setActiveScreen }: InboxScreenProps) {
       return;
     }
 
+    const twentyFourHoursAgo = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
+
     const q = query(
       collection(db, "notifications"),
       where("userId", "in", [user.uid, "all"]),
+      where("timestamp", ">=", twentyFourHoursAgo),
       orderBy("timestamp", "desc")
     );
 
@@ -138,7 +141,7 @@ export default function InboxScreen({ setActiveScreen }: InboxScreenProps) {
               <Inbox className="h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">Your inbox is empty</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                You'll find messages and announcements here.
+                You'll find new messages and announcements here.
               </p>
             </div>
           )}
