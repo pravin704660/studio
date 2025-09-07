@@ -2,6 +2,7 @@
 "use server";
 
 import { db } from "@/lib/firebase/client";
+import { adminStorage } from "@/lib/firebase/server";
 import {
   doc,
   runTransaction,
@@ -111,12 +112,28 @@ export async function createOrUpdateTournament(
       throw new Error("Tournament data is missing.");
     }
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
+    const imageFile = formData.get('imageFile') as File | null;
+    let imageUrl = "https://picsum.photos/600/400"; // Default image
 
-    // const imageFile = formData.get('imageFile') as File | null;
-    // let imageUrl = tournamentData.imageUrl || "https://picsum.photos/600/400";
-    
-    // TODO: Implement image upload to Firebase Storage if imageFile exists
-    // For now, we will use a placeholder.
+    if (imageFile) {
+        const bucket = adminStorage.bucket();
+        const fileName = `${uuidv4()}-${imageFile.name}`;
+        const file = bucket.file(`tournaments/${fileName}`);
+        const fileBuffer = Buffer.from(await imageFile.arrayBuffer());
+
+        await file.save(fileBuffer, {
+            metadata: {
+                contentType: imageFile.type,
+            },
+        });
+        
+        // Get public URL
+        const [url] = await file.getSignedUrl({
+            action: 'read',
+            expires: '03-09-2491' // A very long expiry date
+        });
+        imageUrl = url;
+    }
 
     if (!tournamentData.date || !tournamentData.time) {
       throw new Error("Date and time are required.");
@@ -135,7 +152,7 @@ export async function createOrUpdateTournament(
       rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules || '').split('\n'),
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
-      imageUrl: "https://picsum.photos/600/400",
+      imageUrl: imageUrl,
     };
     
     const tournamentCollection = collection(db, 'tournaments');
@@ -247,8 +264,6 @@ export async function deleteUserNotification(notificationId: string, userId: str
 
         const notification = notifDoc.data() as Notification;
 
-        // Admins can delete any user's notification, users can only delete their own.
-        // This logic might need adjustment based on requirements.
         if (notification.userId !== userId) {
             const userDoc = await getDoc(doc(db, "users", userId));
             if (!userDoc.exists() || (userDoc.data() as UserProfile).role !== 'admin') {
@@ -278,7 +293,5 @@ export async function updateUserProfileName(userId: string, newName: string): Pr
     return { success: false, error: "Failed to update name." };
   }
 }
-
-    
 
     

@@ -31,10 +31,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 
 const PAGE_SIZE = 10;
 
-const initialFormData: Omit<TournamentFormData, 'id' | 'date' | 'imageUrl'> & { date: string } = {
+const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string } = {
   title: "",
   gameType: "Solo",
   date: "",
@@ -84,25 +85,27 @@ export default function ManageTournamentsPage() {
         const tournamentsCollection = collection(db, "tournaments");
         let q;
         if (lastDoc && !initial) {
-            q = query(tournamentsCollection, where("isMega", "==", false), orderBy("date", "desc"), startAfter(lastDoc), limit(PAGE_SIZE));
+            q = query(tournamentsCollection, orderBy("date", "desc"), startAfter(lastDoc), limit(PAGE_SIZE));
         } else {
-            q = query(tournamentsCollection, where("isMega", "==", false), orderBy("date", "desc"), limit(PAGE_SIZE));
+            q = query(tournamentsCollection, orderBy("date", "desc"), limit(PAGE_SIZE));
         }
 
         const tournamentsSnapshot = await getDocs(q);
-        const newTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+        
+        const allTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+        const newTournaments = allTournaments.filter(t => !t.isMega);
 
         const lastVisible = tournamentsSnapshot.docs[tournamentsSnapshot.docs.length - 1];
         setLastDoc(lastVisible);
 
-        if (newTournaments.length < PAGE_SIZE) {
+        if (tournamentsSnapshot.docs.length < PAGE_SIZE) {
             setHasMore(false);
         }
 
         setTournaments(prev => initial ? newTournaments : [...prev, ...newTournaments]);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error fetching tournaments:", error);
-        toast({ variant: "destructive", title: "Error", description: "Failed to fetch tournaments. Please ensure Firestore indexes are created." });
+        toast({ variant: "destructive", title: "Error", description: `Failed to fetch tournaments. ${error.message}` });
     } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -119,7 +122,7 @@ export default function ManageTournamentsPage() {
     }
   }, [userProfile]);
   
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -210,7 +213,6 @@ export default function ManageTournamentsPage() {
     if (date instanceof Date) {
       return date.toLocaleDateString();
     }
-    // Handle ISO string or other string formats
     const parsedDate = new Date(date);
     if (!isNaN(parsedDate.getTime())) {
       return parsedDate.toLocaleDateString();
@@ -259,6 +261,10 @@ export default function ManageTournamentsPage() {
                               <Label htmlFor="time">Time</Label>
                               <Input id="time" name="time" type="time" value={formData.time} onChange={handleFormChange} />
                           </div>
+                           <div className="space-y-2">
+                                <Label htmlFor="rules">Rules (one per line)</Label>
+                                <Textarea id="rules" name="rules" value={formData.rules as string} onChange={handleFormChange} rows={4} />
+                            </div>
                           <div className="space-y-2">
                               <Label htmlFor="entryFee">Entry Fee</Label>
                               <Input id="entryFee" name="entryFee" type="number" value={formData.entryFee} onChange={handleFormChange} />
