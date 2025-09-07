@@ -35,6 +35,7 @@ export interface Tournament {
 }
 
 export interface TournamentFormData {
+  id?: string;
   title: string;
   gameType: string;
   date: string;
@@ -45,6 +46,7 @@ export interface TournamentFormData {
   rules: string[] | string;
   status: 'published' | 'draft' | 'cancelled' | 'completed' | 'live';
   isMega?: boolean;
+  imageUrl?: string;
   roomId?: string;
   roomPassword?: string;
   winnerPrizes?: {

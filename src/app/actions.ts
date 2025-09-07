@@ -117,7 +117,7 @@ export async function createOrUpdateTournament(
     }
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
     const imageFile = formData.get('imageFile') as File | null;
-    let imageUrl = ""; 
+    let imageUrl = tournamentData.imageUrl || "";
 
     if (imageFile) {
         const bucket = adminStorage.bucket();
@@ -136,7 +136,8 @@ export async function createOrUpdateTournament(
             expires: '03-09-2491'
         });
         imageUrl = url;
-    } else {
+    } else if (!imageUrl) {
+        // Only set default if no image URL is present from an existing tournament
         if (tournamentData.isMega) {
             imageUrl = "https://picsum.photos/600/400?random=1";
         } else {
@@ -150,7 +151,7 @@ export async function createOrUpdateTournament(
     
     const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
 
-    const finalData = {
+    const finalData: Omit<Tournament, 'id'> = {
       title: tournamentData.title || "",
       gameType: tournamentData.gameType || "Solo",
       date: firestoreDate,
@@ -158,17 +159,21 @@ export async function createOrUpdateTournament(
       entryFee: tournamentData.entryFee || 0,
       slots: tournamentData.slots || 100,
       prize: tournamentData.prize || 0,
-      rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules || '').split('\n'),
+      rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules || '').split('\n').filter(r => r.trim() !== ''),
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
       imageUrl: imageUrl,
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
-      winnerPrizes: tournamentData.winnerPrizes || {},
+      winnerPrizes: tournamentData.winnerPrizes || { first: 0, second: 0, third: 0, fourth: 0 },
     };
     
-    const tournamentCollection = collection(db, 'tournaments');
-    await addDoc(tournamentCollection, finalData);
+    if (tournamentData.id) {
+        const tournamentDocRef = doc(db, 'tournaments', tournamentData.id);
+        await setDoc(tournamentDocRef, finalData, { merge: true });
+    } else {
+        await addDoc(collection(db, 'tournaments'), finalData);
+    }
     
     return { success: true };
   } catch (error: any) {
