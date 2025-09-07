@@ -72,6 +72,7 @@ export default function ManageMegaWinTournamentsPage() {
       const tournamentsCollection = collection(db, "tournaments");
       const tournamentsSnapshot = await getDocs(tournamentsCollection);
       const allTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+      // Filter on the client-side to avoid composite indexes
       const megaTournaments = allTournaments.filter(t => t.isMega);
       setTournaments(megaTournaments);
     } catch (error) {

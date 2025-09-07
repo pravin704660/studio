@@ -70,6 +70,7 @@ export default function ManageTournamentsPage() {
         const tournamentsCollection = collection(db, "tournaments");
         const tournamentsSnapshot = await getDocs(tournamentsCollection);
         const allTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
+        // Filter on the client-side to avoid composite indexes
         const regularTournaments = allTournaments.filter(t => !t.isMega);
         setTournaments(regularTournaments);
     } catch (error) {
