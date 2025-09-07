@@ -274,12 +274,22 @@ export async function deleteUserNotification(notificationId: string, userId: str
 
         const notification = notifDoc.data() as Notification;
 
-        if (notification.userId !== userId) {
+        // Allow deleting personal notifications, or if the user is an admin
+        if (notification.userId !== userId && notification.userId !== 'all') {
             const userDoc = await getDoc(doc(db, "users", userId));
             if (!userDoc.exists() || (userDoc.data() as UserProfile).role !== 'admin') {
                return { success: false, error: "You do not have permission to delete this notification." };
             }
         }
+
+        // Prevent non-admins from deleting global notifications
+        if (notification.userId === 'all') {
+             const userDoc = await getDoc(doc(db, "users", userId));
+            if (!userDoc.exists() || (userDoc.data() as UserProfile).role !== 'admin') {
+               return { success: false, error: "You cannot delete global announcements." };
+            }
+        }
+
 
         await deleteDoc(notifDocRef);
         return { success: true };
@@ -309,6 +319,7 @@ export async function deleteUserNotifications(userId: string): Promise<{ success
         return { success: false, error: "User ID is required." };
     }
     try {
+        // This query only fetches user-specific notifications, not global ones.
         const q = query(collection(db, "notifications"), where("userId", "==", userId));
         const querySnapshot = await getDocs(q);
 

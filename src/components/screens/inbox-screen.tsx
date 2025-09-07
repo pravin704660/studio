@@ -46,7 +46,7 @@ export default function InboxScreen({ setActiveScreen }: InboxScreenProps) {
 
     const q = query(
       collection(db, "notifications"),
-      where("userId", "==", user.uid),
+      where("userId", "in", [user.uid, "all"]),
       orderBy("timestamp", "desc")
     );
 
@@ -68,7 +68,7 @@ export default function InboxScreen({ setActiveScreen }: InboxScreenProps) {
     setIsClearing(true);
     const result = await deleteUserNotifications(user.uid);
     if (result.success) {
-      toast({ title: "Inbox Cleared", description: "All your messages have been deleted." });
+      toast({ title: "Inbox Cleared", description: "All your personal messages have been deleted." });
     } else {
       toast({ variant: "destructive", title: "Error", description: result.error });
     }
@@ -86,16 +86,16 @@ export default function InboxScreen({ setActiveScreen }: InboxScreenProps) {
         </div>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" disabled={notifications.length === 0 || isClearing}>
+            <Button variant="destructive" size="sm" disabled={notifications.filter(n => n.userId === user?.uid).length === 0 || isClearing}>
               <Trash2 className="mr-2 h-4 w-4" />
-              Clear All
+              Clear Personal
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete all messages in your inbox. This action cannot be undone.
+                This will permanently delete all your personal messages. Global announcements will not be affected. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -136,7 +136,7 @@ export default function InboxScreen({ setActiveScreen }: InboxScreenProps) {
               <Inbox className="h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">Your inbox is empty</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                You'll find messages from the admin here.
+                You'll find messages and announcements here.
               </p>
             </div>
           )}
