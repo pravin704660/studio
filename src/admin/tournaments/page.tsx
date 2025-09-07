@@ -118,7 +118,7 @@ export default function ManageTournamentsPage() {
     }
   }, [userProfile]);
   
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -336,5 +336,3 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
-
-    
