@@ -112,19 +112,19 @@ export async function createOrUpdateTournament(
     if (!tournamentData.date || !tournamentData.time) {
       throw new Error("Date and time are required.");
     }
-
-    const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
     
+    const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
+
     const finalData = {
-      title: tournamentData.title ?? "",
-      gameType: tournamentData.gameType ?? "Solo",
+      title: tournamentData.title || "",
+      gameType: tournamentData.gameType || "Solo",
       date: firestoreDate,
-      time: tournamentData.time ?? "",
-      entryFee: tournamentData.entryFee ?? 0,
-      slots: tournamentData.slots ?? 100,
-      prize: tournamentData.prize ?? 0,
+      time: tournamentData.time || "",
+      entryFee: tournamentData.entryFee || 0,
+      slots: tournamentData.slots || 100,
+      prize: tournamentData.prize || 0,
       rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules || '').split('\n'),
-      status: tournamentData.status ?? "draft",
+      status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
       imageUrl: "https://picsum.photos/600/400",
     };
