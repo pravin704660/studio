@@ -109,7 +109,10 @@ export async function createOrUpdateTournament(
     const tournamentCollection = collection(db, 'tournaments');
     const newTournamentRef = doc(tournamentCollection);
 
-    // Ensure date and time are correctly combined
+    if (!tournamentData.date || !tournamentData.time) {
+      throw new Error("Date and time are required.");
+    }
+
     const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
     
     const finalData = {
@@ -265,5 +268,3 @@ export async function updateUserProfileName(userId: string, newName: string): Pr
     return { success: false, error: "Failed to update name." };
   }
 }
-
-    
