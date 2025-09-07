@@ -43,15 +43,6 @@ export default function Home() {
     return <AuthForm />;
   }
   
-  const screenTitles: Record<Screen, string> = {
-      home: "",
-      wallet: "My Wallet",
-      "mega-result": "Mega Results",
-      tournaments: "My Tournaments",
-      profile: "",
-      rules: "Rules & Regulations"
-  }
-
   const getInitials = (name: string | null | undefined) => {
     if (!name || name === 'New User') return null;
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -93,7 +84,7 @@ export default function Home() {
             </Button>
           </div>
           <div className="flex-1 text-center">
-            <h1 className="text-xl font-bold tracking-tight">{screenTitles[activeScreen]}</h1>
+            <h1 className="text-lg font-bold tracking-tight text-yellow-400">PUBG1STAR TOURNAMENT</h1>
           </div>
           <div className="flex-1 flex justify-end items-center gap-2">
             <a href="https://shorturl.at/NbYgS" target="_blank" rel="noopener noreferrer">
