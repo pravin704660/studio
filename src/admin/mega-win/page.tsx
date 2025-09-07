@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { collection, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Tournament, TournamentFormData } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -131,7 +131,7 @@ export default function ManageMegaWinTournamentsPage() {
         throw new Error(result.error || "Failed to create tournament.");
       }
     } catch (error: any) {
-        console.error("Detailed Error:", error);
+        console.error("Detailed Error creating tournament:", error);
         let description = "An unknown error occurred. Please check the console for more details.";
         if (error.message) {
             description = error.message;
@@ -317,3 +317,5 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
+
+    

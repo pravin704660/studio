@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Tournament } from "@/lib/types";
 import TournamentCard from "@/components/tournament-card";
@@ -92,3 +92,5 @@ export default function HomeScreen() {
     </div>
   );
 }
+
+    

@@ -127,9 +127,10 @@ export async function createOrUpdateTournament(
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
       imageUrl: "https://picsum.photos/600/400",
+      id: newTournamentRef.id,
     };
     
-    await setDoc(newTournamentRef, { ...finalData, id: newTournamentRef.id });
+    await setDoc(newTournamentRef, finalData);
     
     return { success: true };
   } catch (error: any) {
@@ -268,3 +269,5 @@ export async function updateUserProfileName(userId: string, newName: string): Pr
     return { success: false, error: "Failed to update name." };
   }
 }
+
+    
