@@ -111,8 +111,7 @@ export async function createOrUpdateTournament(
 
     const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
     
-    const finalData: Omit<Tournament, 'date'> & { date: Timestamp } = {
-      id: newTournamentRef.id,
+    const finalData = {
       title: tournamentData.title,
       gameType: tournamentData.gameType,
       date: firestoreDate,
@@ -126,7 +125,7 @@ export async function createOrUpdateTournament(
       imageUrl: "https://picsum.photos/600/400",
     };
 
-    await setDoc(newTournamentRef, finalData);
+    await setDoc(newTournamentRef, { ...finalData, id: newTournamentRef.id });
     
     return { success: true };
   } catch (error: any) {
