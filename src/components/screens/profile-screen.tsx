@@ -8,14 +8,14 @@ import { signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, User, Mail, Shield, Gamepad2, Edit, Save, X, FileText } from "lucide-react";
+import { LogOut, User, Mail, Shield, Gamepad2, Edit, Save, X, FileText, Inbox } from "lucide-react";
 import Link from "next/link";
 import { Spinner } from "../ui/spinner";
 import { Input } from "../ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfileName } from "@/app/actions";
 
-type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile" | "rules";
+type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile" | "rules" | "inbox";
 
 interface ProfileScreenProps {
   setActiveScreen: (screen: Screen) => void;
@@ -144,6 +144,11 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
             <Button variant="outline" className="w-full" onClick={() => setActiveScreen('rules')}>
                 <FileText className="mr-2 h-4 w-4" />
                 Rules
+            </Button>
+            
+             <Button variant="outline" className="w-full" onClick={() => setActiveScreen('inbox')}>
+                <Inbox className="mr-2 h-4 w-4" />
+                Inbox
             </Button>
 
           <Button variant="destructive" className="w-full" onClick={handleLogout}>

@@ -14,6 +14,10 @@ import {
   Timestamp,
   getDoc,
   updateDoc,
+  query,
+  where,
+  getDocs,
+  writeBatch,
 } from "firebase/firestore";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type { Tournament, UserProfile, TournamentFormData, Notification } from "./lib/types";
@@ -135,9 +139,9 @@ export async function createOrUpdateTournament(
     } else {
         // Set default image based on tournament type
         if (tournamentData.isMega) {
-            imageUrl = "https://picsum.photos/seed/mega/600/400"; // Placeholder for Mega Tournament
+            imageUrl = "https://picsum.photos/600/400"; // Placeholder for Mega Tournament
         } else {
-            imageUrl = "https://picsum.photos/seed/regular/600/400"; // Placeholder for Regular Tournament
+            imageUrl = "https://picsum.photos/600/400"; // Placeholder for Regular Tournament
         }
     }
 
@@ -300,4 +304,27 @@ export async function updateUserProfileName(userId: string, newName: string): Pr
   }
 }
 
-    
+export async function deleteUserNotifications(userId: string): Promise<{ success: boolean; error?: string }> {
+    if (!userId) {
+        return { success: false, error: "User ID is required." };
+    }
+    try {
+        const q = query(collection(db, "notifications"), where("userId", "==", userId));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return { success: true }; // Nothing to delete
+        }
+        
+        const batch = writeBatch(db);
+        querySnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error deleting user notifications:", error);
+        return { success: false, error: "Failed to clear notifications." };
+    }
+}

@@ -17,8 +17,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
 import RulesScreen from "@/components/screens/rules-screen";
+import InboxScreen from "@/components/screens/inbox-screen";
 
-type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile" | "rules";
+type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile" | "rules" | "inbox";
 
 export default function Home() {
   const { user, userProfile, loading } = useAuth();
@@ -62,6 +63,8 @@ export default function Home() {
         return <ProfileScreen setActiveScreen={setActiveScreen} />;
       case "rules":
         return <RulesScreen setActiveScreen={setActiveScreen} />;
+      case "inbox":
+        return <InboxScreen setActiveScreen={setActiveScreen} />;
       default:
         return <HomeScreen />;
     }
