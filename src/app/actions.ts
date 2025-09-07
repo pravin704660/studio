@@ -109,9 +109,10 @@ export async function createOrUpdateTournament(
     const tournamentCollection = collection(db, 'tournaments');
     const newTournamentRef = doc(tournamentCollection);
 
+    // Ensure date and time are correctly combined
     const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
     
-    const finalData = {
+    const finalData: Omit<Tournament, 'id' | 'date'> & { date: Timestamp } = {
       title: tournamentData.title,
       gameType: tournamentData.gameType,
       date: firestoreDate,
@@ -119,14 +120,13 @@ export async function createOrUpdateTournament(
       entryFee: tournamentData.entryFee,
       slots: tournamentData.slots,
       prize: tournamentData.prize,
-      rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules).split('\n'),
+      rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules || '').split('\n'),
       status: tournamentData.status,
-      isMega: tournamentData.isMega,
+      isMega: tournamentData.isMega || false,
       imageUrl: "https://picsum.photos/600/400",
-      id: newTournamentRef.id,
     };
-
-    await setDoc(newTournamentRef, finalData);
+    
+    await setDoc(newTournamentRef, { ...finalData, id: newTournamentRef.id });
     
     return { success: true };
   } catch (error: any) {

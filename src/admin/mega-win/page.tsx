@@ -90,7 +90,7 @@ export default function ManageMegaWinTournamentsPage() {
     if (userProfile?.role === "admin") {
       fetchTournaments();
     }
-  }, [userProfile]);
+  }, [userProfile, toast]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
@@ -114,12 +114,12 @@ export default function ManageMegaWinTournamentsPage() {
     setIsSubmitting(true);
 
     try {
-      const tournamentDataForAction = {
+      const tournamentDataForAction: TournamentFormData = {
         ...formData,
         isMega: true,
       };
       
-      const result = await createOrUpdateTournament(tournamentDataForAction as TournamentFormData);
+      const result = await createOrUpdateTournament(tournamentDataForAction);
 
       if (result.success) {
         toast({ title: "Success", description: "Mega Tournament saved successfully." });

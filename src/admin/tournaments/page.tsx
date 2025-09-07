@@ -88,7 +88,7 @@ export default function ManageTournamentsPage() {
     if (userProfile?.role === "admin") {
       refreshTournaments();
     }
-  }, [userProfile]);
+  }, [userProfile, toast]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -112,12 +112,12 @@ export default function ManageTournamentsPage() {
     setIsSubmitting(true);
     
     try {
-      const tournamentDataForAction = {
+      const tournamentDataForAction: TournamentFormData = {
         ...formData,
         isMega: false,
       };
 
-      const result = await createOrUpdateTournament(tournamentDataForAction as TournamentFormData);
+      const result = await createOrUpdateTournament(tournamentDataForAction);
 
       if (result.success) {
         toast({ title: "Success", description: "Tournament saved successfully." });
