@@ -138,9 +138,9 @@ export async function createOrUpdateTournament(
         imageUrl = url;
     } else {
         if (tournamentData.isMega) {
-            imageUrl = "https://picsum.photos/600/400";
+            imageUrl = "https://picsum.photos/600/400?random=1";
         } else {
-            imageUrl = "https://picsum.photos/600/400";
+            imageUrl = "https://picsum.photos/600/400?random=2";
         }
     }
 
@@ -164,6 +164,7 @@ export async function createOrUpdateTournament(
       imageUrl: imageUrl,
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
+      winnerPrizes: tournamentData.winnerPrizes || {},
     };
     
     const tournamentCollection = collection(db, 'tournaments');

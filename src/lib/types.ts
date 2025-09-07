@@ -26,6 +26,12 @@ export interface Tournament {
   isMega?: boolean;
   roomId?: string;
   roomPassword?: string;
+  winnerPrizes?: {
+    first?: number;
+    second?: number;
+    third?: number;
+    fourth?: number;
+  };
 }
 
 export interface TournamentFormData {
@@ -41,6 +47,12 @@ export interface TournamentFormData {
   isMega?: boolean;
   roomId?: string;
   roomPassword?: string;
+  winnerPrizes?: {
+    first?: number;
+    second?: number;
+    third?: number;
+    fourth?: number;
+  };
 }
 
 export interface Entry {

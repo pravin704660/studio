@@ -49,6 +49,12 @@ const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string 
   isMega: true,
   roomId: "",
   roomPassword: "",
+  winnerPrizes: {
+    first: 0,
+    second: 0,
+    third: 0,
+    fourth: 0,
+  }
 };
 
 
@@ -127,10 +133,21 @@ export default function ManageMegaWinTournamentsPage() {
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value 
-    }));
+    if (name.startsWith("prize-")) {
+      const prizeKey = name.split('-')[1] as keyof NonNullable<TournamentFormData['winnerPrizes']>;
+      setFormData(prev => ({
+        ...prev,
+        winnerPrizes: {
+          ...prev.winnerPrizes,
+          [prizeKey]: value === '' ? 0 : Number(value)
+        }
+      }));
+    } else {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value 
+      }));
+    }
   };
   
   const handleSelectChange = (name: string, value: string) => {
@@ -287,6 +304,26 @@ export default function ManageMegaWinTournamentsPage() {
                                 <div className="space-y-2">
                                     <Label htmlFor="roomPassword">Room Password</Label>
                                     <Input id="roomPassword" name="roomPassword" value={formData.roomPassword} onChange={handleFormChange} />
+                                </div>
+                            </div>
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="prize-first">1st Prize</Label>
+                                    <Input id="prize-first" name="prize-first" type="number" value={formData.winnerPrizes?.first || ''} onChange={handleFormChange} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="prize-second">2nd Prize</Label>
+                                    <Input id="prize-second" name="prize-second" type="number" value={formData.winnerPrizes?.second || ''} onChange={handleFormChange} />
+                                </div>
+                            </div>
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="prize-third">3rd Prize</Label>
+                                    <Input id="prize-third" name="prize-third" type="number" value={formData.winnerPrizes?.third || ''} onChange={handleFormChange} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="prize-fourth">4th Prize</Label>
+                                    <Input id="prize-fourth" name="prize-fourth" type="number" value={formData.winnerPrizes?.fourth || ''} onChange={handleFormChange} />
                                 </div>
                             </div>
                             <div className="space-y-2">
