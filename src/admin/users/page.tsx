@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import Link from "next/link";
-import { ArrowLeft, User, Shield, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowLeft, User, ShieldCheck, Wallet } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -26,7 +26,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -142,6 +141,7 @@ export default function ManageUsersPage() {
         title: "Error",
         description: "Failed to update user role.",
       });
+      refreshUsers(); // Refresh the list after a failed update as well
     }
   };
 
@@ -304,3 +304,5 @@ export default function ManageUsersPage() {
     </div>
   );
 }
+
+    
