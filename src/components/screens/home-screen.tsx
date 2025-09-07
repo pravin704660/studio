@@ -22,7 +22,7 @@ export default function HomeScreen() {
         const querySnapshot = await getDocs(collection(db, "tournaments"));
         const allTournaments = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
         
-        // Filter and sort on the client-side
+        // Filter and sort on the client-side to avoid composite indexes
         const publishedTournaments = allTournaments
           .filter(t => t.status === 'published')
           .sort((a, b) => b.date.toMillis() - a.date.toMillis());
@@ -92,3 +92,5 @@ export default function HomeScreen() {
     </div>
   );
 }
+
+    

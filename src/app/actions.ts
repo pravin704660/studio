@@ -112,16 +112,16 @@ export async function createOrUpdateTournament(
     // Ensure date and time are correctly combined
     const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
     
-    const finalData: Omit<Tournament, 'id' | 'date'> & { date: Timestamp } = {
-      title: tournamentData.title,
-      gameType: tournamentData.gameType,
+    const finalData = {
+      title: tournamentData.title ?? "",
+      gameType: tournamentData.gameType ?? "Solo",
       date: firestoreDate,
-      time: tournamentData.time,
-      entryFee: tournamentData.entryFee,
-      slots: tournamentData.slots,
-      prize: tournamentData.prize,
+      time: tournamentData.time ?? "",
+      entryFee: tournamentData.entryFee ?? 0,
+      slots: tournamentData.slots ?? 100,
+      prize: tournamentData.prize ?? 0,
       rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules || '').split('\n'),
-      status: tournamentData.status,
+      status: tournamentData.status ?? "draft",
       isMega: tournamentData.isMega || false,
       imageUrl: "https://picsum.photos/600/400",
     };
@@ -265,3 +265,5 @@ export async function updateUserProfileName(userId: string, newName: string): Pr
     return { success: false, error: "Failed to update name." };
   }
 }
+
+    
