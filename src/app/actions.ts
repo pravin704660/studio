@@ -266,3 +266,5 @@ export async function updateUserProfileName(userId: string, newName: string): Pr
     return { success: false, error: "Failed to update name." };
   }
 }
+
+    
