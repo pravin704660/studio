@@ -89,7 +89,7 @@ export default function ManageTournamentsPage() {
     if (userProfile?.role === "admin") {
       refreshTournaments();
     }
-  }, [userProfile, toast]);
+  }, [userProfile]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;

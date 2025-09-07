@@ -19,16 +19,14 @@ export default function HomeScreen() {
     const fetchTournaments = async () => {
       setLoading(true);
       try {
-        // Simplified query to avoid composite index requirement
-        const q = query(
-          collection(db, "tournaments"), 
-          orderBy("date", "desc")
-        );
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(collection(db, "tournaments"));
         const allTournaments = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
         
-        // Filter for published tournaments in the client-side code
-        const publishedTournaments = allTournaments.filter(t => t.status === 'published');
+        // Filter and sort on the client-side
+        const publishedTournaments = allTournaments
+          .filter(t => t.status === 'published')
+          .sort((a, b) => b.date.toMillis() - a.date.toMillis());
+          
         setTournaments(publishedTournaments);
 
       } catch (error) {

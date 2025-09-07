@@ -91,7 +91,7 @@ export default function ManageMegaWinTournamentsPage() {
     if (userProfile?.role === "admin") {
       fetchTournaments();
     }
-  }, [userProfile, toast]);
+  }, [userProfile]);
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
