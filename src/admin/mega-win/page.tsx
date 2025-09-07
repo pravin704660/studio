@@ -47,6 +47,8 @@ const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string 
   rules: '',
   status: "draft",
   isMega: true,
+  roomId: "",
+  roomPassword: "",
 };
 
 
@@ -87,19 +89,18 @@ export default function ManageMegaWinTournamentsPage() {
       const tournamentsCollection = collection(db, "tournaments");
       let q;
       if (lastDoc && !initial) {
-        q = query(tournamentsCollection, orderBy("date", "desc"), startAfter(lastDoc), limit(PAGE_SIZE));
+        q = query(tournamentsCollection, where("isMega", "==", true), orderBy("date", "desc"), startAfter(lastDoc), limit(PAGE_SIZE));
       } else {
-        q = query(tournamentsCollection, orderBy("date", "desc"), limit(PAGE_SIZE));
+        q = query(tournamentsCollection, where("isMega", "==", true), orderBy("date", "desc"), limit(PAGE_SIZE));
       }
       
       const tournamentsSnapshot = await getDocs(q);
-      const allTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
-      const newTournaments = allTournaments.filter(t => t.isMega);
+      const newTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
 
       const lastVisible = tournamentsSnapshot.docs[tournamentsSnapshot.docs.length - 1];
       setLastDoc(lastVisible);
 
-      if (tournamentsSnapshot.docs.length < PAGE_SIZE) {
+      if (newTournaments.length < PAGE_SIZE) {
         setHasMore(false);
       }
 
@@ -254,25 +255,39 @@ export default function ManageMegaWinTournamentsPage() {
                                 <Input id="image" name="imageFile" type="file" accept="image/*" onChange={handleImageChange} />
                                  <p className="text-xs text-muted-foreground">Upload an image file from your computer.</p>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="date">Date</Label>
-                                <Input id="date" name="date" type="date" value={formData.date} onChange={handleFormChange} />
-                            </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="time">Time</Label>
-                                <Input id="time" name="time" type="time" value={formData.time} onChange={handleFormChange} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="date">Date</Label>
+                                    <Input id="date" name="date" type="date" value={formData.date} onChange={handleFormChange} />
+                                </div>
+                                 <div className="space-y-2">
+                                    <Label htmlFor="time">Time</Label>
+                                    <Input id="time" name="time" type="time" value={formData.time} onChange={handleFormChange} />
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="rules">Rules (one per line)</Label>
                                 <Textarea id="rules" name="rules" value={formData.rules as string} onChange={handleFormChange} rows={4} />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="entryFee">Entry Fee</Label>
-                                <Input id="entryFee" name="entryFee" type="number" value={formData.entryFee} onChange={handleFormChange} />
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="entryFee">Entry Fee</Label>
+                                    <Input id="entryFee" name="entryFee" type="number" value={formData.entryFee} onChange={handleFormChange} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="prize">Prize Pool</Label>
+                                    <Input id="prize" name="prize" type="number" value={formData.prize} onChange={handleFormChange} />
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="prize">Prize Pool</Label>
-                                <Input id="prize" name="prize" type="number" value={formData.prize} onChange={handleFormChange} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="roomId">Room ID</Label>
+                                    <Input id="roomId" name="roomId" value={formData.roomId} onChange={handleFormChange} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="roomPassword">Room Password</Label>
+                                    <Input id="roomPassword" name="roomPassword" value={formData.roomPassword} onChange={handleFormChange} />
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="status">Status</Label>
@@ -377,5 +392,3 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
-
-    

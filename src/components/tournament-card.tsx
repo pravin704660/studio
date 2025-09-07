@@ -10,9 +10,15 @@ import { joinTournament } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { Spinner } from "./ui/spinner";
-import { Ticket, Trophy, Calendar } from "lucide-react";
+import { Ticket, Trophy, Calendar, KeyRound, UserCheck } from "lucide-react";
+import { Separator } from "./ui/separator";
 
-export default function TournamentCard({ tournament }: { tournament: Tournament }) {
+interface TournamentCardProps {
+    tournament: Tournament;
+    showCredentials?: boolean;
+}
+
+export default function TournamentCard({ tournament, showCredentials = false }: TournamentCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
@@ -89,10 +95,27 @@ export default function TournamentCard({ tournament }: { tournament: Tournament 
                 <span className="text-lg font-bold">{tournament.date.toDate().toLocaleDateString()}</span>
             </div>
         </div>
+        {showCredentials && (tournament.roomId || tournament.roomPassword) && (
+            <>
+                <Separator className="my-4" />
+                <div className="grid grid-cols-2 gap-4 text-center">
+                    <div className="flex flex-col items-center">
+                        <UserCheck className="h-6 w-6 text-blue-400" />
+                        <span className="mt-1 text-sm font-semibold">Room ID</span>
+                        <span className="text-lg font-bold">{tournament.roomId || "N/A"}</span>
+                    </div>
+                     <div className="flex flex-col items-center">
+                        <KeyRound className="h-6 w-6 text-purple-400" />
+                        <span className="mt-1 text-sm font-semibold">Password</span>
+                        <span className="text-lg font-bold">{tournament.roomPassword || "N/A"}</span>
+                    </div>
+                </div>
+            </>
+        )}
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining}>
-          {isJoining ? <Spinner /> : "Join Now"}
+        <Button className="w-full text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining || showCredentials}>
+          {isJoining ? <Spinner /> : (showCredentials ? "Joined" : "Join Now")}
         </Button>
       </CardFooter>
     </Card>

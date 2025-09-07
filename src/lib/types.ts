@@ -24,6 +24,8 @@ export interface Tournament {
   imageUrl: string;
   status: 'published' | 'draft' | 'cancelled' | 'completed' | 'live';
   isMega?: boolean;
+  roomId?: string;
+  roomPassword?: string;
 }
 
 export interface TournamentFormData {
@@ -37,6 +39,8 @@ export interface TournamentFormData {
   rules: string[] | string;
   status: 'published' | 'draft' | 'cancelled' | 'completed' | 'live';
   isMega?: boolean;
+  roomId?: string;
+  roomPassword?: string;
 }
 
 export interface Entry {

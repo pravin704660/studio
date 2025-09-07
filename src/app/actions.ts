@@ -137,11 +137,10 @@ export async function createOrUpdateTournament(
         });
         imageUrl = url;
     } else {
-        // Set default image based on tournament type
         if (tournamentData.isMega) {
-            imageUrl = "https://picsum.photos/600/400"; // Placeholder for Mega Tournament
+            imageUrl = "https://picsum.photos/600/400";
         } else {
-            imageUrl = "https://picsum.photos/600/400"; // Placeholder for Regular Tournament
+            imageUrl = "https://picsum.photos/600/400";
         }
     }
 
@@ -163,6 +162,8 @@ export async function createOrUpdateTournament(
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
       imageUrl: imageUrl,
+      roomId: tournamentData.roomId || "",
+      roomPassword: tournamentData.roomPassword || "",
     };
     
     const tournamentCollection = collection(db, 'tournaments');
@@ -274,7 +275,6 @@ export async function deleteUserNotification(notificationId: string, userId: str
 
         const notification = notifDoc.data() as Notification;
 
-        // Allow deleting personal notifications, or if the user is an admin
         if (notification.userId !== userId && notification.userId !== 'all') {
             const userDoc = await getDoc(doc(db, "users", userId));
             if (!userDoc.exists() || (userDoc.data() as UserProfile).role !== 'admin') {
@@ -282,7 +282,6 @@ export async function deleteUserNotification(notificationId: string, userId: str
             }
         }
 
-        // Prevent non-admins from deleting global notifications
         if (notification.userId === 'all') {
              const userDoc = await getDoc(doc(db, "users", userId));
             if (!userDoc.exists() || (userDoc.data() as UserProfile).role !== 'admin') {
@@ -319,12 +318,11 @@ export async function deleteUserNotifications(userId: string): Promise<{ success
         return { success: false, error: "User ID is required." };
     }
     try {
-        // This query only fetches user-specific notifications, not global ones.
         const q = query(collection(db, "notifications"), where("userId", "==", userId));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-            return { success: true }; // Nothing to delete
+            return { success: true }; 
         }
         
         const batch = writeBatch(db);

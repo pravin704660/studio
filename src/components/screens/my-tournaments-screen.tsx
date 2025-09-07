@@ -47,20 +47,18 @@ export default function MyTournamentsScreen() {
             } catch (error) {
                 console.error(`Failed to fetch tournament ${entry.tournamentId}:`, error);
             }
-            return null; // Return null if tournament not found or error occurs
+            return null;
         });
-
-        // Wait for all promises to resolve
+        
         const resolvedTournaments = await Promise.all(tournamentPromises);
-        // Filter out any null results
         const tournamentsData = resolvedTournaments.filter(t => t !== null) as JoinedTournament[];
         
         setJoinedTournaments(tournamentsData);
       } catch (error) {
         console.error("Error fetching joined tournaments:", error);
-        setJoinedTournaments([]); // Clear tournaments on error
+        setJoinedTournaments([]);
       } finally {
-        setLoading(false); // Always set loading to false in the end
+        setLoading(false);
       }
     };
 
@@ -68,7 +66,7 @@ export default function MyTournamentsScreen() {
   }, [user]);
 
   const upcoming = joinedTournaments.filter(t => t.status === 'published');
-  const live = joinedTournaments.filter(t => t.status === 'live'); // Assuming a 'live' status
+  const live = joinedTournaments.filter(t => t.status === 'live');
   const completed = joinedTournaments.filter(t => t.status === 'completed');
 
   const renderList = (tournaments: JoinedTournament[]) => {
@@ -83,7 +81,7 @@ export default function MyTournamentsScreen() {
       if (tournaments.length === 0) {
           return <p className="mt-8 text-center text-muted-foreground">No tournaments in this category.</p>;
       }
-      return tournaments.map(t => <TournamentCard key={t.id} tournament={t} />);
+      return tournaments.map(t => <TournamentCard key={t.id} tournament={t} showCredentials={true} />);
   }
 
   return (
