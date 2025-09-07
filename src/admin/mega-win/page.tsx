@@ -130,8 +130,8 @@ export default function ManageMegaWinTournamentsPage() {
         throw new Error(result.error || "Failed to create tournament.");
       }
     } catch (error: any) {
-        console.error("Error creating tournament:", error);
-        let description = "An unknown error occurred.";
+        console.error("Detailed Error:", error);
+        let description = "An unknown error occurred. Please check the console for more details.";
         if (error.message) {
             description = error.message;
         }
