@@ -103,11 +103,20 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 }
 
 export async function createOrUpdateTournament(
-  tournamentData: TournamentFormData
+  formData: FormData
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const tournamentCollection = collection(db, 'tournaments');
-    const newTournamentRef = doc(tournamentCollection);
+    const tournamentDataString = formData.get('tournamentData') as string;
+    if (!tournamentDataString) {
+      throw new Error("Tournament data is missing.");
+    }
+    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
+
+    // const imageFile = formData.get('imageFile') as File | null;
+    // let imageUrl = tournamentData.imageUrl || "https://picsum.photos/600/400";
+    
+    // TODO: Implement image upload to Firebase Storage if imageFile exists
+    // For now, we will use a placeholder.
 
     if (!tournamentData.date || !tournamentData.time) {
       throw new Error("Date and time are required.");
@@ -127,10 +136,10 @@ export async function createOrUpdateTournament(
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
       imageUrl: "https://picsum.photos/600/400",
-      id: newTournamentRef.id,
     };
     
-    await setDoc(newTournamentRef, finalData);
+    const tournamentCollection = collection(db, 'tournaments');
+    await addDoc(tournamentCollection, finalData);
     
     return { success: true };
   } catch (error: any) {
@@ -269,5 +278,7 @@ export async function updateUserProfileName(userId: string, newName: string): Pr
     return { success: false, error: "Failed to update name." };
   }
 }
+
+    
 
     

@@ -62,6 +62,7 @@ export default function ManageTournamentsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || userProfile?.role !== "admin")) {
@@ -129,6 +130,12 @@ export default function ManageTournamentsPage() {
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+        setImageFile(e.target.files[0]);
+    }
+  };
   
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -138,14 +145,26 @@ export default function ManageTournamentsPage() {
     }
     
     setIsSubmitting(true);
-    
+
     try {
-      const result = await createOrUpdateTournament(formData);
+      const data = new FormData();
+      if (imageFile) {
+        data.append('imageFile', imageFile);
+      }
+      
+      const tournamentDataForAction = {
+        ...formData,
+        isMega: false,
+      };
+      data.append('tournamentData', JSON.stringify(tournamentDataForAction));
+      
+      const result = await createOrUpdateTournament(data);
 
       if (result.success) {
         toast({ title: "Success", description: "Tournament saved successfully." });
         setIsDialogOpen(false);
         setFormData(initialFormData);
+        setImageFile(null);
         refreshTournaments();
       } else {
         throw new Error(result.error || "Failed to create tournament.");
@@ -226,6 +245,11 @@ export default function ManageTournamentsPage() {
                           <div className="space-y-2">
                               <Label htmlFor="title">Title</Label>
                               <Input id="title" name="title" value={formData.title} onChange={handleFormChange} />
+                          </div>
+                           <div className="space-y-2">
+                              <Label htmlFor="image">Image</Label>
+                              <Input id="image" name="imageFile" type="file" accept="image/*" onChange={handleImageChange} />
+                               <p className="text-xs text-muted-foreground">Upload an image file from your computer.</p>
                           </div>
                           <div className="space-y-2">
                               <Label htmlFor="date">Date</Label>
@@ -336,3 +360,5 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
+
+    
