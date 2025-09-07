@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Swords, Wallet, Bell, Trophy } from "lucide-react";
+import { Users, Swords, Wallet, Bell, Trophy, Award } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import Link from "next/link";
 
@@ -73,6 +73,17 @@ export default function AdminPage() {
                       </CardHeader>
                       <CardContent>
                           <p className="text-xs text-muted-foreground">Manage special mega win tournaments.</p>
+                      </CardContent>
+                  </Card>
+                </Link>
+                 <Link href="/admin/results">
+                  <Card className="cursor-pointer transition-colors hover:border-primary">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">Declare Results</CardTitle>
+                          <Award className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                          <p className="text-xs text-muted-foreground">Announce winners and points for tournaments.</p>
                       </CardContent>
                   </Card>
                 </Link>

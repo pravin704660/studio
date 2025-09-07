@@ -20,7 +20,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
-import type { Tournament, UserProfile, TournamentFormData, Notification } from "./lib/types";
+import type { Tournament, UserProfile, TournamentFormData, Notification, PlayerResult } from "./lib/types";
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -338,4 +338,33 @@ export async function deleteUserNotifications(userId: string): Promise<{ success
         console.error("Error deleting user notifications:", error);
         return { success: false, error: "Failed to clear notifications." };
     }
+}
+
+
+export async function declareResult(
+  tournamentId: string,
+  tournamentTitle: string,
+  results: PlayerResult[]
+): Promise<{ success: boolean; error?: string }> {
+  if (!tournamentId || results.length === 0) {
+    return { success: false, error: "Missing tournament ID or results." };
+  }
+
+  try {
+    const resultDocRef = doc(db, "results", tournamentId);
+    
+    const sortedResults = results.sort((a, b) => b.points - a.points).map((r, index) => ({...r, rank: index + 1}));
+    
+    await setDoc(resultDocRef, {
+      tournamentId,
+      tournamentTitle,
+      results: sortedResults,
+      declaredAt: serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error declaring result:", error);
+    return { success: false, error: "Failed to declare result." };
+  }
 }

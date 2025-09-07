@@ -80,6 +80,16 @@ export interface Notification {
     isRead: boolean;
 }
 
-    
+export interface PlayerResult {
+  playerName: string;
+  points: number;
+  rank?: number;
+}
 
-    
+export interface TournamentResult {
+  id: string;
+  tournamentId: string;
+  tournamentTitle: string;
+  results: PlayerResult[];
+  declaredAt: Timestamp;
+}
