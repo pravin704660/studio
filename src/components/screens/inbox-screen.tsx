@@ -75,6 +75,8 @@ export default function InboxScreen({ setActiveScreen }: InboxScreenProps) {
     setIsClearing(false);
   };
 
+  const hasPersonalNotifications = notifications.some(n => n.userId === user?.uid);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -86,7 +88,7 @@ export default function InboxScreen({ setActiveScreen }: InboxScreenProps) {
         </div>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" disabled={notifications.filter(n => n.userId === user?.uid).length === 0 || isClearing}>
+            <Button variant="destructive" size="sm" disabled={!hasPersonalNotifications || isClearing}>
               <Trash2 className="mr-2 h-4 w-4" />
               Clear Personal
             </Button>
