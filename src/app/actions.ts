@@ -113,7 +113,7 @@ export async function createOrUpdateTournament(
     }
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
     const imageFile = formData.get('imageFile') as File | null;
-    let imageUrl = "https://picsum.photos/600/400"; // Default image
+    let imageUrl = ""; 
 
     if (imageFile) {
         const bucket = adminStorage.bucket();
@@ -127,12 +127,18 @@ export async function createOrUpdateTournament(
             },
         });
         
-        // Get public URL
         const [url] = await file.getSignedUrl({
             action: 'read',
-            expires: '03-09-2491' // A very long expiry date
+            expires: '03-09-2491'
         });
         imageUrl = url;
+    } else {
+        // Set default image based on tournament type
+        if (tournamentData.isMega) {
+            imageUrl = "https://picsum.photos/seed/mega/600/400"; // Placeholder for Mega Tournament
+        } else {
+            imageUrl = "https://picsum.photos/seed/regular/600/400"; // Placeholder for Regular Tournament
+        }
     }
 
     if (!tournamentData.date || !tournamentData.time) {
