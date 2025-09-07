@@ -70,7 +70,6 @@ export default function ManageMegaWinTournamentsPage() {
     setLoading(true);
     try {
       const tournamentsCollection = collection(db, "tournaments");
-      // Fetch all documents and filter on the client side to avoid index issues.
       const tournamentsSnapshot = await getDocs(tournamentsCollection);
       const allTournaments = tournamentsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Tournament));
       const megaTournaments = allTournaments.filter(t => t.isMega);
