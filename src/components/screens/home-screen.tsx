@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Tournament } from "@/lib/types";
 import TournamentCard from "@/components/tournament-card";
@@ -19,13 +19,13 @@ export default function HomeScreen() {
     const fetchTournaments = async () => {
       setLoading(true);
       try {
-        const querySnapshot = await getDocs(collection(db, "tournaments"));
+        const tournamentsCollection = collection(db, "tournaments");
+        const q = query(tournamentsCollection, orderBy("date", "desc"));
+        
+        const querySnapshot = await getDocs(q);
         const allTournaments = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
         
-        // Filter and sort on the client-side to avoid composite indexes
-        const publishedTournaments = allTournaments
-          .filter(t => t.status === 'published')
-          .sort((a, b) => b.date.toMillis() - a.date.toMillis());
+        const publishedTournaments = allTournaments.filter(t => t.status === 'published');
           
         setTournaments(publishedTournaments);
 
@@ -57,6 +57,12 @@ export default function HomeScreen() {
               PUBG 1 STAR
             </h2>
         </div>
+      </div>
+
+      <div className="rounded-lg border-2 border-primary bg-primary/10 p-4 text-center">
+        <h2 className="animate-pulse text-2xl font-bold text-red-500">
+          YOU WIN YOU TOURNAMENTS
+        </h2>
       </div>
 
       <div>
@@ -92,5 +98,3 @@ export default function HomeScreen() {
     </div>
   );
 }
-
-    
