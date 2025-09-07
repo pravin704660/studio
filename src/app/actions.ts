@@ -123,9 +123,10 @@ export async function createOrUpdateTournament(
       status: tournamentData.status,
       isMega: tournamentData.isMega,
       imageUrl: "https://picsum.photos/600/400",
+      id: newTournamentRef.id,
     };
 
-    await setDoc(newTournamentRef, { ...finalData, id: newTournamentRef.id });
+    await setDoc(newTournamentRef, finalData);
     
     return { success: true };
   } catch (error: any) {
