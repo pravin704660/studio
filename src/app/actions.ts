@@ -111,8 +111,8 @@ export async function createOrUpdateTournament(
 
     const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
     
-    // Create a new object for Firestore to avoid passing extraneous properties.
-    const finalData = {
+    const finalData: Omit<Tournament, 'date'> & { date: Timestamp } = {
+      id: newTournamentRef.id,
       title: tournamentData.title,
       gameType: tournamentData.gameType,
       date: firestoreDate,
@@ -124,7 +124,6 @@ export async function createOrUpdateTournament(
       status: tournamentData.status,
       isMega: tournamentData.isMega,
       imageUrl: "https://picsum.photos/600/400",
-      id: newTournamentRef.id, // Assign the string ID
     };
 
     await setDoc(newTournamentRef, finalData);
@@ -266,7 +265,3 @@ export async function updateUserProfileName(userId: string, newName: string): Pr
     return { success: false, error: "Failed to update name." };
   }
 }
-
-    
-
-    
