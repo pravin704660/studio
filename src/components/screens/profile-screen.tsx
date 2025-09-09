@@ -8,7 +8,7 @@ import { signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, User, Mail, Shield, Gamepad2, Edit, Save, X, FileText, Inbox } from "lucide-react";
+import { LogOut, User, Mail, Shield, Gamepad2, Edit, Save, X, FileText, Inbox, Share2 } from "lucide-react";
 import Link from "next/link";
 import { Spinner } from "../ui/spinner";
 import { Input } from "../ui/input";
@@ -49,6 +49,34 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
       toast({ variant: "destructive", title: "Error", description: result.error });
     }
     setIsSaving(false);
+  };
+  
+  const handleShare = async () => {
+    if (!user) {
+        toast({ variant: "destructive", title: "Error", description: "You must be logged in to share." });
+        return;
+    }
+    
+    const referralLink = `${window.location.origin}/?ref=${user.uid}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join me on Arena Ace!',
+          text: 'Join me on Arena Ace and compete in exciting tournaments!',
+          url: referralLink,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(referralLink);
+        toast({ title: "Link Copied!", description: "Referral link copied to clipboard." });
+      } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "Could not copy the link." });
+      }
+    }
   };
 
   if (loading || !user) {
@@ -140,6 +168,11 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
                     </Button>
                 </Link>
             )}
+            
+            <Button variant="outline" className="w-full" onClick={handleShare}>
+                <Share2 className="mr-2 h-4 w-4" />
+                Refer &amp; Earn
+            </Button>
 
             <Button variant="outline" className="w-full" onClick={() => setActiveScreen('rules')}>
                 <FileText className="mr-2 h-4 w-4" />
