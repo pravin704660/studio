@@ -374,5 +374,3 @@ export async function declareResult(
     return { success: false, error: "Failed to declare result." };
   }
 }
-
-    
