@@ -149,7 +149,9 @@ export async function createOrUpdateTournament(
       throw new Error("Date and time are required.");
     }
     
-    const firestoreDate = Timestamp.fromDate(new Date(`${tournamentData.date}T${tournamentData.time}`));
+    // Ensure the date is correctly combined with time before creating the Timestamp
+    const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
+    const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
 
     const finalData: Omit<Tournament, 'id'> = {
       title: tournamentData.title || "",
