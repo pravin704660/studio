@@ -38,7 +38,7 @@ export interface TournamentFormData {
   id?: string;
   title: string;
   gameType: string;
-  date: string;
+  date: string | Date | Timestamp;
   time: string;
   entryFee: number;
   slots: number;
@@ -111,3 +111,5 @@ export interface TournamentResult {
   results: PlayerResult[];
   declaredAt: Timestamp;
 }
+
+    
