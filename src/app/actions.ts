@@ -136,8 +136,8 @@ export async function createOrUpdateTournament(
             expires: '03-09-2491'
         });
         imageUrl = url;
-    } else if (!imageUrl) {
-        // Only set default if no image URL is present from an existing tournament
+    } else if (!imageUrl && !tournamentData.id) {
+        // Only set default if no image URL is present and it's a new tournament
         if (tournamentData.isMega) {
             imageUrl = "https://picsum.photos/600/400?random=1";
         } else {
@@ -178,7 +178,7 @@ export async function createOrUpdateTournament(
     return { success: true };
   } catch (error: any) {
     console.error('Error creating/updating tournament:', error);
-    return { success: false, error: error.message || 'Failed to create tournament.' };
+    return { success: false, error: error.message || 'Failed to save tournament.' };
   }
 }
 
@@ -372,3 +372,5 @@ export async function declareResult(
     return { success: false, error: "Failed to declare result." };
   }
 }
+
+    
