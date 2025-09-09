@@ -57,27 +57,24 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
         return;
     }
     
-    const referralLink = `${window.location.origin}/?ref=${user.uid}`;
+    const referralText = encodeURIComponent(`Join me on Arena Ace and compete in exciting tournaments! Use my referral link: ${window.location.origin}/?ref=${user.uid}`);
     
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Join me on Arena Ace!',
-          text: 'Join me on Arena Ace and compete in exciting tournaments!',
-          url: referralLink,
-        });
-      } catch (error) {
-        console.error('Error sharing:', error);
-      }
+    // Simple check for mobile device
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+        window.open(`https://api.whatsapp.com/send?text=${referralText}`, '_blank');
     } else {
-      try {
-        await navigator.clipboard.writeText(referralLink);
-        toast({ title: "Link Copied!", description: "Referral link copied to clipboard." });
-      } catch (error) {
-        toast({ variant: "destructive", title: "Error", description: "Could not copy the link." });
-      }
+        try {
+            const referralLink = `${window.location.origin}/?ref=${user.uid}`;
+            await navigator.clipboard.writeText(referralLink);
+            toast({ title: "Link Copied!", description: "Referral link copied to clipboard. You can now share it on WhatsApp Web." });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Could not copy the link." });
+        }
     }
   };
+
 
   if (loading || !user) {
     return (
