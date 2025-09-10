@@ -25,6 +25,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 
 export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
+  let userProfileData: UserProfile | null = null;
+  let tournamentData: Tournament | null = null;
   try {
     await runTransaction(db, async (transaction) => {
       const userDocRef = doc(db, "users", userId);
@@ -39,7 +41,10 @@ export async function joinTournament(tournamentId: string, userId: string): Prom
       if (!tournamentDoc.exists()) throw new Error("Tournament not found.");
 
       const userProfile = userDoc.data() as UserProfile;
-      const tournament = tournamentDoc.data() as Tournament;
+      const tournament = { ...tournamentDoc.data(), id: tournamentDoc.id } as Tournament;
+      
+      userProfileData = userProfile;
+      tournamentData = tournament;
 
       if (userProfile.walletBalance < tournament.entryFee) {
         throw new Error("Insufficient wallet balance.");
@@ -68,6 +73,22 @@ export async function joinTournament(tournamentId: string, userId: string): Prom
         description: `Entry for ${tournament.title}`
       });
     });
+
+    if (userProfileData && tournamentData) {
+        const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
+        const adminsSnapshot = await getDocs(adminsQuery);
+        
+        const title = "New Tournament Entry";
+        const message = `${userProfileData.name || 'A user'} has joined the tournament: ${tournamentData.title}.`;
+
+        const notificationPromises = adminsSnapshot.docs.map(adminDoc => {
+            const admin = adminDoc.data() as UserProfile;
+            return sendNotification(admin.uid, title, message);
+        });
+
+        await Promise.all(notificationPromises);
+    }
+    
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
