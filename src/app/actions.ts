@@ -25,26 +25,32 @@ import { v4 as uuidv4 } from 'uuid';
 
 
 export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
-  let userProfileData: UserProfile | null = null;
-  let tournamentData: Tournament | null = null;
   try {
+    const userDocRef = doc(db, "users", userId);
+    const tournamentDocRef = doc(db, "tournaments", tournamentId);
+
+    // Fetch user and tournament data outside the transaction for notification use
+    const [userDoc, tournamentDoc] = await Promise.all([
+      getDoc(userDocRef),
+      getDoc(tournamentDocRef),
+    ]);
+
+    if (!userDoc.exists()) throw new Error("User not found.");
+    if (!tournamentDoc.exists()) throw new Error("Tournament not found.");
+
+    const userProfileData = userDoc.data() as UserProfile;
+    const tournamentData = { ...tournamentDoc.data(), id: tournamentDoc.id } as Tournament;
+
     await runTransaction(db, async (transaction) => {
-      const userDocRef = doc(db, "users", userId);
-      const tournamentDocRef = doc(db, "tournaments", tournamentId);
-      
-      const [userDoc, tournamentDoc] = await Promise.all([
-        transaction.get(userDocRef),
-        transaction.get(tournamentDocRef),
-      ]);
+      // Re-get documents inside the transaction to ensure atomicity
+      const freshUserDoc = await transaction.get(userDocRef);
+      const freshTournamentDoc = await transaction.get(tournamentDocRef);
 
-      if (!userDoc.exists()) throw new Error("User not found.");
-      if (!tournamentDoc.exists()) throw new Error("Tournament not found.");
-
-      const userProfile = userDoc.data() as UserProfile;
-      const tournament = { ...tournamentDoc.data(), id: tournamentDoc.id } as Tournament;
+      if (!freshUserDoc.exists()) throw new Error("User not found.");
+      if (!freshTournamentDoc.exists()) throw new Error("Tournament not found.");
       
-      userProfileData = userProfile;
-      tournamentData = tournament;
+      const userProfile = freshUserDoc.data() as UserProfile;
+      const tournament = freshTournamentDoc.data() as Tournament;
 
       if (userProfile.walletBalance < tournament.entryFee) {
         throw new Error("Insufficient wallet balance.");
@@ -74,20 +80,19 @@ export async function joinTournament(tournamentId: string, userId: string): Prom
       });
     });
 
-    if (userProfileData && tournamentData) {
-        const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
-        const adminsSnapshot = await getDocs(adminsQuery);
-        
-        const title = "New Tournament Entry";
-        const message = `${userProfileData.name || 'A user'} has joined the tournament: ${tournamentData.title}.`;
+    // Send notification to all admins after the transaction is successful
+    const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
+    const adminsSnapshot = await getDocs(adminsQuery);
+    
+    const title = "New Tournament Entry";
+    const message = `${userProfileData.name || 'A user'} has joined the tournament: ${tournamentData.title}.`;
 
-        const notificationPromises = adminsSnapshot.docs.map(adminDoc => {
-            const admin = adminDoc.data() as UserProfile;
-            return sendNotification(admin.uid, title, message);
-        });
+    const notificationPromises = adminsSnapshot.docs.map(adminDoc => {
+        const admin = adminDoc.data() as UserProfile;
+        return sendNotification(admin.uid, title, message);
+    });
 
-        await Promise.all(notificationPromises);
-    }
+    await Promise.all(notificationPromises);
     
     return { success: true };
   } catch (error: any) {
