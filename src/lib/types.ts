@@ -78,6 +78,8 @@ export interface Transaction {
 export interface WalletRequest {
   requestId: string;
   userId: string;
+  userName?: string;
+  userEmail?: string;
   amount: number;
   utr: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -111,5 +113,3 @@ export interface TournamentResult {
   results: PlayerResult[];
   declaredAt: Timestamp;
 }
-
-    

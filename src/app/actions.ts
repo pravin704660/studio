@@ -105,12 +105,21 @@ export async function submitWalletRequest(userId: string, amount: number, utr: s
     return { success: false, error: "Invalid amount or UTR code." };
   }
   try {
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+        return { success: false, error: "User not found." };
+    }
+    const userData = userDoc.data() as UserProfile;
+
     const requestColRef = collection(db, 'wallet_requests');
     const newRequestRef = doc(requestColRef);
     
-    await addDoc(collection(db, "wallet_requests"), {
+    await setDoc(newRequestRef, {
       requestId: newRequestRef.id,
       userId,
+      userName: userData.name || "N/A",
+      userEmail: userData.email || "N/A",
       amount,
       utr,
       status: "pending",
@@ -119,6 +128,7 @@ export async function submitWalletRequest(userId: string, amount: number, utr: s
 
     return { success: true };
   } catch (error: any) {
+    console.error("Error submitting wallet request:", error);
     return { success: false, error: "Failed to submit request." };
   }
 }
@@ -398,5 +408,56 @@ export async function declareResult(
   } catch (error: any) {
     console.error("Error declaring result:", error);
     return { success: false, error: "Failed to declare result." };
+  }
+}
+
+export async function updateWalletRequestStatus(
+  requestId: string,
+  userId: string,
+  amount: number,
+  newStatus: 'approved' | 'rejected'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const requestDocRef = doc(db, "wallet_requests", requestId);
+
+    if (newStatus === 'approved') {
+        await runTransaction(db, async (transaction) => {
+            const userDocRef = doc(db, 'users', userId);
+            const userDoc = await transaction.get(userDocRef);
+
+            if (!userDoc.exists()) {
+                throw new Error('User not found.');
+            }
+
+            const userProfile = userDoc.data() as UserProfile;
+            const newBalance = userProfile.walletBalance + amount;
+            
+            transaction.update(userDocRef, { walletBalance: newBalance });
+
+            const transactionDocRef = doc(collection(db, 'transactions'));
+            transaction.set(transactionDocRef, {
+                txnId: transactionDocRef.id,
+                userId,
+                amount,
+                type: 'credit',
+                status: 'success',
+                timestamp: serverTimestamp(),
+                description: 'Wallet deposit approved',
+            });
+
+            transaction.update(requestDocRef, { status: newStatus });
+        });
+
+        await sendNotification(userId, "Deposit Approved", `Your request to add ₹${amount} has been approved.`);
+
+    } else { // Rejected
+        await updateDoc(requestDocRef, { status: newStatus });
+        await sendNotification(userId, "Deposit Rejected", `Your request to add ₹${amount} has been rejected.`);
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating wallet request:", error);
+    return { success: false, error: error.message || 'Failed to update request.' };
   }
 }

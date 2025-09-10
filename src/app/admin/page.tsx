@@ -98,7 +98,8 @@ export default function AdminPage() {
                       </CardContent>
                   </Card>
                 </Link>
-                  <Card>
+                <Link href="/admin/wallet-requests">
+                  <Card className="cursor-pointer transition-colors hover:border-primary">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                           <CardTitle className="text-sm font-medium">Wallet Requests</CardTitle>
                           <Wallet className="h-4 w-4 text-muted-foreground" />
@@ -107,6 +108,7 @@ export default function AdminPage() {
                           <p className="text-xs text-muted-foreground">Approve or reject user wallet top-ups.</p>
                       </CardContent>
                   </Card>
+                </Link>
               </div>
           </div>
         </main>
