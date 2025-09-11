@@ -26,6 +26,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    // Check if the user has already joined the tournament
+    const entriesRef = collection(db, "entries");
+    const q = query(entriesRef, where("userId", "==", userId), where("tournamentId", "==", tournamentId));
+    const existingEntrySnapshot = await getDocs(q);
+    if (!existingEntrySnapshot.empty) {
+      return { success: false, error: "You have already joined this tournament." };
+    }
+      
     const userDocRef = doc(db, "users", userId);
     const tournamentDocRef = doc(db, "tournaments", tournamentId);
 
