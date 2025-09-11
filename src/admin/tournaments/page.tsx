@@ -390,6 +390,10 @@ export default function ManageTournamentsPage() {
                               <Input id="prize" name="prize" type="number" value={formData.prize} onChange={handleFormChange} />
                           </div>
                         </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="slots">Slots</Label>
+                            <Input id="slots" name="slots" type="number" value={formData.slots} onChange={handleFormChange} />
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                               <Label htmlFor="roomId">Room ID</Label>
@@ -447,3 +451,5 @@ export default function ManageTournamentsPage() {
     </div>
   );
 }
+
+    
