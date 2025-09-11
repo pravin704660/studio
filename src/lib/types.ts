@@ -101,7 +101,9 @@ export interface Notification {
 }
 
 export interface PlayerResult {
+  userId: string;
   playerName: string;
+  pubgId?: string;
   points: number;
   rank?: number;
 }
@@ -113,3 +115,5 @@ export interface TournamentResult {
   results: PlayerResult[];
   declaredAt: Timestamp;
 }
+
+    
