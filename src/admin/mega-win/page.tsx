@@ -4,12 +4,12 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, where, Timestamp, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import type { Tournament, TournamentFormData } from "@/lib/types";
+import type { Tournament, TournamentFormData, WinnerPrize } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import Link from "next/link";
-import { ArrowLeft, PlusCircle, Trash2, Trophy, Pencil } from "lucide-react";
+import { ArrowLeft, PlusCircle, Trash2, Trophy, Pencil, Plus, X } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,12 +49,12 @@ const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string 
   isMega: true,
   roomId: "",
   roomPassword: "",
-  winnerPrizes: {
-    first: 0,
-    second: 0,
-    third: 0,
-    fourth: 0,
-  }
+  winnerPrizes: [
+    { rank: '1st', prize: 0 },
+    { rank: '2nd', prize: 0 },
+    { rank: '3rd', prize: 0 },
+    { rank: '4th', prize: 0 },
+  ],
 };
 
 
@@ -148,7 +148,7 @@ export default function ManageMegaWinTournamentsPage() {
         ...tournament,
         date: dateString,
         rules: Array.isArray(tournament.rules) ? tournament.rules.join('\n') : tournament.rules,
-        winnerPrizes: tournament.winnerPrizes || { first: 0, second: 0, third: 0, fourth: 0 },
+        winnerPrizes: tournament.winnerPrizes && tournament.winnerPrizes.length > 0 ? tournament.winnerPrizes : initialFormData.winnerPrizes,
     });
     setImageFile(null);
     setIsDialogOpen(true);
@@ -156,21 +156,30 @@ export default function ManageMegaWinTournamentsPage() {
   
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    if (name.startsWith("prize-")) {
-      const prizeKey = name.split('-')[1] as keyof NonNullable<TournamentFormData['winnerPrizes']>;
-      setFormData(prev => ({
-        ...prev,
-        winnerPrizes: {
-          ...prev.winnerPrizes!,
-          [prizeKey]: value === '' ? 0 : Number(value)
-        }
-      }));
-    } else {
-      setFormData(prev => ({ 
-        ...prev, 
-        [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value 
-      }));
-    }
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value 
+    }));
+  };
+
+  const handlePrizeChange = (index: number, field: keyof WinnerPrize, value: string | number) => {
+    const newPrizes = [...(formData.winnerPrizes || [])];
+    (newPrizes[index] as any)[field] = field === 'prize' ? (value === '' ? 0 : Number(value)) : value;
+    setFormData(prev => ({ ...prev, winnerPrizes: newPrizes }));
+  };
+
+  const addPrizeField = () => {
+    setFormData(prev => ({
+      ...prev,
+      winnerPrizes: [...(prev.winnerPrizes || []), { rank: '', prize: 0 }]
+    }));
+  };
+  
+  const removePrizeField = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      winnerPrizes: prev.winnerPrizes?.filter((_, i) => i !== index)
+    }));
   };
   
   const handleSelectChange = (name: string, value: string) => {
@@ -201,6 +210,7 @@ export default function ManageMegaWinTournamentsPage() {
       const tournamentDataForAction: TournamentFormData = {
         ...formData,
         isMega: true,
+        winnerPrizes: formData.winnerPrizes?.filter(p => p.rank && p.prize > 0),
       };
 
       if (editingTournamentId) {
@@ -402,7 +412,7 @@ export default function ManageMegaWinTournamentsPage() {
                                     <Input id="prize" name="prize" type="number" value={formData.prize} onChange={handleFormChange} />
                                 </div>
                             </div>
-                             <div className="space-y-2">
+                            <div className="space-y-2">
                                 <Label htmlFor="slots">Slots</Label>
                                 <Input id="slots" name="slots" type="number" value={formData.slots} onChange={handleFormChange} />
                             </div>
@@ -416,26 +426,29 @@ export default function ManageMegaWinTournamentsPage() {
                                     <Input id="roomPassword" name="roomPassword" value={formData.roomPassword} onChange={handleFormChange} />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <Label>Winner Prizes</Label>
-                                <div className="grid grid-cols-2 gap-4 rounded-md border p-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="prize-first">1st Prize</Label>
-                                        <Input id="prize-first" name="prize-first" type="number" value={formData.winnerPrizes?.first} onChange={handleFormChange} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="prize-second">2nd Prize</Label>
-                                        <Input id="prize-second" name="prize-second" type="number" value={formData.winnerPrizes?.second} onChange={handleFormChange} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="prize-third">3rd Prize</Label>
-                                        <Input id="prize-third" name="prize-third" type="number" value={formData.winnerPrizes?.third} onChange={handleFormChange} />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="prize-fourth">4th Prize</Label>
-                                        <Input id="prize-fourth" name="prize-fourth" type="number" value={formData.winnerPrizes?.fourth} onChange={handleFormChange} />
-                                    </div>
-                                </div>
+                            <div className="space-y-4 rounded-md border p-4">
+                              <Label>Winner Prizes</Label>
+                              {formData.winnerPrizes?.map((prize, index) => (
+                                  <div key={index} className="flex items-center gap-2">
+                                      <Input 
+                                          placeholder="Rank (e.g., 5th)" 
+                                          value={prize.rank}
+                                          onChange={(e) => handlePrizeChange(index, 'rank', e.target.value)}
+                                      />
+                                      <Input 
+                                          type="number" 
+                                          placeholder="Prize Amount"
+                                          value={prize.prize}
+                                          onChange={(e) => handlePrizeChange(index, 'prize', e.target.value)}
+                                      />
+                                      <Button type="button" variant="ghost" size="icon" onClick={() => removePrizeField(index)}>
+                                          <X className="h-4 w-4" />
+                                      </Button>
+                                  </div>
+                              ))}
+                              <Button type="button" variant="outline" size="sm" onClick={addPrizeField}>
+                                  <Plus className="mr-2 h-4 w-4" /> Add Prize
+                              </Button>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="status">Status</Label>
@@ -463,5 +476,3 @@ export default function ManageMegaWinTournamentsPage() {
     </div>
   );
 }
-
-    

@@ -11,6 +11,11 @@ export interface UserProfile {
   pubgId?: string;
 }
 
+export interface WinnerPrize {
+  rank: string;
+  prize: number;
+}
+
 export interface Tournament {
   id: string;
   title: string;
@@ -26,12 +31,7 @@ export interface Tournament {
   isMega?: boolean;
   roomId?: string;
   roomPassword?: string;
-  winnerPrizes?: {
-    first?: number;
-    second?: number;
-    third?: number;
-    fourth?: number;
-  };
+  winnerPrizes?: WinnerPrize[];
 }
 
 export interface TournamentFormData {
@@ -49,12 +49,7 @@ export interface TournamentFormData {
   imageUrl?: string;
   roomId?: string;
   roomPassword?: string;
-  winnerPrizes?: {
-    first?: number;
-    second?: number;
-    third?: number;
-    fourth?: number;
-  };
+  winnerPrizes?: WinnerPrize[];
 }
 
 export interface Entry {

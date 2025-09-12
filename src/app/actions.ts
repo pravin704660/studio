@@ -211,7 +211,7 @@ export async function createOrUpdateTournament(
       imageUrl: imageUrl,
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
-      winnerPrizes: tournamentData.winnerPrizes || { first: 0, second: 0, third: 0, fourth: 0 },
+      winnerPrizes: tournamentData.winnerPrizes || [],
     };
     
     if (tournamentData.id) {

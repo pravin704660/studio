@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import type { Tournament } from "@/lib/types";
+import type { Tournament, WinnerPrize } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,12 @@ interface TournamentCardProps {
     tournament: Tournament;
     showCredentials?: boolean;
 }
+
+const prizeIcons: { [key: string]: string } = {
+    '1st': "text-yellow-400",
+    '2nd': "text-gray-400",
+    '3rd': "text-orange-400",
+};
 
 export default function TournamentCard({ tournament, showCredentials = false }: TournamentCardProps) {
   const { user } = useAuth();
@@ -59,7 +65,7 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
     }
   };
   
-  const hasWinnerPrizes = tournament.winnerPrizes && Object.values(tournament.winnerPrizes).some(p => p && p > 0);
+  const hasWinnerPrizes = tournament.winnerPrizes && tournament.winnerPrizes.length > 0;
 
   return (
     <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
@@ -104,30 +110,12 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
                 <div className="space-y-2 text-center">
                     <h4 className="text-sm font-semibold text-muted-foreground">Prize Distribution</h4>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-left">
-                        {tournament.winnerPrizes?.first && tournament.winnerPrizes.first > 0 && (
-                            <div className="flex items-center gap-2 text-sm">
-                                <Award className="h-4 w-4 text-yellow-400" />
-                                <span>1st Prize: <span className="font-bold">₹{tournament.winnerPrizes.first}</span></span>
+                        {tournament.winnerPrizes?.map((prize, index) => (
+                           <div key={index} className="flex items-center gap-2 text-sm">
+                                <Award className={`h-4 w-4 ${prizeIcons[prize.rank] || 'text-blue-400'}`} />
+                                <span>{prize.rank} Prize: <span className="font-bold">₹{prize.prize}</span></span>
                             </div>
-                        )}
-                         {tournament.winnerPrizes?.second && tournament.winnerPrizes.second > 0 && (
-                            <div className="flex items-center gap-2 text-sm">
-                                <Award className="h-4 w-4 text-gray-400" />
-                                <span>2nd Prize: <span className="font-bold">₹{tournament.winnerPrizes.second}</span></span>
-                            </div>
-                        )}
-                         {tournament.winnerPrizes?.third && tournament.winnerPrizes.third > 0 && (
-                            <div className="flex items-center gap-2 text-sm">
-                                <Award className="h-4 w-4 text-orange-400" />
-                                <span>3rd Prize: <span className="font-bold">₹{tournament.winnerPrizes.third}</span></span>
-                            </div>
-                        )}
-                         {tournament.winnerPrizes?.fourth && tournament.winnerPrizes.fourth > 0 && (
-                            <div className="flex items-center gap-2 text-sm">
-                                <Award className="h-4 w-4 text-blue-400" />
-                                <span>4th Prize: <span className="font-bold">₹{tournament.winnerPrizes.fourth}</span></span>
-                            </div>
-                        )}
+                        ))}
                     </div>
                 </div>
             </>
