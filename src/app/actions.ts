@@ -394,6 +394,7 @@ export async function deleteUserNotifications(userId: string): Promise<{ success
 export async function declareResult(
   tournamentId: string,
   tournamentTitle: string,
+  isMega: boolean,
   results: PlayerResult[]
 ): Promise<{ success: boolean; error?: string }> {
   if (!tournamentId || results.length === 0) {
@@ -408,9 +409,19 @@ export async function declareResult(
     await setDoc(resultDocRef, {
       tournamentId,
       tournamentTitle,
+      isMega,
       results: sortedResults,
       declaredAt: serverTimestamp(),
     });
+
+    // Send notifications to participants
+    const notificationPromises = sortedResults.map(result => {
+      const title = `Result Declared: ${tournamentTitle}`;
+      const message = `Congratulations! You have secured rank #${result.rank} with ${result.points} points.`;
+      return sendNotification(result.userId, title, message);
+    });
+
+    await Promise.all(notificationPromises);
 
     return { success: true };
   } catch (error: any) {
@@ -469,5 +480,3 @@ export async function updateWalletRequestStatus(
     return { success: false, error: error.message || 'Failed to update request.' };
   }
 }
-
-    

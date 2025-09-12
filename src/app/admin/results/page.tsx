@@ -124,7 +124,7 @@ export default function ManageResultsPage() {
         .filter(r => r.playerName.trim() !== "")
         .map(r => ({ ...r, points: Number(r.points) || 0 }));
 
-    const result = await declareResult(selectedTournament.id, selectedTournament.title, finalResults);
+    const result = await declareResult(selectedTournament.id, selectedTournament.title, selectedTournament.isMega || false, finalResults);
     
     if (result.success) {
       toast({ title: "Success", description: "Results declared successfully." });
@@ -260,5 +260,3 @@ export default function ManageResultsPage() {
     </div>
   );
 }
-
-    

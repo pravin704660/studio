@@ -112,8 +112,7 @@ export interface TournamentResult {
   id: string;
   tournamentId: string;
   tournamentTitle: string;
+  isMega: boolean;
   results: PlayerResult[];
   declaredAt: Timestamp;
 }
-
-    
