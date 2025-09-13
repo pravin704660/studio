@@ -55,10 +55,18 @@ export default function MyTournamentsScreen() {
         });
         
         const resolvedTournaments = (await Promise.all(tournamentPromises)).filter(t => t !== null) as JoinedTournament[];
-        setJoinedTournaments(resolvedTournaments);
+        
+        // Filter out duplicate tournaments, keeping only the first entry found.
+        const uniqueTournaments = resolvedTournaments.filter((tournament, index, self) =>
+            index === self.findIndex((t) => (
+                t.id === tournament.id
+            ))
+        );
+        
+        setJoinedTournaments(uniqueTournaments);
 
         // Fetch results for completed tournaments
-        const completedTournamentIds = resolvedTournaments
+        const completedTournamentIds = uniqueTournaments
             .filter(t => t.status === 'completed')
             .map(t => t.id);
 
