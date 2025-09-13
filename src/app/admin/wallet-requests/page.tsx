@@ -87,7 +87,8 @@ export default function WalletRequestsPage() {
           return <p className="text-center text-muted-foreground p-8">No requests in this category.</p>
       }
       return (
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
@@ -101,18 +102,18 @@ export default function WalletRequestsPage() {
               <TableBody>
                 {filteredRequests.map((req) => (
                   <TableRow key={req.requestId}>
-                    <TableCell>{req.userName || req.userEmail}</TableCell>
+                    <TableCell className="min-w-[150px]">{req.userName || req.userEmail}</TableCell>
                     <TableCell>₹{req.amount}</TableCell>
                     <TableCell>{req.utr}</TableCell>
-                    <TableCell>{req.timestamp.toDate().toLocaleString()}</TableCell>
+                    <TableCell className="min-w-[180px]">{req.timestamp.toDate().toLocaleString()}</TableCell>
                     <TableCell>
                       <Badge variant={
                         req.status === 'approved' ? 'default' : req.status === 'rejected' ? 'destructive' : 'secondary'
                       }>{req.status}</Badge>
                     </TableCell>
-                    <TableCell className="space-x-2 text-right">
+                    <TableCell className="text-right">
                       {req.status === 'pending' && (
-                        <>
+                        <div className="flex flex-col sm:flex-row items-end justify-end gap-2">
                           <Button
                             size="sm"
                             variant="outline"
@@ -132,13 +133,14 @@ export default function WalletRequestsPage() {
                              {isSubmitting === req.requestId ? <Spinner size="sm" /> : <XCircle className="mr-2 h-4 w-4" />}
                             Reject
                           </Button>
-                        </>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          </div>
       )
   }
 

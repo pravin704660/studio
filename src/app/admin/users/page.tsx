@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import Link from "next/link";
-import { ArrowLeft, User, Shield, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowLeft, User, ShieldCheck, Wallet } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -26,7 +26,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -142,6 +141,7 @@ export default function ManageUsersPage() {
         title: "Error",
         description: "Failed to update user role.",
       });
+      refreshUsers(); // Refresh the list after a failed update as well
     }
   };
 
@@ -209,45 +209,49 @@ export default function ManageUsersPage() {
             <div className="flex justify-center"><Spinner size="lg" /></div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Wallet Balance</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((u) => (
-                    <TableRow key={u.uid}>
-                      <TableCell>{u.name}</TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>₹{u.walletBalance.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                          {u.role === "admin" ? <ShieldCheck className="mr-1 h-3 w-3"/> : <User className="mr-1 h-3 w-3"/>}
-                          {u.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="space-x-2 text-right">
-                        <Button size="sm" variant="outline" onClick={() => handleOpenDialog(u)}>
-                            <Wallet className="mr-2 h-4 w-4" /> Manage Balance
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => toggleAdminRole(u)}
-                          disabled={user?.uid === u.uid}
-                          variant={u.role === "admin" ? "destructive" : "default"}
-                        >
-                          {u.role === "admin" ? "Revoke Admin" : "Make Admin"}
-                        </Button>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Wallet Balance</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((u) => (
+                      <TableRow key={u.uid}>
+                        <TableCell className="min-w-[150px]">{u.name}</TableCell>
+                        <TableCell className="min-w-[200px]">{u.email}</TableCell>
+                        <TableCell>₹{u.walletBalance.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Badge variant={u.role === "admin" ? "default" : "secondary"}>
+                            {u.role === "admin" ? <ShieldCheck className="mr-1 h-3 w-3"/> : <User className="mr-1 h-3 w-3"/>}
+                            {u.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                           <div className="flex flex-col sm:flex-row items-end justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleOpenDialog(u)}>
+                                  <Wallet className="mr-2 h-4 w-4" /> Manage Balance
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => toggleAdminRole(u)}
+                                disabled={user?.uid === u.uid}
+                                variant={u.role === "admin" ? "destructive" : "default"}
+                              >
+                                {u.role === "admin" ? "Revoke Admin" : "Make Admin"}
+                              </Button>
+                           </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               {hasMore && (
                   <div className="mt-6 flex justify-center">
                       <Button onClick={() => fetchUsers()} disabled={loadingMore}>

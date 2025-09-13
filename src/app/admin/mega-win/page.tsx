@@ -307,58 +307,62 @@ export default function ManageMegaWinTournamentsPage() {
                  </Card>
             ) : (
               <>
-                <Table>
-                    <TableHeader>
-                    <TableRow>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Entry Fee</TableHead>
-                        <TableHead>Prize</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {tournaments.map((t) => (
-                        <TableRow key={t.id}>
-                        <TableCell className="font-medium">{t.title}</TableCell>
-                        <TableCell>{getDisplayDate(t.date)}</TableCell>
-                        <TableCell>₹{t.entryFee}</TableCell>
-                        <TableCell>₹{t.prize}</TableCell>
-                        <TableCell>
-                            <Badge variant={t.status === "published" ? "default" : "secondary"}>{t.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right space-x-2">
-                             <Button variant="outline" size="icon" onClick={() => handleOpenEditDialog(t)}>
-                                <Pencil className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="icon" disabled={isDeleting}>
-                                <Trash2 className="h-4 w-4" />
+                <div className="overflow-x-auto">
+                  <Table>
+                      <TableHeader>
+                      <TableRow>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Entry Fee</TableHead>
+                          <TableHead>Prize</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                      {tournaments.map((t) => (
+                          <TableRow key={t.id}>
+                          <TableCell className="font-medium min-w-[200px]">{t.title}</TableCell>
+                          <TableCell>{getDisplayDate(t.date)}</TableCell>
+                          <TableCell>₹{t.entryFee}</TableCell>
+                          <TableCell>₹{t.prize}</TableCell>
+                          <TableCell>
+                              <Badge variant={t.status === "published" ? "default" : "secondary"}>{t.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                              <div className="flex flex-col sm:flex-row items-end justify-end gap-2">
+                                <Button variant="outline" size="icon" onClick={() => handleOpenEditDialog(t)}>
+                                    <Pencil className="h-4 w-4" />
                                 </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the
-                                    tournament and remove all related data.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(t.id)}>
-                                    {isDeleting ? <Spinner /> : "Delete"}
-                                </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                            </AlertDialog>
-                        </TableCell>
-                        </TableRow>
-                    ))}
-                    </TableBody>
-                </Table>
+                                <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="icon" disabled={isDeleting}>
+                                    <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the
+                                        tournament and remove all related data.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(t.id)}>
+                                        {isDeleting ? <Spinner /> : "Delete"}
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                          </TableCell>
+                          </TableRow>
+                      ))}
+                      </TableBody>
+                  </Table>
+                </div>
                 {hasMore && (
                   <div className="mt-6 flex justify-center">
                       <Button onClick={() => fetchTournaments()} disabled={loadingMore}>
