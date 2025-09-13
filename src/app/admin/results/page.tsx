@@ -86,6 +86,7 @@ export default function ManageResultsPage() {
                     playerName: userData.name || "N/A",
                     pubgId: userData.pubgId || "N/A",
                     points: 0,
+                    prize: 0,
                 };
             }
             return null;
@@ -108,7 +109,7 @@ export default function ManageResultsPage() {
   };
   
   const addPlayerRow = () => {
-    setResults([...results, { userId: "", playerName: "", pubgId: "", points: 0 }]);
+    setResults([...results, { userId: "", playerName: "", pubgId: "", points: 0, prize: 0 }]);
   };
 
   const removePlayerRow = (index: number) => {
@@ -122,7 +123,11 @@ export default function ManageResultsPage() {
 
     const finalResults = results
         .filter(r => r.playerName.trim() !== "")
-        .map(r => ({ ...r, points: Number(r.points) || 0 }));
+        .map(r => ({ 
+            ...r, 
+            points: Number(r.points) || 0,
+            prize: Number(r.prize) || 0,
+        }));
 
     const result = await declareResult(selectedTournament.id, selectedTournament.title, selectedTournament.isMega || false, finalResults);
     
@@ -195,7 +200,7 @@ export default function ManageResultsPage() {
       </main>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
               <DialogHeader>
                   <DialogTitle>Declare Results for {selectedTournament?.title}</DialogTitle>
               </DialogHeader>
@@ -214,6 +219,7 @@ export default function ManageResultsPage() {
                                        <TableHead>Player Name</TableHead>
                                        <TableHead>PUBG ID</TableHead>
                                        <TableHead className="w-24">Points</TableHead>
+                                       <TableHead className="w-24">Prize Money</TableHead>
                                        <TableHead className="w-12"></TableHead>
                                    </TableRow>
                                </TableHeader>
@@ -228,6 +234,15 @@ export default function ManageResultsPage() {
                                                     placeholder="Points"
                                                     value={result.points}
                                                     onChange={(e) => handleResultChange(index, 'points', e.target.value)}
+                                                    className="w-24"
+                                                />
+                                           </TableCell>
+                                           <TableCell>
+                                                <Input 
+                                                    type="number"
+                                                    placeholder="Prize"
+                                                    value={result.prize}
+                                                    onChange={(e) => handleResultChange(index, 'prize', e.target.value)}
                                                     className="w-24"
                                                 />
                                            </TableCell>

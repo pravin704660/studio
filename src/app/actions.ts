@@ -402,11 +402,14 @@ export async function declareResult(
   }
 
   try {
+    const batch = writeBatch(db);
     const resultDocRef = doc(db, "results", tournamentId);
     
-    const sortedResults = results.sort((a, b) => b.points - a.points).map((r, index) => ({...r, rank: index + 1}));
+    const sortedResults = results
+      .sort((a, b) => b.points - a.points)
+      .map((r, index) => ({...r, rank: index + 1}));
     
-    await setDoc(resultDocRef, {
+    batch.set(resultDocRef, {
       tournamentId,
       tournamentTitle,
       isMega,
@@ -414,14 +417,46 @@ export async function declareResult(
       declaredAt: serverTimestamp(),
     });
 
-    // Send notifications to participants
-    const notificationPromises = sortedResults.map(result => {
+    const notificationPromises = sortedResults.map(async (result) => {
       const title = `Result Declared: ${tournamentTitle}`;
-      const message = `Congratulations! You have secured rank #${result.rank} with ${result.points} points.`;
-      return sendNotification(result.userId, title, message);
+      let message = `Congratulations! You secured rank #${result.rank} with ${result.points} points.`;
+      
+      if (result.prize && result.prize > 0) {
+        message += ` You've won ₹${result.prize}!`;
+        // Credit the prize to the user's wallet
+        const userDocRef = doc(db, 'users', result.userId);
+        const userDoc = await getDoc(userDocRef); // Use getDoc instead of transaction.get in batch
+        if (userDoc.exists()) {
+            const userProfile = userDoc.data() as UserProfile;
+            const newBalance = userProfile.walletBalance + result.prize;
+            batch.update(userDocRef, { walletBalance: newBalance });
+
+            // Create a transaction record
+            const transactionDocRef = doc(collection(db, 'transactions'));
+            batch.set(transactionDocRef, {
+                txnId: transactionDocRef.id,
+                userId: result.userId,
+                amount: result.prize,
+                type: 'credit',
+                status: 'success',
+                timestamp: serverTimestamp(),
+                description: `Prize money for ${tournamentTitle}`,
+            });
+        }
+      }
+      
+      const notificationDocRef = doc(collection(db, "notifications"));
+      batch.set(notificationDocRef, {
+        userId: result.userId,
+        title,
+        message,
+        timestamp: serverTimestamp(),
+        isRead: false,
+      });
     });
 
     await Promise.all(notificationPromises);
+    await batch.commit();
 
     return { success: true };
   } catch (error: any) {

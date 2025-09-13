@@ -100,6 +100,7 @@ export interface PlayerResult {
   playerName: string;
   pubgId?: string;
   points: number;
+  prize?: number;
   rank?: number;
 }
 
