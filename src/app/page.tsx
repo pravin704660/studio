@@ -87,7 +87,7 @@ export default function Home() {
             </Button>
           </div>
           <div className="flex-1 text-center">
-            <h1 className="text-lg font-bold tracking-tight text-yellow-400">PUBG1STAR TOURNAMENT</h1>
+            <h1 className="text-lg font-bold tracking-tight text-yellow-400">WELCOME</h1>
           </div>
           <div className="flex-1 flex justify-end items-center gap-2">
             <a href="https://shorturl.at/NbYgS" target="_blank" rel="noopener noreferrer">
