@@ -53,9 +53,12 @@ export default function HomeScreen() {
         />
         <div className="absolute inset-0 bg-black/50" />
         <div className="absolute inset-0 flex items-center justify-center">
-            <h2 className="text-4xl font-black text-yellow-400 drop-shadow-lg">
-              PUBG 1 STAR
-            </h2>
+            <div className="text-center">
+                <h2 className="text-4xl font-black text-yellow-400 drop-shadow-lg">
+                  PUBG 1 STAR
+                </h2>
+                <p className="text-lg font-semibold text-white tracking-widest">TOURNAMENT</p>
+            </div>
         </div>
       </div>
 
