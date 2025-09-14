@@ -10,8 +10,17 @@ import { joinTournament } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { Spinner } from "./ui/spinner";
-import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award } from "lucide-react";
+import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List } from "lucide-react";
 import { Separator } from "./ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "./ui/scroll-area";
+
 
 interface TournamentCardProps {
     tournament: Tournament;
@@ -139,7 +148,27 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             </>
         )}
       </CardContent>
-      <CardFooter className="p-4 pt-0">
+      <CardFooter className="p-4 pt-0 flex items-center gap-2">
+         <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="w-full">
+                    <List className="mr-2 h-4 w-4" />
+                    View Rules
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{tournament.title} - Rules</DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="max-h-[60vh] pr-4">
+                    <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
+                        {tournament.rules.map((rule, index) => (
+                            <li key={index}>{rule}</li>
+                        ))}
+                    </ul>
+                </ScrollArea>
+            </DialogContent>
+        </Dialog>
         <Button className="w-full text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining || showCredentials}>
           {isJoining ? <Spinner /> : (showCredentials ? "Joined" : "Join Now")}
         </Button>
