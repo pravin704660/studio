@@ -45,7 +45,7 @@ export default function HomeScreen() {
     <div className="space-y-6">
       <div className="relative h-48 w-full overflow-hidden rounded-lg">
         <Image
-            src="https://picsum.photos/800/400"
+            src="https://picsum.photos/seed/pubg1/800/400"
             alt="PUBG Banner"
             fill
             className="object-cover"

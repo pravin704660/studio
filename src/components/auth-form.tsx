@@ -97,7 +97,7 @@ export default function AuthForm() {
       <Card className="w-full max-w-sm overflow-hidden">
         <div className="relative h-40 w-full">
             <Image 
-                src="https://picsum.photos/400/200"
+                src="https://picsum.photos/seed/auth/400/200"
                 alt="Player" 
                 fill
                 className="object-cover"

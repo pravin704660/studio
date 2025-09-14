@@ -220,10 +220,11 @@ export async function createOrUpdateTournament(
         imageUrl = url;
     } else if (!imageUrl && !tournamentData.id) {
         // Only set default if no image URL is present and it's a new tournament
+        const randomSeed = Math.floor(Math.random() * 1000) + 1;
         if (tournamentData.isMega) {
-            imageUrl = "https://picsum.photos/600/400?random=1";
+            imageUrl = `https://picsum.photos/seed/mega${randomSeed}/600/400`;
         } else {
-            imageUrl = "https://picsum.photos/600/400?random=2";
+            imageUrl = `https://picsum.photos/seed/tourney${randomSeed}/600/400`;
         }
     }
 
