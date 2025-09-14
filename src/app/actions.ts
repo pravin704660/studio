@@ -141,6 +141,44 @@ export async function submitWalletRequest(userId: string, amount: number, utr: s
   }
 }
 
+export async function submitWithdrawalRequest(userId: string, amount: number, upiId: string): Promise<{ success: boolean; error?: string }> {
+  if (amount <= 0 || !upiId) {
+    return { success: false, error: "Invalid amount or UPI ID." };
+  }
+
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+        return { success: false, error: "User not found." };
+    }
+    const userData = userDoc.data() as UserProfile;
+
+    if (userData.walletBalance < amount) {
+        return { success: false, error: "Insufficient wallet balance." };
+    }
+
+    const requestColRef = collection(db, 'withdrawal_requests');
+    const newRequestRef = doc(requestColRef);
+    
+    await setDoc(newRequestRef, {
+      requestId: newRequestRef.id,
+      userId,
+      userName: userData.name || "N/A",
+      userEmail: userData.email || "N/A",
+      amount,
+      upiId,
+      status: "pending",
+      timestamp: serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error submitting withdrawal request:", error);
+    return { success: false, error: "Failed to submit request." };
+  }
+}
+
 export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<string | null> {
     try {
         const result = await utrFollowUp(input);
@@ -512,6 +550,60 @@ export async function updateWalletRequestStatus(
     return { success: true };
   } catch (error: any) {
     console.error("Error updating wallet request:", error);
+    return { success: false, error: error.message || 'Failed to update request.' };
+  }
+}
+
+export async function updateWithdrawalRequestStatus(
+  requestId: string,
+  userId: string,
+  amount: number,
+  newStatus: 'approved' | 'rejected'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const requestDocRef = doc(db, "withdrawal_requests", requestId);
+
+    if (newStatus === 'approved') {
+        await runTransaction(db, async (transaction) => {
+            const userDocRef = doc(db, 'users', userId);
+            const userDoc = await transaction.get(userDocRef);
+
+            if (!userDoc.exists()) {
+                throw new Error('User not found.');
+            }
+
+            const userProfile = userDoc.data() as UserProfile;
+            if (userProfile.walletBalance < amount) {
+                throw new Error('Insufficient funds for withdrawal.');
+            }
+            const newBalance = userProfile.walletBalance - amount;
+            
+            transaction.update(userDocRef, { walletBalance: newBalance });
+
+            const transactionDocRef = doc(collection(db, 'transactions'));
+            transaction.set(transactionDocRef, {
+                txnId: transactionDocRef.id,
+                userId,
+                amount,
+                type: 'debit',
+                status: 'success',
+                timestamp: serverTimestamp(),
+                description: 'Withdrawal approved',
+            });
+
+            transaction.update(requestDocRef, { status: newStatus });
+        });
+
+        await sendNotification(userId, "Withdrawal Approved", `Your request to withdraw ₹${amount} has been approved.`);
+
+    } else { // Rejected
+        await updateDoc(requestDocRef, { status: newStatus });
+        await sendNotification(userId, "Withdrawal Rejected", `Your request to withdraw ₹${amount} has been rejected.`);
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating withdrawal request:", error);
     return { success: false, error: error.message || 'Failed to update request.' };
   }
 }

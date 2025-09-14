@@ -81,6 +81,17 @@ export interface WalletRequest {
   timestamp: Timestamp;
 }
 
+export interface WithdrawalRequest {
+  requestId: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  amount: number;
+  upiId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  timestamp: Timestamp;
+}
+
 export interface AppConfig {
   upiId: string;
   qrImageUrl: string;

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { submitWalletRequest } from "@/app/actions";
+import { submitWalletRequest, submitWithdrawalRequest } from "@/app/actions";
 import { Spinner } from "../ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Transaction, AppConfig } from "@/lib/types";
@@ -30,14 +30,21 @@ const DEFAULT_QR_IMAGE_URL = "/done.png";
 export default function WalletScreen() {
   const { user, userProfile } = useAuth();
   const { toast } = useToast();
-  const [amount, setAmount] = useState("");
+  
+  // Add money state
+  const [addAmount, setAddAmount] = useState("");
   const [utr, setUtr] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isAddingMoney, setIsAddingMoney] = useState(false);
+
+  // Withdraw money state
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawUpiId, setWithdrawUpiId] = useState("");
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [paymentConfig, setPaymentConfig] = useState<AppConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [qrImageUrl, setQrImageUrl] = useState<string>(DEFAULT_QR_IMAGE_URL);
-
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -85,16 +92,15 @@ export default function WalletScreen() {
     return () => unsubscribe();
   }, [user]);
 
-
   const handleAddMoney = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    setLoading(true);
+    setIsAddingMoney(true);
 
     try {
       const result = await submitWalletRequest(
         user.uid,
-        parseFloat(amount),
+        parseFloat(addAmount),
         utr
       );
       if (result.success) {
@@ -102,7 +108,7 @@ export default function WalletScreen() {
           title: "Request Submitted",
           description: "Your request to add money is pending approval.",
         });
-        setAmount("");
+        setAddAmount("");
         setUtr("");
       } else {
         toast({
@@ -118,10 +124,46 @@ export default function WalletScreen() {
         description: "Could not submit your request. Please try again.",
       });
     } finally {
-      setLoading(false);
+      setIsAddingMoney(false);
     }
   };
-  
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setIsWithdrawing(true);
+
+    try {
+      const result = await submitWithdrawalRequest(
+        user.uid,
+        parseFloat(withdrawAmount),
+        withdrawUpiId
+      );
+      if (result.success) {
+        toast({
+          title: "Request Submitted",
+          description: "Your withdrawal request is pending approval.",
+        });
+        setWithdrawAmount("");
+        setWithdrawUpiId("");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Submission Failed",
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "An Error Occurred",
+        description: "Could not submit your request. Please try again.",
+      });
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
   const handleCopyUpi = () => {
     const upiId = paymentConfig?.upiId || DEFAULT_UPI_ID;
     navigator.clipboard.writeText(upiId);
@@ -145,8 +187,9 @@ export default function WalletScreen() {
       <UtrFollowUpNotifier />
 
       <Tabs defaultValue="add_money">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="add_money">Add Money</TabsTrigger>
+          <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
@@ -166,7 +209,7 @@ export default function WalletScreen() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
-                    <img 
+                    <img
                       src={qrImageUrl}
                       alt="QR Code" 
                       width={200} 
@@ -183,12 +226,12 @@ export default function WalletScreen() {
               )}
               <form onSubmit={handleAddMoney} className="space-y-4">
                 <div className="space-y-1">
-                  <Label htmlFor="amount">Amount</Label>
+                  <Label htmlFor="addAmount">Amount</Label>
                   <Input
-                    id="amount"
+                    id="addAmount"
                     type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    value={addAmount}
+                    onChange={(e) => setAddAmount(e.target.value)}
                     placeholder="Enter amount"
                     required
                   />
@@ -204,12 +247,52 @@ export default function WalletScreen() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? <Spinner /> : "Submit Request"}
+                <Button type="submit" className="w-full" disabled={isAddingMoney}>
+                  {isAddingMoney ? <Spinner /> : "Submit Request"}
                 </Button>
               </form>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="withdraw" className="mt-4">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Withdraw Funds</CardTitle>
+                    <CardDescription>
+                        Enter the amount you wish to withdraw and your UPI ID.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleWithdraw} className="space-y-4">
+                        <div className="space-y-1">
+                            <Label htmlFor="withdrawAmount">Amount</Label>
+                            <Input
+                                id="withdrawAmount"
+                                type="number"
+                                value={withdrawAmount}
+                                onChange={(e) => setWithdrawAmount(e.target.value)}
+                                placeholder="Enter amount"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="withdrawUpiId">Your UPI ID</Label>
+                            <Input
+                                id="withdrawUpiId"
+                                type="text"
+                                value={withdrawUpiId}
+                                onChange={(e) => setWithdrawUpiId(e.target.value)}
+                                placeholder="Enter your UPI ID for payment"
+                                required
+                            />
+                        </div>
+                        <Button type="submit" className="w-full" disabled={isWithdrawing}>
+                            {isWithdrawing ? <Spinner /> : "Submit Withdrawal Request"}
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
         </TabsContent>
         
         <TabsContent value="history" className="mt-4">
