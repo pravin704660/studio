@@ -143,20 +143,22 @@ export default function WalletScreen() {
                     <Skeleton className="h-[200px] w-[200px] rounded-md" />
                     <Skeleton className="h-4 w-48" />
                 </div>
-              ) : paymentConfig ? (
+              ) : (
                 <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
-                    {paymentConfig.qrImageUrl ? (
-                      <Image src={paymentConfig.qrImageUrl} alt="QR Code" width={200} height={200} className="rounded-md" data-ai-hint="qr code"/>
-                    ) : <p className="text-sm text-muted-foreground p-4">QR Code not available</p> }
-                    <p className="font-mono text-sm">{paymentConfig.upiId || 'UPI ID not available'}</p>
+                    <Image 
+                      src={paymentConfig?.qrImageUrl || "/done.png"} 
+                      alt="QR Code" 
+                      width={200} 
+                      height={200} 
+                      className="rounded-md" 
+                      data-ai-hint="qr code"
+                      unoptimized // Add this if the image is static in public folder
+                    />
+                    <p className="font-mono text-sm">{paymentConfig?.upiId || 'UPI ID not available'}</p>
                     <div className="relative h-24 w-full">
                         <Image src="/done.png" alt="Payment Done" layout="fill" objectFit="contain" />
                     </div>
                 </div>
-              ) : (
-                 <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
-                    <p className="text-sm text-muted-foreground p-4">Payment details are not configured yet.</p>
-                 </div>
               )}
               <form onSubmit={handleAddMoney} className="space-y-4">
                 <div className="space-y-1">
