@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updatePaymentSettings } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import Image from "next/image";
 
 const DEFAULT_UPI_ID = "sankhatpravin121@oksbi";
 const DEFAULT_QR_IMAGE_URL = "/done.png";
@@ -151,13 +150,12 @@ export default function PaymentSettingsPage() {
                 <div className="space-y-2">
                     <Label>Current QR Code</Label>
                     <div className="flex justify-center rounded-lg bg-muted p-4">
-                        <Image 
+                        <img 
                             src={config?.qrImageUrl || DEFAULT_QR_IMAGE_URL} 
                             alt="Current QR Code" 
                             width={200} 
                             height={200} 
                             className="rounded-md" 
-                            unoptimized
                         />
                     </div>
                 </div>

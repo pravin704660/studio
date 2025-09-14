@@ -17,7 +17,6 @@ import { useToast } from "@/hooks/use-toast";
 import { submitWalletRequest } from "@/app/actions";
 import { Spinner } from "../ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Image from "next/image";
 import type { Transaction, AppConfig } from "@/lib/types";
 import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -123,8 +122,9 @@ export default function WalletScreen() {
       description: `${upiId} has been copied to your clipboard.`,
     });
   };
-
+  
   const qrImageUrl = (paymentConfig?.qrImageUrl && paymentConfig.qrImageUrl.trim() !== '') ? paymentConfig.qrImageUrl : DEFAULT_QR_IMAGE_URL;
+
 
   return (
     <div className="space-y-6">
@@ -161,14 +161,12 @@ export default function WalletScreen() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
-                    <Image 
+                    <img 
                       src={qrImageUrl} 
                       alt="QR Code" 
                       width={200} 
                       height={200} 
                       className="rounded-md" 
-                      data-ai-hint="qr code"
-                      unoptimized 
                     />
                     <div className="flex items-center gap-2">
                       <p className="font-mono text-sm">{paymentConfig?.upiId || DEFAULT_UPI_ID}</p>
