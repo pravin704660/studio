@@ -41,6 +41,8 @@ export default function WalletScreen() {
         const configDoc = await getDoc(doc(db, "config", "payment"));
         if (configDoc.exists()) {
           setPaymentConfig(configDoc.data() as AppConfig);
+        } else {
+          setPaymentConfig({ upiId: "", qrImageUrl: "" }); // Set default empty config
         }
       } catch (error) {
         console.error("Failed to fetch payment config", error);
@@ -141,13 +143,17 @@ export default function WalletScreen() {
                     <Skeleton className="h-[200px] w-[200px] rounded-md" />
                     <Skeleton className="h-4 w-48" />
                 </div>
-              ) : paymentConfig && (
+              ) : paymentConfig ? (
                 <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
                     {paymentConfig.qrImageUrl ? (
                       <Image src={paymentConfig.qrImageUrl} alt="QR Code" width={200} height={200} className="rounded-md" data-ai-hint="qr code"/>
-                    ) : <p className="text-sm text-muted-foreground">QR Code not available</p> }
+                    ) : <p className="text-sm text-muted-foreground p-4">QR Code not available</p> }
                     <p className="font-mono text-sm">{paymentConfig.upiId || 'UPI ID not available'}</p>
                 </div>
+              ) : (
+                 <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
+                    <p className="text-sm text-muted-foreground p-4">Payment details are not configured yet.</p>
+                 </div>
               )}
               <form onSubmit={handleAddMoney} className="space-y-4">
                 <div className="space-y-1">
