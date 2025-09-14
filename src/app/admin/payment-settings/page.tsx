@@ -18,6 +18,9 @@ import { updatePaymentSettings } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Image from "next/image";
 
+const DEFAULT_UPI_ID = "sankhatpravin121@oksbi";
+const DEFAULT_QR_IMAGE_URL = "/done.png";
+
 export default function PaymentSettingsPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -43,11 +46,11 @@ export default function PaymentSettingsPage() {
       if (configDoc.exists()) {
         const data = configDoc.data() as AppConfig;
         setConfig(data);
-        setUpiId(data.upiId);
+        setUpiId(data.upiId || DEFAULT_UPI_ID);
       } else {
         // Set default empty state if not configured yet
-        setConfig({ upiId: "", qrImageUrl: "" });
-        setUpiId("");
+        setConfig({ upiId: DEFAULT_UPI_ID, qrImageUrl: DEFAULT_QR_IMAGE_URL });
+        setUpiId(DEFAULT_UPI_ID);
       }
     } catch (error) {
       console.error("Error fetching payment config:", error);
@@ -147,13 +150,16 @@ export default function PaymentSettingsPage() {
 
                 <div className="space-y-2">
                     <Label>Current QR Code</Label>
-                    {config?.qrImageUrl ? (
-                        <div className="flex justify-center rounded-lg bg-muted p-4">
-                            <Image src={config.qrImageUrl} alt="Current QR Code" width={200} height={200} className="rounded-md" />
-                        </div>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">No QR code is currently set.</p>
-                    )}
+                    <div className="flex justify-center rounded-lg bg-muted p-4">
+                        <Image 
+                            src={config?.qrImageUrl || DEFAULT_QR_IMAGE_URL} 
+                            alt="Current QR Code" 
+                            width={200} 
+                            height={200} 
+                            className="rounded-md" 
+                            unoptimized
+                        />
+                    </div>
                 </div>
 
                 <div className="space-y-2">

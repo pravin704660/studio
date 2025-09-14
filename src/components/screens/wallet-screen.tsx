@@ -24,6 +24,9 @@ import { db } from "@/lib/firebase/client";
 import UtrFollowUpNotifier from "../utr-follow-up-notifier";
 import { Skeleton } from "../ui/skeleton";
 
+const DEFAULT_UPI_ID = "sankhatpravin121@oksbi";
+const DEFAULT_QR_IMAGE_URL = "/done.png";
+
 export default function WalletScreen() {
   const { user, userProfile } = useAuth();
   const { toast } = useToast();
@@ -42,10 +45,11 @@ export default function WalletScreen() {
         if (configDoc.exists()) {
           setPaymentConfig(configDoc.data() as AppConfig);
         } else {
-          setPaymentConfig({ upiId: "", qrImageUrl: "" }); // Set default empty config
+          setPaymentConfig({ upiId: DEFAULT_UPI_ID, qrImageUrl: DEFAULT_QR_IMAGE_URL });
         }
       } catch (error) {
         console.error("Failed to fetch payment config", error);
+        setPaymentConfig({ upiId: DEFAULT_UPI_ID, qrImageUrl: DEFAULT_QR_IMAGE_URL });
         toast({
           variant: "destructive",
           title: "Error",
@@ -146,7 +150,7 @@ export default function WalletScreen() {
               ) : (
                 <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
                     <Image 
-                      src={paymentConfig?.qrImageUrl || "/done.png"} 
+                      src={paymentConfig?.qrImageUrl || DEFAULT_QR_IMAGE_URL} 
                       alt="QR Code" 
                       width={200} 
                       height={200} 
@@ -154,7 +158,7 @@ export default function WalletScreen() {
                       data-ai-hint="qr code"
                       unoptimized 
                     />
-                    <p className="font-mono text-sm">{paymentConfig?.upiId || 'UPI ID not available'}</p>
+                    <p className="font-mono text-sm">{paymentConfig?.upiId || DEFAULT_UPI_ID}</p>
                 </div>
               )}
               <form onSubmit={handleAddMoney} className="space-y-4">
