@@ -52,10 +52,12 @@ export default function WalletScreen() {
           }
         } else {
           setPaymentConfig({ upiId: DEFAULT_UPI_ID, qrImageUrl: DEFAULT_QR_IMAGE_URL });
+          setQrImageUrl(DEFAULT_QR_IMAGE_URL);
         }
       } catch (error) {
         console.error("Failed to fetch payment config", error);
         setPaymentConfig({ upiId: DEFAULT_UPI_ID, qrImageUrl: DEFAULT_QR_IMAGE_URL });
+        setQrImageUrl(DEFAULT_QR_IMAGE_URL);
         toast({
           variant: "destructive",
           title: "Error",
@@ -165,7 +167,7 @@ export default function WalletScreen() {
               ) : (
                 <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
                     <img 
-                      src={qrImageUrl} 
+                      src={qrImageUrl}
                       alt="QR Code" 
                       width={200} 
                       height={200} 
