@@ -149,6 +149,9 @@ export default function WalletScreen() {
                       <Image src={paymentConfig.qrImageUrl} alt="QR Code" width={200} height={200} className="rounded-md" data-ai-hint="qr code"/>
                     ) : <p className="text-sm text-muted-foreground p-4">QR Code not available</p> }
                     <p className="font-mono text-sm">{paymentConfig.upiId || 'UPI ID not available'}</p>
+                    <div className="relative h-24 w-full">
+                        <Image src="/done.png" alt="Payment Done" layout="fill" objectFit="contain" />
+                    </div>
                 </div>
               ) : (
                  <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
