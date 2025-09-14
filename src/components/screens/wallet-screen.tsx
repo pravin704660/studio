@@ -23,6 +23,7 @@ import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/fire
 import { db } from "@/lib/firebase/client";
 import UtrFollowUpNotifier from "../utr-follow-up-notifier";
 import { Skeleton } from "../ui/skeleton";
+import { ClipboardCopy } from "lucide-react";
 
 const DEFAULT_UPI_ID = "sankhatpravin121@oksbi";
 const DEFAULT_QR_IMAGE_URL = "/done.png";
@@ -113,6 +114,15 @@ export default function WalletScreen() {
       setLoading(false);
     }
   };
+  
+  const handleCopyUpi = () => {
+    const upiId = paymentConfig?.upiId || DEFAULT_UPI_ID;
+    navigator.clipboard.writeText(upiId);
+    toast({
+      title: "UPI ID Copied!",
+      description: `${upiId} has been copied to your clipboard.`,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -158,7 +168,12 @@ export default function WalletScreen() {
                       data-ai-hint="qr code"
                       unoptimized 
                     />
-                    <p className="font-mono text-sm">{paymentConfig?.upiId || DEFAULT_UPI_ID}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-mono text-sm">{paymentConfig?.upiId || DEFAULT_UPI_ID}</p>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopyUpi}>
+                        <ClipboardCopy className="h-4 w-4" />
+                      </Button>
+                    </div>
                 </div>
               )}
               <form onSubmit={handleAddMoney} className="space-y-4">
