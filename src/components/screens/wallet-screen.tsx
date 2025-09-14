@@ -36,6 +36,8 @@ export default function WalletScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [paymentConfig, setPaymentConfig] = useState<AppConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
+  const [qrImageUrl, setQrImageUrl] = useState<string>(DEFAULT_QR_IMAGE_URL);
+
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -43,7 +45,11 @@ export default function WalletScreen() {
       try {
         const configDoc = await getDoc(doc(db, "config", "payment"));
         if (configDoc.exists()) {
-          setPaymentConfig(configDoc.data() as AppConfig);
+          const configData = configDoc.data() as AppConfig;
+          setPaymentConfig(configData);
+          if (configData.qrImageUrl && configData.qrImageUrl.trim() !== '') {
+            setQrImageUrl(configData.qrImageUrl);
+          }
         } else {
           setPaymentConfig({ upiId: DEFAULT_UPI_ID, qrImageUrl: DEFAULT_QR_IMAGE_URL });
         }
@@ -122,9 +128,6 @@ export default function WalletScreen() {
       description: `${upiId} has been copied to your clipboard.`,
     });
   };
-  
-  const qrImageUrl = (paymentConfig?.qrImageUrl && paymentConfig.qrImageUrl.trim() !== '') ? paymentConfig.qrImageUrl : DEFAULT_QR_IMAGE_URL;
-
 
   return (
     <div className="space-y-6">
