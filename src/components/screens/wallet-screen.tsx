@@ -152,12 +152,9 @@ export default function WalletScreen() {
                       height={200} 
                       className="rounded-md" 
                       data-ai-hint="qr code"
-                      unoptimized // Add this if the image is static in public folder
+                      unoptimized 
                     />
                     <p className="font-mono text-sm">{paymentConfig?.upiId || 'UPI ID not available'}</p>
-                    <div className="relative h-24 w-full">
-                        <Image src="/done.png" alt="Payment Done" layout="fill" objectFit="contain" />
-                    </div>
                 </div>
               )}
               <form onSubmit={handleAddMoney} className="space-y-4">
