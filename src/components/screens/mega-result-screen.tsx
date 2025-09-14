@@ -18,16 +18,20 @@ export default function MegaResultScreen() {
       setLoading(true);
       try {
         const resultsCollection = collection(db, "results");
+        // The query now only filters, sorting is done client-side
         const q = query(
           resultsCollection,
-          where("isMega", "==", true),
-          orderBy("declaredAt", "desc")
+          where("isMega", "==", true)
         );
 
         const querySnapshot = await getDocs(q);
         const megaResults = querySnapshot.docs.map(
           (doc) => ({ id: doc.id, ...doc.data() } as TournamentResult)
         );
+        
+        // Sort the results in descending order by declaredAt date on the client
+        megaResults.sort((a, b) => b.declaredAt.toMillis() - a.declaredAt.toMillis());
+        
         setResults(megaResults);
       } catch (error) {
         console.error("Error fetching mega results:", error);
