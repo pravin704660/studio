@@ -83,9 +83,9 @@ export default function MegaResultScreen() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {result.results.slice(0, 4).map((player, index) => (
+                  {result.results.slice(0, 10).map((player, index) => (
                     <li
-                      key={player.userId}
+                      key={player.userId || index}
                       className="flex items-center justify-between rounded-lg bg-muted/50 p-3"
                     >
                       <div className="flex items-center gap-3">
