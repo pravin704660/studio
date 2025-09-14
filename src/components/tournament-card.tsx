@@ -10,7 +10,7 @@ import { joinTournament } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { Spinner } from "./ui/spinner";
-import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List } from "lucide-react";
+import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users } from "lucide-react";
 import { Separator } from "./ui/separator";
 import {
   Dialog,
@@ -95,7 +95,7 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
         </div>
       </CardHeader>
       <CardContent className="p-4">
-        <div className="grid grid-cols-3 gap-4 text-center">
+        <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-4">
             <div className="flex flex-col items-center">
                 <Ticket className="h-6 w-6 text-primary" />
                 <span className="mt-1 text-sm font-semibold">Entry Fee</span>
@@ -105,6 +105,11 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
                 <Trophy className="h-6 w-6 text-amber-400" />
                 <span className="mt-1 text-sm font-semibold">Prize Pool</span>
                 <span className="text-lg font-bold">₹{tournament.prize}</span>
+            </div>
+             <div className="flex flex-col items-center">
+                <Users className="h-6 w-6 text-cyan-400" />
+                <span className="mt-1 text-sm font-semibold">Total Slots</span>
+                <span className="text-lg font-bold">{tournament.slots}</span>
             </div>
             <div className="flex flex-col items-center">
                 <Calendar className="h-6 w-6 text-green-400" />
@@ -161,11 +166,15 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
                     <DialogTitle>{tournament.title} - Rules</DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="max-h-[60vh] pr-4">
-                    <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-                        {tournament.rules.map((rule, index) => (
-                            <li key={index}>{rule}</li>
-                        ))}
-                    </ul>
+                    {tournament.rules.length > 0 ? (
+                        <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
+                            {tournament.rules.map((rule, index) => (
+                                <li key={index}>{rule}</li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-center text-muted-foreground">No rules specified for this tournament.</p>
+                    )}
                 </ScrollArea>
             </DialogContent>
         </Dialog>
