@@ -124,6 +124,8 @@ export default function WalletScreen() {
     });
   };
 
+  const qrImageUrl = (paymentConfig?.qrImageUrl && paymentConfig.qrImageUrl.trim() !== '') ? paymentConfig.qrImageUrl : DEFAULT_QR_IMAGE_URL;
+
   return (
     <div className="space-y-6">
       <Card className="text-center">
@@ -160,7 +162,7 @@ export default function WalletScreen() {
               ) : (
                 <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
                     <Image 
-                      src={paymentConfig?.qrImageUrl || DEFAULT_QR_IMAGE_URL} 
+                      src={qrImageUrl} 
                       alt="QR Code" 
                       width={200} 
                       height={200} 
