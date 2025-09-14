@@ -20,7 +20,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
-import type { Tournament, UserProfile, TournamentFormData, Notification, PlayerResult } from "./lib/types";
+import type { Tournament, UserProfile, TournamentFormData, Notification, PlayerResult, AppConfig } from "./lib/types";
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -513,5 +513,49 @@ export async function updateWalletRequestStatus(
   } catch (error: any) {
     console.error("Error updating wallet request:", error);
     return { success: false, error: error.message || 'Failed to update request.' };
+  }
+}
+
+
+export async function updatePaymentSettings(formData: FormData): Promise<{ success: boolean; error?: string }> {
+  try {
+    const upiId = formData.get('upiId') as string;
+    const qrImageFile = formData.get('qrImageFile') as File | null;
+    let qrImageUrl = "";
+
+    const configDocRef = doc(db, "config", "payment");
+    const currentConfigDoc = await getDoc(configDocRef);
+    const currentConfig = currentConfigDoc.exists() ? currentConfigDoc.data() as AppConfig : { upiId: "", qrImageUrl: "" };
+    
+    qrImageUrl = currentConfig.qrImageUrl; // Keep old image by default
+
+    if (qrImageFile) {
+      const bucket = adminStorage.bucket();
+      const fileName = `config/${uuidv4()}-${qrImageFile.name}`;
+      const file = bucket.file(fileName);
+      const fileBuffer = Buffer.from(await qrImageFile.arrayBuffer());
+
+      await file.save(fileBuffer, {
+        metadata: { contentType: qrImageFile.type },
+      });
+
+      const [url] = await file.getSignedUrl({
+        action: 'read',
+        expires: '03-09-2491'
+      });
+      qrImageUrl = url;
+    }
+
+    const newConfig: AppConfig = {
+      upiId: upiId,
+      qrImageUrl: qrImageUrl,
+    };
+
+    await setDoc(configDocRef, newConfig);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating payment settings:", error);
+    return { success: false, error: error.message || "Failed to update settings." };
   }
 }
