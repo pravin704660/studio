@@ -167,7 +167,8 @@ export default function WalletScreen() {
     });
   };
 
-  const qrImageUrlToShow = paymentConfig?.qrImageUrl && paymentConfig.qrImageUrl.trim() !== '' ? paymentConfig.qrImageUrl : DEFAULT_QR_IMAGE_URL;
+  const qrImageUrlToShow = (paymentConfig?.qrImageUrl && paymentConfig.qrImageUrl.trim() !== '') ? paymentConfig.qrImageUrl : DEFAULT_QR_IMAGE_URL;
+
 
   return (
     <div className="space-y-6">

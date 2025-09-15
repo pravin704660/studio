@@ -94,7 +94,7 @@ export interface WithdrawalRequest {
 
 export interface AppConfig {
   upiId: string;
-  qrImageUrl: string;
+  qrImageUrl?: string;
 }
 
 export interface Notification {
