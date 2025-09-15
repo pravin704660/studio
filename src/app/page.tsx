@@ -1,3 +1,5 @@
+
+"use client";
 export default function Home() {
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6">
@@ -12,8 +14,6 @@ export default function Home() {
     </main>
   );
 }
-"use client";
-
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import AuthForm from "@/components/auth-form";
