@@ -1,19 +1,6 @@
 
 "use client";
-export default function Home() {
-  return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-6">
-      <h1 className="text-2xl font-bold mb-4">Welcome to My App</h1>
 
-      {/* Download APK Button */}
-      <a href="/app.apk" download>
-        <button className="px-6 py-3 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700">
-          📥 Download Android App
-        </button>
-      </a>
-    </main>
-  );
-}
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import AuthForm from "@/components/auth-form";
