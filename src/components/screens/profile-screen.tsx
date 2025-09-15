@@ -57,15 +57,10 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
         return;
     }
     
-    const apkUrl = `${window.location.origin}/arena-ace.apk`;
     const referralLink = `${window.location.origin}/?ref=${user.uid}`;
     
-    const referralText = `Join me on pubg1star and get ₹10 cash bonus when you sign up! 💰 Compete in exciting tournaments and win big. 🏆\n\nDownload the app here:\n${apkUrl}\n\nUse my referral link to sign up:\n${referralLink}`;
+    const referralText = `Join me on pubg1star and get ₹10 cash bonus when you sign up! 💰 Compete in exciting tournaments and win big. 🏆\n\nUse my referral link to sign up:\n${referralLink}`;
     
-    const encodedReferralText = encodeURIComponent(referralText);
-    
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
     if (navigator.share) {
         try {
             await navigator.share({
@@ -75,10 +70,8 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
             });
         } catch (error) {
             console.error('Error sharing:', error);
-            toast({ variant: "destructive", title: "Sharing Failed", description: "Could not share the referral link." });
+            // Non-critical error, so no toast needed unless debugging
         }
-    } else if (isMobile) {
-        window.open(`https://api.whatsapp.com/send?text=${encodedReferralText}`, '_blank');
     } else {
         try {
             await navigator.clipboard.writeText(referralText);
