@@ -57,21 +57,20 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
         return;
     }
     
-    // Assuming the APK file is named 'arena-ace.apk' and is in the public folder.
     const apkUrl = `${window.location.origin}/arena-ace.apk`;
     const referralLink = `${window.location.origin}/?ref=${user.uid}`;
     
-    const referralText = encodeURIComponent(
-      `Join me on Arena Ace and compete in exciting tournaments!\n\nDownload the app here:\n${apkUrl}\n\nUse my referral link to sign up:\n${referralLink}`
-    );
+    const referralText = `Join me on pubg1star and get ₹10 cash bonus when you sign up! 💰 Compete in exciting tournaments and win big. 🏆\n\nDownload the app here:\n${apkUrl}\n\nUse my referral link to sign up:\n${referralLink}`;
+    
+    const encodedReferralText = encodeURIComponent(referralText);
     
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     if (navigator.share) {
         try {
             await navigator.share({
-                title: 'Join Arena Ace!',
-                text: `Join me on Arena Ace and compete in exciting tournaments!\n\nDownload the app here:\n${apkUrl}\n\nUse my referral link to sign up:\n${referralLink}`,
+                title: 'Join pubg1star!',
+                text: referralText,
                 url: referralLink,
             });
         } catch (error) {
@@ -79,12 +78,11 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
             toast({ variant: "destructive", title: "Sharing Failed", description: "Could not share the referral link." });
         }
     } else if (isMobile) {
-        window.open(`https://api.whatsapp.com/send?text=${referralText}`, '_blank');
+        window.open(`https://api.whatsapp.com/send?text=${encodedReferralText}`, '_blank');
     } else {
         try {
-            const clipboardText = `Join me on Arena Ace and compete in exciting tournaments!\n\nDownload the app here:\n${apkUrl}\n\nUse my referral link to sign up:\n${referralLink}`;
-            await navigator.clipboard.writeText(clipboardText);
-            toast({ title: "Link Copied!", description: "Referral link and app download URL copied to clipboard." });
+            await navigator.clipboard.writeText(referralText);
+            toast({ title: "Link Copied!", description: "Referral message copied to clipboard." });
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "Could not copy the link." });
         }
