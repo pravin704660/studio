@@ -111,6 +111,8 @@ export default function PaymentSettingsPage() {
       </div>
     );
   }
+  
+  const qrImageUrlToShow = config?.qrImageUrl && config.qrImageUrl.trim() !== '' ? config.qrImageUrl : DEFAULT_QR_IMAGE_URL;
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -151,7 +153,7 @@ export default function PaymentSettingsPage() {
                     <Label>Current QR Code</Label>
                     <div className="flex justify-center rounded-lg bg-muted p-4">
                         <img 
-                            src={config?.qrImageUrl || DEFAULT_QR_IMAGE_URL} 
+                            src={qrImageUrlToShow} 
                             alt="Current QR Code" 
                             width={200} 
                             height={200} 
