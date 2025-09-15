@@ -44,7 +44,6 @@ export default function WalletScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [paymentConfig, setPaymentConfig] = useState<AppConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
-  const [qrImageUrl, setQrImageUrl] = useState<string>(DEFAULT_QR_IMAGE_URL);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -54,17 +53,12 @@ export default function WalletScreen() {
         if (configDoc.exists()) {
           const configData = configDoc.data() as AppConfig;
           setPaymentConfig(configData);
-          if (configData.qrImageUrl && configData.qrImageUrl.trim() !== '') {
-            setQrImageUrl(configData.qrImageUrl);
-          }
         } else {
           setPaymentConfig({ upiId: DEFAULT_UPI_ID, qrImageUrl: DEFAULT_QR_IMAGE_URL });
-          setQrImageUrl(DEFAULT_QR_IMAGE_URL);
         }
       } catch (error) {
         console.error("Failed to fetch payment config", error);
         setPaymentConfig({ upiId: DEFAULT_UPI_ID, qrImageUrl: DEFAULT_QR_IMAGE_URL });
-        setQrImageUrl(DEFAULT_QR_IMAGE_URL);
         toast({
           variant: "destructive",
           title: "Error",
@@ -173,6 +167,8 @@ export default function WalletScreen() {
     });
   };
 
+  const qrImageUrlToShow = paymentConfig?.qrImageUrl && paymentConfig.qrImageUrl.trim() !== '' ? paymentConfig.qrImageUrl : DEFAULT_QR_IMAGE_URL;
+
   return (
     <div className="space-y-6">
       <Card className="text-center">
@@ -210,7 +206,7 @@ export default function WalletScreen() {
               ) : (
                 <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
                     <img
-                      src={qrImageUrl}
+                      src={qrImageUrlToShow}
                       alt="QR Code" 
                       width={200} 
                       height={200} 
