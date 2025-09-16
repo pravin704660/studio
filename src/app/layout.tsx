@@ -1,4 +1,34 @@
-import type { Metadata } from 'next';
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body style={{ textAlign: "center", marginTop: "50px" }}>
+        {/* Logo Image */}
+        <img src="/logo.png" alt="App Logo" width="150" />
+
+        <h1>Welcome to PUBG1STAR Tournament</h1>
+
+        {/* Download APK Button */}
+        <a href="/PUBG1STAR.apk" download>
+          <button
+            style={{
+              padding: "10px 20px",
+              background: "#28a745",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
+          >
+            Download APK
+          </button>
+        </a>
+
+        {/* Other pages */}
+        {children}
+      </body>
+    </html>
+  );
+}                                                                                                                                                                                                                                   import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/auth-provider';
