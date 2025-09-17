@@ -104,7 +104,7 @@ export default function Home() {
         </div> 
 <div className="text-center my-4">
   <a
-    href="/app-release (2).zip"
+    href="/app-release.zip"
     download
     className="inline-block bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg hover:bg-green-700 transition"
   >
