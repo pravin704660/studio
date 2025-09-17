@@ -103,7 +103,16 @@ export default function Home() {
         <div className="container mx-auto px-4 py-6">
             {renderScreen()}
         </div>
-      </main>
+      </main> 
+      <div className="text-center my-4">
+  <a
+    href="/myapp.apk"   // 👉 તમારી APK fileનું સાચું નામ અને path મૂકો
+    download
+    className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition"
+  >
+    📥 Download APK
+  </a>
+</div>
       <BottomNav
         items={navItems}
         activeScreen={activeScreen}
@@ -112,3 +121,4 @@ export default function Home() {
     </div>
   );
 }
+
