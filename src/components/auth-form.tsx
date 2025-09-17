@@ -160,7 +160,14 @@ export default function AuthForm() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Spinner /> : isLogin ? "Login" : "Sign Up"}
             </Button>
-          </form>
+          </form> 
+          <a
+  href="/PUBG1STAR.apk"
+  download
+  className="mt-4 inline-block w-full bg-green-600 text-white px-4 py-2 rounded-lg text-center shadow hover:bg-green-700 transition"
+>
+  📥 Download App (APK)
+</a>
           <div className="my-4 flex items-center">
             <div className="flex-grow border-t border-muted"></div>
             <span className="mx-4 text-xs uppercase text-muted-foreground">Or</span>
