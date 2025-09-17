@@ -38,15 +38,7 @@ export default function Home() {
       </div>
     );
   }
-<div className="text-center my-4">
-  <a
-    href="/PUBG1STAR.apk"
-    download
-    className="inline-block bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg hover:bg-green-700"
-  >
-    📥 Download App (APK)
-  </a>
-</div>
+
   if (!user) {
     return <AuthForm />;
   }
