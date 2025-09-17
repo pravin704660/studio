@@ -102,15 +102,13 @@ export default function Home() {
         <div className="container mx-auto px-4 py-6">
             {renderScreen()}
         </div> 
-        <div className="text-center my-4">
-  <a
-    href="/myapp.apk"   // 👉 PUBG1STAR.apk"
-    download
-    className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition"
-  >
-    📥 Download APK
-  </a>
-</div>
+        <a
+  href="/app-release.apk"
+  download
+  className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700"
+>
+  📥 Download APK
+</a>
       </main>
       <BottomNav
         items={navItems}
