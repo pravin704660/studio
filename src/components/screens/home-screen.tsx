@@ -22,12 +22,15 @@ export default function HomeScreen() {
         const q = query(tournamentsCollection, orderBy("date", "desc"));
         
         const querySnapshot = await getDocs(q);
-        const allTournaments = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
-        
-        const publishedTournaments = allTournaments.filter(t => t.status === 'published');
-          
-        setTournaments(publishedTournaments);
+        const allTournaments = querySnapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as Tournament)
+        );
 
+        const publishedTournaments = allTournaments.filter(
+          (t) => t.status === "published"
+        );
+
+        setTournaments(publishedTournaments);
       } catch (error) {
         console.error("Error fetching tournaments:", error);
       } finally {
@@ -42,31 +45,40 @@ export default function HomeScreen() {
 
   return (
     <div className="space-y-6">
+      {/* Banner */}
       <div className="relative h-48 w-full overflow-hidden rounded-lg">
         <Image
-            src="https://picsum.photos/seed/pubg1/800/400"
-            alt="PUBG Banner"
-            fill
-            className="object-cover"
-            data-ai-hint="game battle player"
+          src="https://picsum.photos/seed/pubg1/800/400"
+          alt="PUBG Banner"
+          fill
+          className="object-cover"
+          data-ai-hint="game battle player"
         />
-        
+      </div>
+
+      {/* YOU WIN box */}
       <div className="rounded-lg border-2 border-primary bg-primary/10 p-4 text-center">
         <h2 className="animate-pulse text-2xl font-bold text-red-500">
           YOU WIN YOU TOURNAMENTS
         </h2>
       </div>
 
+      {/* Title + description */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Tournaments</h1>
-        <p className="text-muted-foreground">Join and compete in daily tournaments.</p>
+        <p className="text-muted-foreground">
+          Join and compete in daily tournaments.
+        </p>
       </div>
 
-
+      {/* Tournament Cards */}
       <div className="space-y-4">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="space-y-3 rounded-lg border bg-card p-4">
+            <div
+              key={i}
+              className="space-y-3 rounded-lg border bg-card p-4"
+            >
               <Skeleton className="h-40 w-full rounded-lg" />
               <Skeleton className="h-6 w-3/4" />
               <div className="flex justify-between">
@@ -79,7 +91,9 @@ export default function HomeScreen() {
         ) : tournaments.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card p-12 text-center">
             <h3 className="text-lg font-semibold">No Tournaments Available</h3>
-            <p className="text-sm text-muted-foreground">Please check back later for new tournaments.</p>
+            <p className="text-sm text-muted-foreground">
+              Please check back later for new tournaments.
+            </p>
           </div>
         ) : (
           tournaments.map((tournament) => (
