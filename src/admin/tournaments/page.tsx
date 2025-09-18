@@ -45,7 +45,7 @@ const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string 
   prize: 0,
   rules: '',
   status: "draft",
-  isMega: false,
+  type: "regular",
   roomId: "",
   roomPassword: "",
   winnerPrizes: [
