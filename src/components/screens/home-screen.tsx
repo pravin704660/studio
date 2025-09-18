@@ -51,8 +51,8 @@ export default function HomeScreen() {
         <Image
           src="/home/Homapageimage.jpg"
           alt="Homepage Banner"
-          width={1600}
-          height={600}
+          width={1800}
+          height={1000}
           className="w-full max-w-3xl mx-auto rounded-lg object-cover"
           priority
         />
