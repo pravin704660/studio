@@ -81,12 +81,16 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
             <Image
-                src={tournament.imageUrl || "https://picsum.photos/600/400"}
-                alt={tournament.title}
-                fill
-                className="object-cover"
-                data-ai-hint="game tournament"
-            />
+  src={
+    tournament.imageUrl ||
+    (tournament.type === "mega"
+      ? "/tournament/MegaTournament.jpg"
+      : "/tournament/RegularTournament.jpg")
+  }
+  alt={tournament.title}
+  fill
+  className="object-cover"
+/>
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
             <div className="absolute bottom-4 left-4">
                 <CardTitle className="text-2xl font-black text-white">{tournament.title}</CardTitle>
