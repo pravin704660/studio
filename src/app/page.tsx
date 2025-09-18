@@ -130,18 +130,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ✅ Image WELCOME ની નીચે */}
-      <div className="container mx-auto px-4 mt-4">
-        <Image
-          src="/home/Homapageimage.jpg"
-          alt="Homepage Banner"
-          width={1200}
-          height={400}
-          className="w-full max-w-3xl mx-auto rounded-lg object-cover"
-          priority
-        />
-      </div>
-
       {/* Main Content */}
       <main className="flex-1 pb-20">
         <div className="container mx-auto px-4 py-6">{renderScreen()}</div>
