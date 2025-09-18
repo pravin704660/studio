@@ -52,7 +52,7 @@ export default function HomeScreen() {
     alt="Homepage Banner"
     width={1600}
     height={900}
-    className="w-full max-w-4xl h-[280px] sm:h-[350px] md:h-[450px] object-cover rounded-lg"
+    className="w-full max-w-4xl h-auto object-contain rounded-lg"
     priority
   />
 </div>
