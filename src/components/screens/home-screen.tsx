@@ -47,16 +47,16 @@ export default function HomeScreen() {
     <div className="space-y-6">
       {/* Banner */}
       {/* ✅ Image WELCOME ની નીચે */}
-      <div className="container mx-auto px-4 mt-4">
-        <Image
-          src="/home/Homapageimage.jpg"
-          alt="Homepage Banner"
-          width={1800}
-          height={1000}
-          className="w-full max-w-3xl mx-auto rounded-lg object-cover"
-          priority
-        />
-      </div>
+<div className="w-full mt-4">
+  <Image
+    src="/home/Homapageimage.jpg"
+    alt="Homepage Banner"
+    width={1920}
+    height={600}
+    className="w-full h-[300px] md:h-[500px] lg:h-[600px] object-cover rounded-lg"
+    priority
+  />
+</div>
       {/* Tournament Cards */}
       <div className="space-y-4">
         {loading ? (
