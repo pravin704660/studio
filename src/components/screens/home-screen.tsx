@@ -56,21 +56,6 @@ export default function HomeScreen() {
         />
       </div>
 
-      {/* YOU WIN box */}
-      <div className="rounded-lg border-2 border-primary bg-primary/10 p-4 text-center">
-        <h2 className="animate-pulse text-2xl font-bold text-red-500">
-          YOU WIN YOU TOURNAMENTS
-        </h2>
-      </div>
-
-      {/* Title + description */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Tournaments</h1>
-        <p className="text-muted-foreground">
-          Join and compete in daily tournaments.
-        </p>
-      </div>
-
       {/* Tournament Cards */}
       <div className="space-y-4">
         {loading ? (
@@ -104,4 +89,3 @@ export default function HomeScreen() {
     </div>
   );
 }
-
