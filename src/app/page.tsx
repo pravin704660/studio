@@ -87,15 +87,15 @@ export default function Home() {
             </Button>
           </div>
           <div className="flex-1 text-center">
-            <h1 className="text-lg font-bold tracking-tight text-yellow-400">WELCOME</h1>
-          </div> 
-          <Image
+            <h1 className="text-lg font-bold tracking-tight text-yellow-400">WELCOME</h1> 
+            <Image
   src="/home/Homapageimage.jpg"
   alt="Homepage Banner"
   width={600}
   height={200}
   className="mx-auto rounded-lg object-cover mt-4"
 />
+          </div> 
           <div className="flex-1 flex justify-end items-center gap-2">
             <a href="https://shorturl.at/NbYgS" target="_blank" rel="noopener noreferrer">
               <Button variant="ghost" size="icon">
