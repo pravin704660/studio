@@ -46,7 +46,7 @@ export default function HomeScreen() {
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="mt-4 flex justify-center">
+      <div className="flex justify-center">
   <Image
     src="/home/Homapageimage.jpg"
     alt="Homepage Banner"
