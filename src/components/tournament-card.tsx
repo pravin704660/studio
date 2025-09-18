@@ -82,10 +82,13 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
         <div className="relative h-48 w-full">
             <Image
   src={
-    tournament.imageUrl ||
-    (tournament.type === "mega"
-      ? "/tournament/MegaTournament.jpg"
-      : "/tournament/RegularTournament.jpg")
+    tournament.imageUrl
+      ? (tournament.imageUrl.startsWith("http")
+          ? tournament.imageUrl
+          : `/tournament/${tournament.imageUrl}`)
+      : (tournament.type === "mega"
+          ? "/tournament/MegaTournament.jpg"
+          : "/tournament/RegularTournament.jpg")
   }
   alt={tournament.title}
   fill
