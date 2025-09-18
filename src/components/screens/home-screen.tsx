@@ -51,17 +51,7 @@ export default function HomeScreen() {
             className="object-cover"
             data-ai-hint="game battle player"
         />
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-                <h2 className="text-4xl font-black text-yellow-400 drop-shadow-lg">
-                  PUBG 1 STAR
-                </h2>
-                <p className="text-lg font-semibold text-white tracking-widest">TOURNAMENT</p>
-            </div>
-        </div>
-      </div>
-
+        
       <div className="rounded-lg border-2 border-primary bg-primary/10 p-4 text-center">
         <h2 className="animate-pulse text-2xl font-bold text-red-500">
           YOU WIN YOU TOURNAMENTS
