@@ -46,14 +46,13 @@ export default function HomeScreen() {
   return (
     <div className="space-y-6">
       {/* Banner */}
-      {/* ✅ Image WELCOME ની નીચે */}
-<div className="w-full mt-4">
+      <div className="mt-4 flex justify-center">
   <Image
     src="/home/Homapageimage.jpg"
     alt="Homepage Banner"
-    width={1920}
+    width={1200}
     height={600}
-    className="w-full h-[300px] md:h-[500px] lg:h-[600px] object-cover rounded-lg"
+    className="w-full max-w-3xl h-40 sm:h-56 md:h-72 lg:h-96 object-cover rounded-lg"
     priority
   />
 </div>
