@@ -19,7 +19,14 @@ import { User } from "lucide-react";
 import RulesScreen from "@/components/screens/rules-screen";
 import InboxScreen from "@/components/screens/inbox-screen";
 
-type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile" | "rules" | "inbox";
+type Screen =
+  | "home"
+  | "wallet"
+  | "mega-result"
+  | "tournaments"
+  | "profile"
+  | "rules"
+  | "inbox";
 
 export default function Home() {
   const { user, userProfile, loading } = useAuth();
@@ -43,11 +50,15 @@ export default function Home() {
   if (!user) {
     return <AuthForm />;
   }
-  
+
   const getInitials = (name: string | null | undefined) => {
-    if (!name || name === 'New User') return null;
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  }
+    if (!name || name === "New User") return null;
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
 
   const renderScreen = () => {
     switch (activeScreen) {
@@ -69,38 +80,47 @@ export default function Home() {
         return <HomeScreen />;
     }
   };
-  
+
   const initials = getInitials(userProfile?.name);
 
   return (
     <div className="flex min-h-screen flex-col bg-background font-body text-foreground">
+      {/* Header */}
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          {/* Left Avatar */}
           <div className="flex-1 flex justify-start">
-             <Button variant="ghost" className="h-10 w-10 p-0 rounded-full" onClick={() => setActiveScreen("profile")}>
+            <Button
+              variant="ghost"
+              className="h-10 w-10 p-0 rounded-full"
+              onClick={() => setActiveScreen("profile")}
+            >
               <Avatar className="h-9 w-9">
-                <AvatarImage src={userProfile?.photoUrl || ''} alt={userProfile?.name || 'User'} />
+                <AvatarImage
+                  src={userProfile?.photoUrl || ""}
+                  alt={userProfile?.name || "User"}
+                />
                 <AvatarFallback>
-                    {initials ? initials : <User className="h-5 w-5" />}
+                  {initials ? initials : <User className="h-5 w-5" />}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </div>
+
+          {/* Welcome Text */}
           <div className="flex-1 text-center">
-            <h1 className="text-lg font-bold tracking-tight text-yellow-400"> 
-          WELCOME 
-            </h1>   
-          </div>  
-          
-          <Image
-  src="/home/Homapageimage.jpg"
-  alt="Homepage Banner"
-  width={600}
-  height={200}
-  className="mx-auto rounded-lg object-cover mt-4"
-/>
+            <h1 className="text-lg font-bold tracking-tight text-yellow-400">
+              WELCOME
+            </h1>
+          </div>
+
+          {/* Right Side Icons */}
           <div className="flex-1 flex justify-end items-center gap-2">
-            <a href="https://shorturl.at/NbYgS" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://shorturl.at/NbYgS"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <Button variant="ghost" size="icon">
                 <Youtube className="h-6 w-6 text-red-600" />
               </Button>
@@ -109,11 +129,25 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+      {/* ✅ Image WELCOME ની નીચે */}
+      <div className="container mx-auto px-4 mt-4">
+        <Image
+          src="/home/Homapageimage.jpg"
+          alt="Homepage Banner"
+          width={1200}
+          height={400}
+          className="w-full max-w-3xl mx-auto rounded-lg object-cover"
+          priority
+        />
+      </div>
+
+      {/* Main Content */}
       <main className="flex-1 pb-20">
-        <div className="container mx-auto px-4 py-6">
-            {renderScreen()}
-        </div> 
+        <div className="container mx-auto px-4 py-6">{renderScreen()}</div>
       </main>
+
+      {/* Bottom Navigation */}
       <BottomNav
         items={navItems}
         activeScreen={activeScreen}
