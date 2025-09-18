@@ -50,9 +50,9 @@ export default function HomeScreen() {
   <Image
     src="/home/Homapageimage.jpg"
     alt="Homepage Banner"
-    width={1200}
-    height={600}
-    className="w-full max-w-3xl h-auto object-contain rounded-lg"
+    width={1600}
+    height={900}
+    className="w-full max-w-4xl h-[280px] sm:h-[350px] md:h-[450px] object-cover rounded-lg"
     priority
   />
 </div>
