@@ -87,8 +87,9 @@ export default function Home() {
             </Button>
           </div>
           <div className="flex-1 text-center">
-            <h1 className="text-lg font-bold tracking-tight text-yellow-400">WELCOME</h1> 
-            
+            <h1 className="text-lg font-bold tracking-tight text-yellow-400"> 
+          WELCOME 
+            </h1>   
           </div>  
           
           <Image
