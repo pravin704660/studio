@@ -247,23 +247,15 @@ export async function createOrUpdateTournament(
       });
 
       const [url] = await file.getSignedUrl({
-        action: "read",
-        expires: "03-09-2491",
-      });
-      imageUrl = url;
-    } else {
-      // If new tournament and no image provided, set random placeholder (only for new)
-      if (!tournamentData.id && !imageUrl) {
-        const randomSeed = Math.floor(Math.random() * 1000) + 1;
-        imageUrl = tournamentData.isMega
-          ? `https://picsum.photos/seed/mega${randomSeed}/600/400`
-          : `https://picsum.photos/seed/tourney${randomSeed}/600/400`;
-      }
-    }
+  action: "read",
+  expires: "03-09-2491",
+});
+imageUrl = url;
+}
 
-    if (!tournamentData.date || !tournamentData.time) {
-      throw new Error("Date and time are required.");
-    }
+if (!tournamentData.date || !tournamentData.time) {
+  throw new Error("Date and time are required.");
+}
 
     const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
     const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
