@@ -218,15 +218,7 @@ export async function createOrUpdateTournament(
             expires: '03-09-2491'
         });
         imageUrl = url;
-    } else if (!imageUrl && !tournamentData.id) {
-        // Only set default if no image URL is present and it's a new tournament
-        const randomSeed = Math.floor(Math.random() * 1000) + 1;
-        if (tournamentData.isMega) {
-            imageUrl = `https://picsum.photos/seed/mega${randomSeed}/600/400`;
-        } else {
-            imageUrl = `https://picsum.photos/seed/tourney${randomSeed}/600/400`;
-        }
-    }
+    
 
     if (!tournamentData.date || !tournamentData.time) {
       throw new Error("Date and time are required.");
