@@ -230,26 +230,7 @@ export async function createOrUpdateTournament(
       throw new Error("Tournament data is missing.");
     }
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
-    const imageFile = formData.get("imageFile") as File | null;
-    let imageUrl = tournamentData.imageUrl || "";
-
-    // upload image to adminStorage (if provided)
-    if (imageFile) {
-      const bucket = adminStorage.bucket();
-      const fileName = `${uuidv4()}-${imageFile.name}`;
-      const file = bucket.file(`tournaments/${fileName}`);
-      const fileBuffer = Buffer.from(await imageFile.arrayBuffer());
-
-      await file.save(fileBuffer, {
-        metadata: {
-          contentType: imageFile.type,
-        },
-      });
-
-      const [url] = await file.getSignedUrl({
-  action: "read",
-  expires: "03-09-2491",
-});
+    
 imageUrl = url;
 }
 
