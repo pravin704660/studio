@@ -76,7 +76,18 @@ const initialFormData: Omit<TournamentFormData, "id" | "date"> & { date: string 
   status: "draft",
   type: "regular",
   roomId: "",
-  roomPassword: "",
+  roomPassword: "", 
+  <div>
+  <label className="block text-sm font-medium">Image URL</label>
+  <input
+    type="text"
+    name="imageUrl"
+    value={formData.imageUrl}
+    onChange={handleChange}
+    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+    placeholder="Enter image URL"
+  />
+</div>
   imageUrl: "",
   winnerPrizes: [
     { rank: "1st", prize: 0 },
