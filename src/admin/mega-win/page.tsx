@@ -385,10 +385,19 @@ export default function ManageMegaWinTournamentsPage() {
                                 <Input id="title" name="title" value={formData.title} onChange={handleFormChange} />
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="image">Image</Label>
-                                <Input id="image" name="imageFile" type="file" accept="image/*" onChange={handleImageChange} />
-                                 <p className="text-xs text-muted-foreground">Upload a new image or leave blank to keep the existing one.</p>
-                            </div>
+  <Label htmlFor="imageUrl">Image URL (from /public/tournaments)</Label>
+  <Input
+    id="imageUrl"
+    name="imageUrl"
+    type="text"
+    placeholder="/tournaments/myimage.jpg"
+    value={(formData as any).imageUrl || ""}
+    onChange={handleFormChange}
+  />
+  <p className="text-xs text-muted-foreground">
+    Example: <code>/tournaments/sample.jpg</code>
+  </p>
+</div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="date">Date</Label>
