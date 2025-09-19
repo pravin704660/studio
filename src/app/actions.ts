@@ -231,8 +231,7 @@ export async function createOrUpdateTournament(
     }
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
     
-imageUrl = url;
-}
+let imageUrl = tournamentData.imageUrl || "";
 
 if (!tournamentData.date || !tournamentData.time) {
   throw new Error("Date and time are required.");
