@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Tournament } from "@/lib/types";
+import TournamentCard from "@/components/tournament-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 
 export default function HomeScreen() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -20,8 +20,8 @@ export default function HomeScreen() {
       try {
         const tournamentsCollection = collection(db, "tournaments");
         const q = query(tournamentsCollection, orderBy("date", "desc"));
-        const querySnapshot = await getDocs(q);
 
+        const querySnapshot = await getDocs(q);
         const allTournaments = querySnapshot.docs.map(
           (doc) => ({ id: doc.id, ...doc.data() } as Tournament)
         );
@@ -44,62 +44,46 @@ export default function HomeScreen() {
   }, [user]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Banner */}
       <div className="flex justify-center">
         <Image
           src="/home/Homapageimage.jpg"
           alt="Homepage Banner"
-          width={1200}
-          height={500}
-          className="w-full max-w-3xl h-auto object-cover rounded-lg"
+          width={1600}
+          height={900}
+          className="w-full max-w-4xl h-auto object-contain rounded-lg"
           priority
         />
       </div>
 
       {/* Tournament Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
-          Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="space-y-2 rounded-md border bg-card p-3">
-              <Skeleton className="h-28 w-full rounded-md" />
-              <Skeleton className="h-4 w-2/3" />
+          Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="space-y-3 rounded-lg border bg-card p-4"
+            >
+              <Skeleton className="h-40 w-full rounded-lg" />
+              <Skeleton className="h-6 w-3/4" />
               <div className="flex justify-between">
-                <Skeleton className="h-3 w-1/4" />
-                <Skeleton className="h-3 w-1/4" />
+                <Skeleton className="h-5 w-1/4" />
+                <Skeleton className="h-5 w-1/4" />
               </div>
-              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-10 w-full" />
             </div>
           ))
         ) : tournaments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card p-8 text-center">
-            <h3 className="text-sm font-semibold">No Tournaments Available</h3>
-            <p className="text-xs text-muted-foreground">
+          <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card p-12 text-center col-span-full">
+            <h3 className="text-lg font-semibold">No Tournaments Available</h3>
+            <p className="text-sm text-muted-foreground">
               Please check back later for new tournaments.
             </p>
           </div>
         ) : (
           tournaments.map((tournament) => (
-            <div
-              key={tournament.id}
-              className="p-3 rounded-md border bg-card shadow-sm space-y-2"
-            >
-              <img
-                src={tournament.imageUrl || "/home/Homapageimage.jpg"}
-                alt={tournament.title}
-                className="w-full h-28 object-cover rounded-md"
-              />
-              <h3 className="text-sm font-semibold truncate">
-                {tournament.title}
-              </h3>
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>₹{tournament.entryFee}</span>
-                <span>{tournament.slots} Slots</span>
-              </div>
-              <Button size="sm" className="w-full">
-                Join
-              </Button>
-            </div>
+            <TournamentCard key={tournament.id} tournament={tournament} />
           ))
         )}
       </div>
