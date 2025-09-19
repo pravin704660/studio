@@ -36,7 +36,28 @@ import { Textarea } from "@/components/ui/textarea";
 const PAGE_SIZE = 10;
 
 const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string } = {
-  title: "",
+  title: "", 
+  <div className="space-y-2">
+  <Label htmlFor="title">Title</Label>
+  <Input
+    id="title"
+    name="title"
+    value={formData.title}
+    onChange={handleFormChange}
+  />
+</div>
+
+<div className="space-y-2">
+  <Label htmlFor="imageUrl">Image URL</Label>
+  <Input
+    id="imageUrl"
+    name="imageUrl"
+    type="text"
+    value={(formData as any).imageUrl || ""}
+    onChange={handleFormChange}
+    placeholder="/tournament/RegularTournament.jpg અથવા https://example.com/image.jpg"
+  />
+</div>
   gameType: "Solo",
   date: "",
   time: "",
@@ -47,7 +68,8 @@ const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string 
   status: "draft",
   type: "regular",
   roomId: "",
-  roomPassword: "",
+  roomPassword: "", 
+  imageUrl: "",
   winnerPrizes: [
     { rank: '1st', prize: 0 },
     { rank: '2nd', prize: 0 },
