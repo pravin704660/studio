@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, query, where, Timestamp, orderBy, limit, startAfter, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  Timestamp,
+  orderBy,
+  limit,
+  startAfter,
+  QueryDocumentSnapshot,
+  DocumentData,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Tournament, TournamentFormData, WinnerPrize } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -9,14 +20,32 @@ import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import Link from "next/link";
 import { ArrowLeft, PlusCircle, Trash2, Pencil, Plus, X } from "lucide-react";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createOrUpdateTournament, deleteTournament } from "@/app/actions";
 import {
   AlertDialog,
@@ -28,14 +57,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 
 const PAGE_SIZE = 10;
 
-// ✅ Initial Form Data (object only, no JSX)
-const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string } = {
+// ✅ Clean initial form data
+const initialFormData: Omit<TournamentFormData, "id" | "date"> & { date: string } = {
   title: "",
   gameType: "Solo",
   date: "",
@@ -74,6 +103,7 @@ export default function ManageTournamentsPage() {
     initialFormData as TournamentFormData & { date: string }
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [editingTournamentId, setEditingTournamentId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -152,6 +182,7 @@ export default function ManageTournamentsPage() {
   const handleOpenNewDialog = () => {
     setEditingTournamentId(null);
     setFormData(initialFormData as TournamentFormData & { date: string });
+    setImageFile(null);
     setIsDialogOpen(true);
   };
 
@@ -221,6 +252,11 @@ export default function ManageTournamentsPage() {
     setIsSubmitting(true);
 
     try {
+      const data = new FormData();
+      if (imageFile) {
+        data.append("imageFile", imageFile);
+      }
+
       const tournamentDataForAction: TournamentFormData = {
         ...formData,
         isMega: false,
@@ -230,7 +266,9 @@ export default function ManageTournamentsPage() {
         tournamentDataForAction.id = editingTournamentId;
       }
 
-      const result = await createOrUpdateTournament(tournamentDataForAction);
+      data.append("tournamentData", JSON.stringify(tournamentDataForAction));
+
+      const result = await createOrUpdateTournament(data);
 
       if (result.success) {
         toast({ title: "Success", description: "Tournament saved successfully." });
@@ -241,11 +279,11 @@ export default function ManageTournamentsPage() {
       }
     } catch (error: any) {
       console.error("Detailed Error saving tournament:", error);
-      toast({
-        variant: "destructive",
-        title: "Error saving tournament",
-        description: error.message || "Unknown error",
-      });
+      let description = "An unknown error occurred. Please check the console for more details.";
+      if (error.message) {
+        description = error.message;
+      }
+      toast({ variant: "destructive", title: "Error saving tournament", description });
     } finally {
       setIsSubmitting(false);
     }
@@ -386,7 +424,6 @@ export default function ManageTournamentsPage() {
         </div>
       </main>
 
-      {/* ✅ Tournament Form */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col">
           <DialogHeader>
@@ -406,8 +443,7 @@ export default function ManageTournamentsPage() {
                     onChange={handleFormChange}
                   />
                 </div>
-
-                {/* ✅ Image URL Field */}
+                {/* ✅ Image URL field */}
                 <div className="space-y-2">
                   <Label htmlFor="imageUrl">Image URL (from /public/tournaments)</Label>
                   <Input
@@ -422,7 +458,6 @@ export default function ManageTournamentsPage() {
                     Example: <code>/tournaments/sample.jpg</code>
                   </p>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="date">Date</Label>
@@ -445,7 +480,6 @@ export default function ManageTournamentsPage() {
                     />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="rules">Rules (one per line)</Label>
                   <Textarea
@@ -456,7 +490,6 @@ export default function ManageTournamentsPage() {
                     rows={4}
                   />
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="entryFee">Entry Fee</Label>
@@ -479,7 +512,6 @@ export default function ManageTournamentsPage() {
                     />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="slots">Slots</Label>
                   <Input
@@ -490,7 +522,6 @@ export default function ManageTournamentsPage() {
                     onChange={handleFormChange}
                   />
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="roomId">Room ID</Label>
@@ -499,10 +530,3 @@ export default function ManageTournamentsPage() {
                       name="roomId"
                       value={formData.roomId}
                       onChange={handleFormChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="roomPassword">Room Password</Label>
-                    <Input
-                      id="roomPassword"
-                      name="roomPassword"
