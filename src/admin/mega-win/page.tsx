@@ -173,7 +173,7 @@ export default function ManageMegaWinTournamentsPage() {
         rules: Array.isArray(tournament.rules) ? tournament.rules.join('\n') : tournament.rules,
         winnerPrizes: tournament.winnerPrizes && tournament.winnerPrizes.length > 0 ? tournament.winnerPrizes : initialFormData.winnerPrizes,
     });
-    setImageFile(null);
+    
     setIsDialogOpen(true);
   };
   
@@ -209,11 +209,7 @@ export default function ManageMegaWinTournamentsPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-          setImageFile(e.target.files[0]);
-      }
-  };
+  
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
