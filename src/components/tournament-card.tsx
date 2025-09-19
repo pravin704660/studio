@@ -87,8 +87,8 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
           ? tournament.imageUrl
           : `/tournament/${tournament.imageUrl}`)
       : (tournament.type === "mega"
-          ? "/tournament/MegaTournament.jpg"
-          : "/tournament/RegularTournament.jpg")
+          ? "/tournament/MegaTournaments.jpg"
+          : "/tournament/RegularTournaments.jpg")
   }
   alt={tournament.title}
   fill
