@@ -56,7 +56,7 @@ const initialFormData: Omit<TournamentFormData, 'id' | 'date'> & { date: string 
     type="text"
     value={(formData as any).imageUrl || ""}
     onChange={handleFormChange}
-    placeholder="/tournament/RegularTournament.jpg અથવા https://example.com/image.jpg"
+    placeholder="/tournament/MegaTournament.jpg અથવા https://example.com/image.jpg"
   />
 </div>
   gameType: "Solo",
