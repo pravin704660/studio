@@ -201,7 +201,6 @@ export async function createOrUpdateTournament(
       throw new Error("Tournament data is missing.");
     }
     
-      imageUrl = url;
     } else if (!imageUrl && !tournamentData.id) {
         // Only set default if no image URL is present and it's a new tournament
         if (tournamentData.isMega) {
