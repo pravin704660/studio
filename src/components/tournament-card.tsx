@@ -80,17 +80,21 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
     <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
-            <Image
+            ournaments/MegaTournaments.jpg"   // ✅ Mega Tournament default
+<Image
   src={
     tournament.imageUrl && tournament.imageUrl.trim() !== ""
       ? (tournament.imageUrl.startsWith("http")
           ? tournament.imageUrl
-          : tournament.imageUrl) // Public folder path, example: /tournaments/myimage.jpg
-      : tournament.type?.toLowerCase() === "mega"
-        ? "/tournaments/MegaTournaments.jpg"   // ✅ Mega Tournament default
-        : "/tournaments/RegularTournaments.jpg" // ✅ Regular Tournament default
+          : tournament.imageUrl)
+      : (tournament.type && tournament.type.toLowerCase() === "mega"
+          ? "/tournaments/MegaTournaments.jpg"
+          : "/tournaments/RegularTournaments.jpg")
   }
   alt={tournament.title}
+  fill
+  className="object-cover"
+/>  alt={tournament.title}
   fill
   className="object-cover"
 />
