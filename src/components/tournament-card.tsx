@@ -85,11 +85,15 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
     tournament.imageUrl && tournament.imageUrl.trim() !== ""
       ? (tournament.imageUrl.startsWith("http")
           ? tournament.imageUrl
-          : tournament.imageUrl) // Public folder path (e.g. /tournaments/custom.jpg)
-      : tournament.type === "mega"
-        ? "/tournaments/MegaTournaments.jpg"   // default Mega
-        : "/tournaments/RegularTournaments.jpg" // default Regular
+          : tournament.imageUrl) // Public folder path, example: /tournaments/myimage.jpg
+      : tournament.type?.toLowerCase() === "mega"
+        ? "/tournaments/MegaTournaments.jpg"   // ✅ Mega Tournament default
+        : "/tournaments/RegularTournaments.jpg" // ✅ Regular Tournament default
   }
+  alt={tournament.title}
+  fill
+  className="object-cover"
+/>
   alt={tournament.title}
   fill
   className="object-cover"
