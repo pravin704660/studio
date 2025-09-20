@@ -51,37 +51,53 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
     setIsSaving(false);
   };
   
-  const handleShare = async () => {
-    if (!user) {
-        toast({ variant: "destructive", title: "Error", description: "You must be logged in to share." });
-        return;
-    }
-    
-    const referralLink = `${window.location.origin}/?ref=${user.uid}`;
-    
-    const referralText = `Join me on pubg1star and get ₹10 cash bonus when you sign up! 💰 Compete in exciting tournaments and win big. 🏆\n\nUse my referral link to sign up:\n${referralLink}`;
-    
-    if (navigator.share) {
-        try {
-            await navigator.share({
-                title: 'Join pubg1star!',
-                text: referralText,
-                url: referralLink,
-            });
-        } catch (error) {
-            console.error('Error sharing:', error);
-            // Non-critical error, so no toast needed unless debugging
-        }
-    } else {
-        try {
-            await navigator.clipboard.writeText(referralText);
-            toast({ title: "Link Copied!", description: "Referral message copied to clipboard." });
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Could not copy the link." });
-        }
-    }
-  };
+   text: referralText,
+               const handleShare = async () => {
+  if (!user) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "You must be logged in to share.",
+    });
+    return;
+  }
 
+  // Direct APK link
+  const apkLink = `${window.location.origin}/PUBG1STAR.apk`;
+
+  // Referral link with UID
+  const referralLink = `${window.location.origin}/?ref=${user.uid}`;
+
+  const referralText = `🔥 Join me on PUBG1STAR and get ₹10 bonus when you sign up!\n\n` +
+                       `📥 Download the app here: ${apkLink}\n\n` +
+                       `👉 Use my referral link: ${referralLink}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "Join PUBG1STAR!",
+        text: referralText,
+        url: apkLink, // APK download priority
+      });
+    } catch (error) {
+      console.error("Error sharing:", error);
+    }
+  } else {
+    try {
+      await navigator.clipboard.writeText(referralText);
+      toast({
+        title: "Link Copied!",
+        description: "Referral message copied to clipboard.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not copy the link.",
+      });
+    }
+  }
+};
 
   if (loading || !user) {
     return (
