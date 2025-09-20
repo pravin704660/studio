@@ -1,30 +1,15 @@
-  "use server";
+ 
+"use server";
 
-import { getFirestore as getAdminFirestore } from "firebase-admin/firestore";
+import { getFirestore, Timestamp, FieldValue, Transaction, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { adminApp, adminStorage } from "@/lib/firebase/server";
-import {
-  doc,
-  runTransaction,
-  collection,
-  addDoc,
-  serverTimestamp,
-  setDoc,
-  deleteDoc,
-  Timestamp,
-  getDoc,
-  updateDoc,
-  query,
-  where,
-  getDocs,
-  writeBatch,
-} from "firebase/firestore";
-
 import type { Tournament, UserProfile, TournamentFormData, Notification, PlayerResult, AppConfig, UTRFollowUpInput } from "@/lib/types";
 import { v4 as uuidvv4 } from 'uuid';
+import type admin from 'firebase-admin';
+
 
 // Use the admin SDK for server-side operations
-const db = getAdminFirestore(adminApp!);
-
+const db = getFirestore(adminApp!);
 
 // Dynamically import the genkit flow to avoid bundling issues on the client
 async function getUtrFollowUpFlow() {
@@ -41,35 +26,35 @@ async function getUtrFollowUpFlow() {
 export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if the user has already joined the tournament
-    const entriesRef = collection(db, "entries");
-    const q = query(entriesRef, where("userId", "==", userId), where("tournamentId", "==", tournamentId));
-    const existingEntrySnapshot = await getDocs(q);
+    const entriesRef = db.collection("entries");
+    const q = entriesRef.where("userId", "==", userId).where("tournamentId", "==", tournamentId);
+    const existingEntrySnapshot = await q.get();
     if (!existingEntrySnapshot.empty) {
       return { success: false, error: "You have already joined this tournament." };
     }
       
-    const userDocRef = doc(db, "users", userId);
-    const tournamentDocRef = doc(db, "tournaments", tournamentId);
+    const userDocRef = db.doc(`users/${userId}`);
+    const tournamentDocRef = db.doc(`tournaments/${tournamentId}`);
 
     // Fetch user and tournament data outside the transaction for notification use
     const [userDoc, tournamentDoc] = await Promise.all([
-      getDoc(userDocRef),
-      getDoc(tournamentDocRef),
+      userDocRef.get(),
+      tournamentDocRef.get(),
     ]);
 
-    if (!userDoc.exists()) throw new Error("User not found.");
-    if (!tournamentDoc.exists()) throw new Error("Tournament not found.");
+    if (!userDoc.exists) throw new Error("User not found.");
+    if (!tournamentDoc.exists) throw new Error("Tournament not found.");
 
     const userProfileData = userDoc.data() as UserProfile;
     const tournamentData = { ...tournamentDoc.data(), id: tournamentDoc.id } as Tournament;
 
-    await runTransaction(db, async (transaction) => {
+    await db.runTransaction(async (transaction: Transaction) => {
       // Re-get documents inside the transaction to ensure atomicity
       const freshUserDoc = await transaction.get(userDocRef);
       const freshTournamentDoc = await transaction.get(tournamentDocRef);
 
-      if (!freshUserDoc.exists()) throw new Error("User not found.");
-      if (!freshTournamentDoc.exists()) throw new Error("Tournament not found.");
+      if (!freshUserDoc.exists) throw new Error("User not found.");
+      if (!freshTournamentDoc.exists) throw new Error("Tournament not found.");
       
       const userProfile = freshUserDoc.data() as UserProfile;
       const tournament = freshTournamentDoc.data() as Tournament;
@@ -81,7 +66,7 @@ export async function joinTournament(tournamentId: string, userId: string): Prom
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
-      const entryDocRef = doc(collection(db, "entries"));
+      const entryDocRef = db.collection("entries").doc();
       transaction.set(entryDocRef, {
         entryId: entryDocRef.id,
         tournamentId,
@@ -90,26 +75,26 @@ export async function joinTournament(tournamentId: string, userId: string): Prom
         paidAmount: tournament.entryFee,
       });
 
-      const transactionDocRef = doc(collection(db, "transactions"));
+      const transactionDocRef = db.collection("transactions").doc();
       transaction.set(transactionDocRef, {
         txnId: transactionDocRef.id,
         userId,
         amount: tournament.entryFee,
         type: "debit",
         status: "success",
-        timestamp: serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
         description: `Entry for ${tournament.title}`
       });
     });
 
     // Send notification to all admins after the transaction is successful
-    const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
-    const adminsSnapshot = await getDocs(adminsQuery);
+    const adminsQuery = db.collection("users").where("role", "==", "admin");
+    const adminsSnapshot = await adminsQuery.get();
     
     const title = "New Tournament Entry";
     const message = `${userProfileData.name || 'A user'} has joined the tournament: ${tournamentData.title}.`;
 
-    const notificationPromises = adminsSnapshot.docs.map(adminDoc => {
+    const notificationPromises = adminsSnapshot.docs.map((adminDoc: QueryDocumentSnapshot) => {
         const admin = adminDoc.data() as UserProfile;
         return sendNotification(admin.uid, title, message);
     });
@@ -127,17 +112,17 @@ export async function submitWalletRequest(userId: string, amount: number, utr: s
     return { success: false, error: "Invalid amount or UTR code." };
   }
   try {
-    const userDocRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
+    const userDocRef = db.doc(`users/${userId}`);
+    const userDoc = await userDocRef.get();
+    if (!userDoc.exists) {
         return { success: false, error: "User not found." };
     }
     const userData = userDoc.data() as UserProfile;
 
-    const requestColRef = collection(db, 'wallet_requests');
-    const newRequestRef = doc(requestColRef);
+    const requestColRef = db.collection('wallet_requests');
+    const newRequestRef = requestColRef.doc();
     
-    await setDoc(newRequestRef, {
+    await newRequestRef.set({
       requestId: newRequestRef.id,
       userId,
       userName: userData.name || "N/A",
@@ -145,7 +130,7 @@ export async function submitWalletRequest(userId: string, amount: number, utr: s
       amount,
       utr,
       status: "pending",
-      timestamp: serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     return { success: true };
@@ -161,9 +146,9 @@ export async function submitWithdrawalRequest(userId: string, amount: number, up
   }
 
   try {
-    const userDocRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
+    const userDocRef = db.doc(`users/${userId}`);
+    const userDoc = await userDocRef.get();
+    if (!userDoc.exists) {
         return { success: false, error: "User not found." };
     }
     const userData = userDoc.data() as UserProfile;
@@ -172,10 +157,10 @@ export async function submitWithdrawalRequest(userId: string, amount: number, up
         return { success: false, error: "Insufficient wallet balance." };
     }
 
-    const requestColRef = collection(db, 'withdrawal_requests');
-    const newRequestRef = doc(requestColRef);
+    const requestColRef = db.collection('withdrawal_requests');
+    const newRequestRef = requestColRef.doc();
     
-    await setDoc(newRequestRef, {
+    await newRequestRef.set({
       requestId: newRequestRef.id,
       userId,
       userName: userData.name || "N/A",
@@ -183,7 +168,7 @@ export async function submitWithdrawalRequest(userId: string, amount: number, up
       amount,
       upiId,
       status: "pending",
-      timestamp: serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     return { success: true };
@@ -210,6 +195,7 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 export async function createOrUpdateTournament(
   tournamentData: TournamentFormData
 ): Promise<{ success: boolean; error?: string }> {
+  
   try {
     let imageUrl = tournamentData.imageUrl || "";
 
@@ -230,7 +216,7 @@ export async function createOrUpdateTournament(
     const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
     const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
 
-    const finalData: Omit<Tournament, 'id'> = {
+    const finalData: Omit<Tournament, 'id'> & { date: admin.firestore.Timestamp } = {
       title: tournamentData.title || "",
       gameType: tournamentData.gameType || "Solo",
       date: firestoreDate,
@@ -248,10 +234,10 @@ export async function createOrUpdateTournament(
     };
     
     if (tournamentData.id) {
-        const tournamentDocRef = doc(db, 'tournaments', tournamentData.id);
-        await setDoc(tournamentDocRef, finalData, { merge: true });
+        const tournamentDocRef = db.doc(`tournaments/${tournamentData.id}`);
+        await tournamentDocRef.set(finalData, { merge: true });
     } else {
-        await addDoc(collection(db, 'tournaments'), finalData);
+        await db.collection('tournaments').add(finalData);
     }
     
     return { success: true };
@@ -263,8 +249,8 @@ export async function createOrUpdateTournament(
 
 export async function deleteTournament(tournamentId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const tournamentDocRef = doc(db, "tournaments", tournamentId);
-    await deleteDoc(tournamentDocRef);
+    const tournamentDocRef = db.doc(`tournaments/${tournamentId}`);
+    await tournamentDocRef.delete();
     return { success: true };
   } catch (error: any) {
     console.error('Error deleting tournament:', error);
@@ -282,11 +268,11 @@ export async function updateWalletBalance(
   }
 
   try {
-    await runTransaction(db, async (transaction) => {
-      const userDocRef = doc(db, 'users', userId);
+    await db.runTransaction(async (transaction: Transaction) => {
+      const userDocRef = db.doc(`users/${userId}`);
       const userDoc = await transaction.get(userDocRef);
 
-      if (!userDoc.exists()) {
+      if (!userDoc.exists) {
         throw new Error('User not found.');
       }
 
@@ -304,14 +290,14 @@ export async function updateWalletBalance(
       
       transaction.update(userDocRef, { walletBalance: newBalance });
 
-      const transactionDocRef = doc(collection(db, 'transactions'));
+      const transactionDocRef = db.collection('transactions').doc();
       transaction.set(transactionDocRef, {
         txnId: transactionDocRef.id,
         userId,
         amount,
         type,
         status: 'success',
-        timestamp: serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
         description: `Admin ${type}`,
       });
     });
@@ -334,11 +320,11 @@ export async function sendNotification(
   }
 
   try {
-    await addDoc(collection(db, "notifications"), {
+    await db.collection("notifications").add({
       userId: targetUserId,
       title,
       message,
-      timestamp: serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
       isRead: false,
     });
     return { success: true };
@@ -351,31 +337,31 @@ export async function sendNotification(
 
 export async function deleteUserNotification(notificationId: string, userId: string): Promise<{ success: boolean, error?: string }> {
     try {
-        const notifDocRef = doc(db, "notifications", notificationId);
-        const notifDoc = await getDoc(notifDocRef);
+        const notifDocRef = db.doc(`notifications/${notificationId}`);
+        const notifDoc = await notifDocRef.get();
 
-        if (!notifDoc.exists()) {
+        if (!notifDoc.exists) {
             return { success: false, error: "Notification not found." };
         }
 
         const notification = notifDoc.data() as Notification;
 
         if (notification.userId !== userId && notification.userId !== 'all') {
-            const userDoc = await getDoc(doc(db, "users", userId));
-            if (!userDoc.exists() || (userDoc.data() as UserProfile).role !== 'admin') {
+            const userDoc = await db.doc(`users/${userId}`).get();
+            if (!userDoc.exists || (userDoc.data() as UserProfile).role !== 'admin') {
                return { success: false, error: "You do not have permission to delete this notification." };
             }
         }
 
         if (notification.userId === 'all') {
-             const userDoc = await getDoc(doc(db, "users", userId));
-            if (!userDoc.exists() || (userDoc.data() as UserProfile).role !== 'admin') {
+             const userDoc = await db.doc(`users/${userId}`).get();
+            if (!userDoc.exists || (userDoc.data() as UserProfile).role !== 'admin') {
                return { success: false, error: "You cannot delete global announcements." };
             }
         }
 
 
-        await deleteDoc(notifDocRef);
+        await notifDocRef.delete();
         return { success: true };
 
     } catch (error: any) {
@@ -389,8 +375,8 @@ export async function updateUserProfileName(userId: string, newName: string): Pr
     return { success: false, error: "Name cannot be empty." };
   }
   try {
-    const userDocRef = doc(db, "users", userId);
-    await updateDoc(userDocRef, { name: newName.trim() });
+    const userDocRef = db.doc(`users/${userId}`);
+    await userDocRef.update({ name: newName.trim() });
     return { success: true };
   } catch (error: any) {
     console.error("Error updating user name:", error);
@@ -403,15 +389,15 @@ export async function deleteUserNotifications(userId: string): Promise<{ success
         return { success: false, error: "User ID is required." };
     }
     try {
-        const q = query(collection(db, "notifications"), where("userId", "==", userId));
-        const querySnapshot = await getDocs(q);
+        const q = db.collection("notifications").where("userId", "==", userId);
+        const querySnapshot = await q.get();
 
         if (querySnapshot.empty) {
             return { success: true }; 
         }
         
-        const batch = writeBatch(db);
-        querySnapshot.forEach(doc => {
+        const batch = db.batch();
+        querySnapshot.forEach((doc: QueryDocumentSnapshot) => {
             batch.delete(doc.ref);
         });
 
@@ -435,8 +421,8 @@ export async function declareResult(
   }
 
   try {
-    const batch = writeBatch(db);
-    const resultDocRef = doc(db, "results", tournamentId);
+    const batch = db.batch();
+    const resultDocRef = db.doc(`results/${tournamentId}`);
     
     const sortedResults = results
       .sort((a, b) => b.points - a.points)
@@ -447,7 +433,7 @@ export async function declareResult(
       tournamentTitle,
       isMega,
       results: sortedResults,
-      declaredAt: serverTimestamp(),
+      declaredAt: FieldValue.serverTimestamp(),
     });
 
     const notificationPromises = sortedResults.map(async (result) => {
@@ -457,33 +443,33 @@ export async function declareResult(
       if (result.prize && result.prize > 0) {
         message += ` You've won ₹${result.prize}!`;
         // Credit the prize to the user's wallet
-        const userDocRef = doc(db, 'users', result.userId);
-        const userDoc = await getDoc(userDocRef); // Use getDoc instead of transaction.get in batch
-        if (userDoc.exists()) {
+        const userDocRef = db.doc(`users/${result.userId}`);
+        const userDoc = await userDocRef.get(); // Use getDoc instead of transaction.get in batch
+        if (userDoc.exists) {
             const userProfile = userDoc.data() as UserProfile;
             const newBalance = userProfile.walletBalance + result.prize;
             batch.update(userDocRef, { walletBalance: newBalance });
 
             // Create a transaction record
-            const transactionDocRef = doc(collection(db, 'transactions'));
+            const transactionDocRef = db.collection('transactions').doc();
             batch.set(transactionDocRef, {
                 txnId: transactionDocRef.id,
                 userId: result.userId,
                 amount: result.prize,
                 type: 'credit',
                 status: 'success',
-                timestamp: serverTimestamp(),
+                timestamp: FieldValue.serverTimestamp(),
                 description: `Prize money for ${tournamentTitle}`,
             });
         }
       }
       
-      const notificationDocRef = doc(collection(db, "notifications"));
+      const notificationDocRef = db.collection("notifications").doc();
       batch.set(notificationDocRef, {
         userId: result.userId,
         title,
         message,
-        timestamp: serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
         isRead: false,
       });
     });
@@ -505,14 +491,14 @@ export async function updateWalletRequestStatus(
   newStatus: 'approved' | 'rejected'
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const requestDocRef = doc(db, "wallet_requests", requestId);
+    const requestDocRef = db.doc(`wallet_requests/${requestId}`);
 
     if (newStatus === 'approved') {
-        await runTransaction(db, async (transaction) => {
-            const userDocRef = doc(db, 'users', userId);
+        await db.runTransaction(async (transaction: Transaction) => {
+            const userDocRef = db.doc(`users/${userId}`);
             const userDoc = await transaction.get(userDocRef);
 
-            if (!userDoc.exists()) {
+            if (!userDoc.exists) {
                 throw new Error('User not found.');
             }
 
@@ -521,14 +507,14 @@ export async function updateWalletRequestStatus(
             
             transaction.update(userDocRef, { walletBalance: newBalance });
 
-            const transactionDocRef = doc(collection(db, 'transactions'));
+            const transactionDocRef = db.collection('transactions').doc();
             transaction.set(transactionDocRef, {
                 txnId: transactionDocRef.id,
                 userId,
                 amount,
                 type: 'credit',
                 status: 'success',
-                timestamp: serverTimestamp(),
+                timestamp: FieldValue.serverTimestamp(),
                 description: 'Wallet deposit approved',
             });
 
@@ -538,7 +524,7 @@ export async function updateWalletRequestStatus(
         await sendNotification(userId, "Deposit Approved", `Your request to add ₹${amount} has been approved.`);
 
     } else { // Rejected
-        await updateDoc(requestDocRef, { status: newStatus });
+        await requestDocRef.update({ status: newStatus });
         await sendNotification(userId, "Deposit Rejected", `Your request to add ₹${amount} has been rejected.`);
     }
 
@@ -556,14 +542,14 @@ export async function updateWithdrawalRequestStatus(
   newStatus: 'approved' | 'rejected'
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const requestDocRef = doc(db, "withdrawal_requests", requestId);
+    const requestDocRef = db.doc(`withdrawal_requests/${requestId}`);
 
     if (newStatus === 'approved') {
-        await runTransaction(db, async (transaction) => {
-            const userDocRef = doc(db, 'users', userId);
+        await db.runTransaction(async (transaction: Transaction) => {
+            const userDocRef = db.doc(`users/${userId}`);
             const userDoc = await transaction.get(userDocRef);
 
-            if (!userDoc.exists()) {
+            if (!userDoc.exists) {
                 throw new Error('User not found.');
             }
 
@@ -575,14 +561,14 @@ export async function updateWithdrawalRequestStatus(
             
             transaction.update(userDocRef, { walletBalance: newBalance });
 
-            const transactionDocRef = doc(collection(db, 'transactions'));
+            const transactionDocRef = db.collection('transactions').doc();
             transaction.set(transactionDocRef, {
                 txnId: transactionDocRef.id,
                 userId,
                 amount,
                 type: 'debit',
                 status: 'success',
-                timestamp: serverTimestamp(),
+                timestamp: FieldValue.serverTimestamp(),
                 description: 'Withdrawal approved',
             });
 
@@ -592,7 +578,7 @@ export async function updateWithdrawalRequestStatus(
         await sendNotification(userId, "Withdrawal Approved", `Your request to withdraw ₹${amount} has been approved.`);
 
     } else { // Rejected
-        await updateDoc(requestDocRef, { status: newStatus });
+        await requestDocRef.update({ status: newStatus });
         await sendNotification(userId, "Withdrawal Rejected", `Your request to withdraw ₹${amount} has been rejected.`);
     }
 
@@ -608,11 +594,11 @@ export async function updatePaymentSettings(formData: FormData): Promise<{ succe
   try {
     const upiId = formData.get('upiId') as string;
     const qrImageFile = formData.get('qrImageFile') as File | null;
-    let qrImageUrl = "";
+    let qrImageUrl: string | undefined = "";
 
-    const configDocRef = doc(db, "config", "payment");
-    const currentConfigDoc = await getDoc(configDocRef);
-    const currentConfig = currentConfigDoc.exists() ? currentConfigDoc.data() as AppConfig : { upiId: "", qrImageUrl: "" };
+    const configDocRef = db.doc("config/payment");
+    const currentConfigDoc = await configDocRef.get();
+    const currentConfig = currentConfigDoc.exists ? currentConfigDoc.data() as AppConfig : { upiId: "", qrImageUrl: "" };
     
     qrImageUrl = currentConfig.qrImageUrl; // Keep old image by default
 
@@ -638,7 +624,7 @@ export async function updatePaymentSettings(formData: FormData): Promise<{ succe
       qrImageUrl: qrImageUrl,
     };
 
-    await setDoc(configDocRef, newConfig);
+    await configDocRef.set(newConfig);
 
     return { success: true };
   } catch (error: any) {
