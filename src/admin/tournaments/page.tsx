@@ -64,7 +64,7 @@ import { Textarea } from "@/components/ui/textarea";
 const PAGE_SIZE = 10;
 
 // ? Clean initial form data
-const initialFormData: Omit<TournamentFormData, "id" | "date"> & { date: string } = {
+const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
   title: "",
   gameType: "Solo",
   date: "",
@@ -72,21 +72,18 @@ const initialFormData: Omit<TournamentFormData, "id" | "date"> & { date: string 
   entryFee: 0,
   slots: 100,
   prize: 0,
-  rules: "",
+  rules: [],
   status: "draft",
-  type: "regular",
+  type: "regular",   // 👈 regular/mega select option mate
   roomId: "",
-  roomPassword: "", 
-  <div>
-  <label className="block text-sm font-medium">Image URL</label>
-  <input
-    type="text"
-    name="imageUrl"
-    value={formData.imageUrl}
-    onChange={handleChange}
-    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-    placeholder="Enter image URL"
-  />
+  roomPassword: "",
+  winnerPrizes: [
+    { rank: "1st", prize: 0 },
+    { rank: "2nd", prize: 0 },
+    { rank: "3rd", prize: 0 },
+    { rank: "4th", prize: 0 },
+  ],
+};
 </div>
   imageUrl: "",
   winnerPrizes: [
