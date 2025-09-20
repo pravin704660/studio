@@ -390,8 +390,8 @@ export default function ManageMegaWinTournamentsPage() {
                     <TableRow key={t.id}>
                       <TableCell className="font-medium">{t.title}</TableCell>
                       <TableCell>{getDisplayDate(t.date)}</TableCell>
-                      <TableCell>₹{t.entryFee}</TableCell>
-                      <TableCell>₹{t.prize}</TableCell>
+                      <TableCell>?{t.entryFee}</TableCell>
+                      <TableCell>?{t.prize}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
@@ -487,7 +487,7 @@ export default function ManageMegaWinTournamentsPage() {
                     type="text"
                     value={(formData as any).imageUrl || ""}
                     onChange={handleFormChange}
-                    placeholder="/tournament/MegaTournament.jpg અથવા https://example.com/image.jpg"
+                    placeholder="/tournament/MegaTournament.jpg ???? https://example.com/image.jpg"
                   />
                 </div>
 
