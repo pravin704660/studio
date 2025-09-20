@@ -170,57 +170,55 @@ export async function submitWithdrawalRequest(userId: string, amount: number, up
 export async function createOrUpdateTournament(
   tournamentData: TournamentFormData
 ): Promise<{ success: boolean; error?: string }> {
-  
   try {
-    // ખાતરી કરો કે date અને time સ્ટ્રિંગ તરીકે ઉપલબ્ધ છે અને ખાલી નથી
-    if (!tournamentData.date || !tournamentData.time || tournamentData.date.trim() === '' || tournamentData.time.trim() === '') {
-      throw new Error("Date and time are required.");
+    let firestoreDate: admin.firestore.Timestamp | null = null;
+
+    // ✅ Date & Time combine safely
+    if (tournamentData.date && tournamentData.time) {
+      const dateTimeString = `${tournamentData.date}T${tournamentData.time}:00`;
+      const jsDate = new Date(dateTimeString);
+      if (!isNaN(jsDate.getTime())) {
+        firestoreDate = Timestamp.fromDate(jsDate);
+      }
     }
-    
+
     let imageUrl = tournamentData.imageUrl || "";
-    // If creating a new tournament (no ID) and no image URL is provided, set a default.
-    // જો કોઈ imageUrl પ્રદાન કરવામાં આવ્યું નથી, તો ડિફોલ્ટ સેટ કરો.
-    if (!imageUrl) { 
-        if (tournamentData.isMega) {
-            imageUrl = `/MegaTournaments.jpg`;
-        } else {
-            imageUrl = `/RegularTournaments.jpg`;
-        }
+    if (!tournamentData.id && !imageUrl) {
+      imageUrl = tournamentData.isMega ? `/MegaTournaments.jpg` : `/RegularTournaments.jpg`;
     }
 
-    // Date અને Time ને યોગ્ય રીતે જોડો અને Timestamp માં રૂપાંતરિત કરો
-    // ધ્યાનમાં રાખો કે Date કન્સ્ટ્રક્ટર "YYYY-MM-DDTHH:MM" ફોર્મેટને સારી રીતે હેન્ડલ કરે છે
-    const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
-    const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
-
-    const finalData: Omit<Tournament, 'id'> & { date: admin.firestore.Timestamp } = {
+    const finalData: Omit<Tournament, "id"> & { date: admin.firestore.Timestamp | null } = {
       title: tournamentData.title || "",
       gameType: tournamentData.gameType || "Solo",
-      date: firestoreDate, // અહીં Timestamp ઑબ્જેક્ટ સ્ટોર કરો
-      time: tournamentData.time || "", // સમયને સ્ટ્રિંગ તરીકે પણ રાખી શકો છો જો UI માં અલગથી દર્શાવવું હોય
+      date: firestoreDate,   // ✅ fixed
+      time: tournamentData.time || "",
       entryFee: tournamentData.entryFee || 0,
       slots: tournamentData.slots || 100,
       prize: tournamentData.prize || 0,
-      rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules || '').split('\n').filter(r => r.trim() !== ''),
+      rules: Array.isArray(tournamentData.rules)
+        ? tournamentData.rules
+        : String(tournamentData.rules || "")
+            .split("\n")
+            .filter((r) => r.trim() !== ""),
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
-      imageUrl: imageUrl, 
+      imageUrl,
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
       winnerPrizes: tournamentData.winnerPrizes || [],
     };
-    
+
     if (tournamentData.id) {
-        const tournamentDocRef = db.doc(`tournaments/${tournamentData.id}`);
-        await tournamentDocRef.set(finalData, { merge: true }); // merge: true નો ઉપયોગ કરો જેથી અન્ય ફીલ્ડ્સ ઓવરરાઈટ ન થાય
+      const tournamentDocRef = db.doc(`tournaments/${tournamentData.id}`);
+      await tournamentDocRef.set(finalData, { merge: true });
     } else {
-        await db.collection('tournaments').add(finalData);
+      await db.collection("tournaments").add(finalData);
     }
-    
+
     return { success: true };
   } catch (error: any) {
-    console.error('Error creating/updating tournament:', error);
-    return { success: false, error: error.message || 'Failed to save tournament.' };
+    console.error("Error creating/updating tournament:", error);
+    return { success: false, error: error.message || "Failed to save tournament." };
   }
 }
 
