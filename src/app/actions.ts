@@ -2,24 +2,14 @@
 
 import { getFirestore, Timestamp, FieldValue, Transaction, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { adminApp, adminStorage } from "@/lib/firebase/server";
-import type { Tournament, UserProfile, TournamentFormData, Notification, PlayerResult, AppConfig, UTRFollowUpInput } from "@/lib/types";
+import type { Tournament, UserProfile, TournamentFormData, Notification, PlayerResult, AppConfig } from "@/lib/types";
 import { v4 as uuidv4 } from 'uuid';
 import type admin from 'firebase-admin';
+import { getUtrFollowUpMessage } from "@/ai/flows/utr-follow-up";
 
 
 // Use the admin SDK for server-side operations
 const db = getFirestore(adminApp!);
-
-// Dynamically import the genkit flow to avoid bundling issues on the client
-async function getUtrFollowUpFlow() {
-  try {
-    const { utrFollowUp } = await import('@/ai/flows/utr-follow-up');
-    return utrFollowUp;
-  } catch (error) {
-    console.error("Failed to load utrFollowUp flow", error);
-    return null;
-  }
-}
 
 
 export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
@@ -175,20 +165,6 @@ export async function submitWithdrawalRequest(userId: string, amount: number, up
     console.error("Error submitting withdrawal request:", error);
     return { success: false, error: "Failed to submit request." };
   }
-}
-
-export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<string | null> {
-    const utrFollowUp = await getUtrFollowUpFlow();
-    if (!utrFollowUp) {
-        return "We've noticed your payment request is still pending. Please contact support for assistance.";
-    }
-    try {
-        const result = await utrFollowUp(input);
-        return result.followUpMessage;
-    } catch (error) {
-        console.error("Error in GenAI flow:", error);
-        return "We've noticed your payment request is still pending. Please contact support for assistance.";
-    }
 }
 
 export async function createOrUpdateTournament(
