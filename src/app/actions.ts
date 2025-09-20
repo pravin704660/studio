@@ -204,11 +204,6 @@ export async function createOrUpdateTournament(
 
     let imageUrl = tournamentData.imageUrl || "";
 
-
-      const [url] = await file.getSignedUrl({
-        action: 'read',
-        expires: '03-09-2491'
-      });
       imageUrl = url;
     } else if (!imageUrl && !tournamentData.id) {
         // Only set default if no image URL is present and it's a new tournament
