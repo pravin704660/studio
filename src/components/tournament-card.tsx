@@ -121,8 +121,9 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             <div className="flex flex-col items-center">
                 <Calendar className="h-6 w-6 text-green-400" />
                 <span className="mt-1 text-sm font-semibold">Starts</span>
-                <span className="text-lg font-bold">{tournament.date.toDate().toLocaleDateString()}</span>
-            </div>
+<span className="text-lg font-bold">
+  {tournament.date?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {tournament.date?.toDate().toLocaleDateString()}
+</span>            </div>
         </div>
         
         {hasWinnerPrizes && (
