@@ -255,7 +255,13 @@ if (!tournamentData.date || !tournamentData.time) {
             .filter((r) => r.trim() !== ""),
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
-      imageUrl: imageUrl,
+imageUrl:
+  tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
+    ? tournamentData.imageUrl
+    : tournamentData.type === "mega"
+    ? "/tournaments/MegaTournaments.jpg"
+    : "/tournaments/RegularTournaments.jpg",
+      
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
       winnerPrizes: tournamentData.winnerPrizes || [],
