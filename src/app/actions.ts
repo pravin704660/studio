@@ -172,13 +172,15 @@ export async function createOrUpdateTournament(
 ): Promise<{ success: boolean; error?: string }> {
   
   try {
-    if (!tournamentData.date || !tournamentData.time) {
+    // ખાતરી કરો કે date અને time સ્ટ્રિંગ તરીકે ઉપલબ્ધ છે અને ખાલી નથી
+    if (!tournamentData.date || !tournamentData.time || tournamentData.date.trim() === '' || tournamentData.time.trim() === '') {
       throw new Error("Date and time are required.");
     }
     
     let imageUrl = tournamentData.imageUrl || "";
     // If creating a new tournament (no ID) and no image URL is provided, set a default.
-    if (!tournamentData.id && !imageUrl) {
+    // જો કોઈ imageUrl પ્રદાન કરવામાં આવ્યું નથી, તો ડિફોલ્ટ સેટ કરો.
+    if (!imageUrl) { 
         if (tournamentData.isMega) {
             imageUrl = `/MegaTournaments.jpg`;
         } else {
@@ -186,22 +188,23 @@ export async function createOrUpdateTournament(
         }
     }
 
-    // Ensure the date is correctly combined with time before creating the Timestamp
+    // Date અને Time ને યોગ્ય રીતે જોડો અને Timestamp માં રૂપાંતરિત કરો
+    // ધ્યાનમાં રાખો કે Date કન્સ્ટ્રક્ટર "YYYY-MM-DDTHH:MM" ફોર્મેટને સારી રીતે હેન્ડલ કરે છે
     const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
     const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
 
     const finalData: Omit<Tournament, 'id'> & { date: admin.firestore.Timestamp } = {
       title: tournamentData.title || "",
       gameType: tournamentData.gameType || "Solo",
-      date: firestoreDate,
-      time: tournamentData.time || "",
+      date: firestoreDate, // અહીં Timestamp ઑબ્જેક્ટ સ્ટોર કરો
+      time: tournamentData.time || "", // સમયને સ્ટ્રિંગ તરીકે પણ રાખી શકો છો જો UI માં અલગથી દર્શાવવું હોય
       entryFee: tournamentData.entryFee || 0,
       slots: tournamentData.slots || 100,
       prize: tournamentData.prize || 0,
       rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules || '').split('\n').filter(r => r.trim() !== ''),
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
-      imageUrl: imageUrl,
+      imageUrl: imageUrl, 
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
       winnerPrizes: tournamentData.winnerPrizes || [],
@@ -209,7 +212,7 @@ export async function createOrUpdateTournament(
     
     if (tournamentData.id) {
         const tournamentDocRef = db.doc(`tournaments/${tournamentData.id}`);
-        await tournamentDocRef.set(finalData, { merge: true });
+        await tournamentDocRef.set(finalData, { merge: true }); // merge: true નો ઉપયોગ કરો જેથી અન્ય ફીલ્ડ્સ ઓવરરાઈટ ન થાય
     } else {
         await db.collection('tournaments').add(finalData);
     }
@@ -575,7 +578,7 @@ export async function updatePaymentSettings(formData: FormData): Promise<{ succe
     
     qrImageUrl = currentConfig.qrImageUrl; // Keep old image by default
 
-    if (qrImageFile) {
+    if (qrImageFile && qrImageFile.size > 0) { // ખાતરી કરો કે ફાઇલ ખરેખર અપલોડ થઈ છે
       const bucket = adminStorage.bucket();
       const fileName = `config/${uuidv4()}-${qrImageFile.name}`;
       const file = bucket.file(fileName);
@@ -597,7 +600,7 @@ export async function updatePaymentSettings(formData: FormData): Promise<{ succe
       qrImageUrl: qrImageUrl,
     };
 
-    await configDocRef.set(newConfig);
+    await configDocRef.set(newConfig, { merge: true }); // merge: true નો ઉપયોગ કરો જેથી અન્ય ફીલ્ડ્સ ઓવરરાઈટ ન થાય
 
     return { success: true };
   } catch (error: any) {
