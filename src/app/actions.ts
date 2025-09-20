@@ -1,3 +1,4 @@
+
 "use server";
 
 import { getFirestore, Timestamp, FieldValue, Transaction, QueryDocumentSnapshot } from "firebase-admin/firestore";
@@ -192,17 +193,17 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 }
 
 export async function createOrUpdateTournament(
-  formData: FormData
+  tournamentData: TournamentFormData
 ): Promise<{ success: boolean; error?: string }> {
   
   try {
-    const tournamentDataString = formData.get('tournamentData') as string;
-    if (!tournamentDataString) {
-      throw new Error("Tournament data is missing.");
+    if (!tournamentData.date || !tournamentData.time) {
+      throw new Error("Date and time are required.");
     }
     
-    } else if (!imageUrl && !tournamentData.id) {
-        // Only set default if no image URL is present and it's a new tournament
+    let imageUrl = tournamentData.imageUrl || "";
+    // If creating a new tournament (no ID) and no image URL is provided, set a default.
+    if (!tournamentData.id && !imageUrl) {
         if (tournamentData.isMega) {
             imageUrl = `/MegaTournaments.jpg`;
         } else {
@@ -210,10 +211,6 @@ export async function createOrUpdateTournament(
         }
     }
 
-    if (!tournamentData.date || !tournamentData.time) {
-      throw new Error("Date and time are required.");
-    }
-    
     // Ensure the date is correctly combined with time before creating the Timestamp
     const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
     const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
