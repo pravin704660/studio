@@ -1,71 +1,51 @@
+
 "use server";
 
-import { db } from "@/lib/firebase/client";
-import { adminStorage } from "@/lib/firebase/server";
-import {
-  doc,
-  runTransaction,
-  collection,
-  addDoc,
-  serverTimestamp,
-  setDoc,
-  deleteDoc,
-  Timestamp,
-  getDoc,
-  updateDoc,
-  query,
-  where,
-  getDocs,
-  writeBatch,
-} from "firebase/firestore";
-import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
-import type {
-  Tournament,
-  UserProfile,
-  TournamentFormData,
-  Notification,
-  PlayerResult,
-  AppConfig,
-} from "./lib/types";
-import { v4 as uuidv4 } from "uuid";
+import { getFirestore, Timestamp, FieldValue, Transaction, QueryDocumentSnapshot } from "firebase-admin/firestore";
+import { adminApp, adminStorage } from "@/lib/firebase/server";
+import type { Tournament, UserProfile, TournamentFormData, Notification, PlayerResult, AppConfig } from "@/lib/types";
+import { v4 as uuidv4 } from 'uuid';
+import type admin from 'firebase-admin';
+import { getUtrFollowUpMessage } from "@/ai/flows/utr-follow-up";
 
-/**
- * joinTournament
- */
-export async function joinTournament(
-  tournamentId: string,
-  userId: string
-): Promise<{ success: boolean; error?: string }> {
+
+// Use the admin SDK for server-side operations
+const db = getFirestore(adminApp!);
+
+
+export async function joinTournament(tournamentId: string, userId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const entriesRef = collection(db, "entries");
-    const q = query(
-      entriesRef,
-      where("userId", "==", userId),
-      where("tournamentId", "==", tournamentId)
-    );
-    const existingEntrySnapshot = await getDocs(q);
+    // Check if the user has already joined the tournament
+    const entriesRef = db.collection("entries");
+    const q = entriesRef.where("userId", "==", userId).where("tournamentId", "==", tournamentId);
+    const existingEntrySnapshot = await q.get();
     if (!existingEntrySnapshot.empty) {
       return { success: false, error: "You have already joined this tournament." };
     }
+      
+    const userDocRef = db.doc(`users/${userId}`);
+    const tournamentDocRef = db.doc(`tournaments/${tournamentId}`);
 
-    const userDocRef = doc(db, "users", userId);
-    const tournamentDocRef = doc(db, "tournaments", tournamentId);
+    // Fetch user and tournament data outside the transaction for notification use
+    const [userDoc, tournamentDoc] = await Promise.all([
+      userDocRef.get(),
+      tournamentDocRef.get(),
+    ]);
 
-    const [userDoc, tournamentDoc] = await Promise.all([getDoc(userDocRef), getDoc(tournamentDocRef)]);
-
-    if (!userDoc.exists()) throw new Error("User not found.");
-    if (!tournamentDoc.exists()) throw new Error("Tournament not found.");
+    if (!userDoc.exists) throw new Error("User not found.");
+    if (!tournamentDoc.exists) throw new Error("Tournament not found.");
 
     const userProfileData = userDoc.data() as UserProfile;
     const tournamentData = { ...tournamentDoc.data(), id: tournamentDoc.id } as Tournament;
 
-    await runTransaction(db, async (transaction) => {
+    await db.runTransaction(async (transaction: Transaction) => {
+      // Re-get documents inside the transaction to ensure atomicity
       const freshUserDoc = await transaction.get(userDocRef);
       const freshTournamentDoc = await transaction.get(tournamentDocRef);
 
-      if (!freshUserDoc.exists()) throw new Error("User not found.");
-      if (!freshTournamentDoc.exists()) throw new Error("Tournament not found.");
-
+      if (!freshUserDoc.exists) throw new Error("User not found.");
+      if (!freshTournamentDoc.exists) throw new Error("Tournament not found.");
+      
       const userProfile = freshUserDoc.data() as UserProfile;
       const tournament = freshTournamentDoc.data() as Tournament;
 
@@ -75,73 +55,64 @@ export async function joinTournament(
 
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
-
-      const entryDocRef = doc(collection(db, "entries"));
+      
+      const entryDocRef = db.collection("entries").doc();
       transaction.set(entryDocRef, {
         entryId: entryDocRef.id,
         tournamentId,
         userId,
         status: "confirmed",
         paidAmount: tournament.entryFee,
-        createdAt: serverTimestamp(),
       });
 
-      const transactionDocRef = doc(collection(db, "transactions"));
+      const transactionDocRef = db.collection("transactions").doc();
       transaction.set(transactionDocRef, {
         txnId: transactionDocRef.id,
         userId,
         amount: tournament.entryFee,
         type: "debit",
         status: "success",
-        timestamp: serverTimestamp(),
-        description: `Entry for ${tournament.title}`,
+        timestamp: FieldValue.serverTimestamp(),
+        description: `Entry for ${tournament.title}`
       });
     });
 
-    // notify admins
-    const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
-    const adminsSnapshot = await getDocs(adminsQuery);
-
+    // Send notification to all admins after the transaction is successful
+    const adminsQuery = db.collection("users").where("role", "==", "admin");
+    const adminsSnapshot = await adminsQuery.get();
+    
     const title = "New Tournament Entry";
-    const message = `${userProfileData.name || "A user"} has joined the tournament: ${tournamentData.title}.`;
+    const message = `${userProfileData.name || 'A user'} has joined the tournament: ${tournamentData.title}.`;
 
-    const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
-      const admin = adminDoc.data() as UserProfile;
-      return sendNotification(admin.uid, title, message);
+    const notificationPromises = adminsSnapshot.docs.map((adminDoc: QueryDocumentSnapshot) => {
+        const admin = adminDoc.data() as UserProfile;
+        return sendNotification(admin.uid, title, message);
     });
 
-    await Promise.all(notifPromises);
-
+    await Promise.all(notificationPromises);
+    
     return { success: true };
   } catch (error: any) {
-    console.error("joinTournament error:", error);
-    return { success: false, error: error?.message || "Failed to join tournament." };
+    return { success: false, error: error.message };
   }
 }
 
-/**
- * submitWalletRequest
- */
-export async function submitWalletRequest(
-  userId: string,
-  amount: number,
-  utr: string
-): Promise<{ success: boolean; error?: string }> {
+export async function submitWalletRequest(userId: string, amount: number, utr: string): Promise<{ success: boolean; error?: string }> {
   if (amount <= 0 || !utr) {
     return { success: false, error: "Invalid amount or UTR code." };
   }
   try {
-    const userDocRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
-      return { success: false, error: "User not found." };
+    const userDocRef = db.doc(`users/${userId}`);
+    const userDoc = await userDocRef.get();
+    if (!userDoc.exists) {
+        return { success: false, error: "User not found." };
     }
     const userData = userDoc.data() as UserProfile;
 
-    const requestColRef = collection(db, "wallet_requests");
-    const newRequestRef = doc(requestColRef);
-
-    await setDoc(newRequestRef, {
+    const requestColRef = db.collection('wallet_requests');
+    const newRequestRef = requestColRef.doc();
+    
+    await newRequestRef.set({
       requestId: newRequestRef.id,
       userId,
       userName: userData.name || "N/A",
@@ -149,44 +120,37 @@ export async function submitWalletRequest(
       amount,
       utr,
       status: "pending",
-      timestamp: serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     return { success: true };
   } catch (error: any) {
-    console.error("submitWalletRequest error:", error);
+    console.error("Error submitting wallet request:", error);
     return { success: false, error: "Failed to submit request." };
   }
 }
 
-/**
- * submitWithdrawalRequest
- */
-export async function submitWithdrawalRequest(
-  userId: string,
-  amount: number,
-  upiId: string
-): Promise<{ success: boolean; error?: string }> {
+export async function submitWithdrawalRequest(userId: string, amount: number, upiId: string): Promise<{ success: boolean; error?: string }> {
   if (amount <= 0 || !upiId) {
     return { success: false, error: "Invalid amount or UPI ID." };
   }
 
   try {
-    const userDocRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
-      return { success: false, error: "User not found." };
+    const userDocRef = db.doc(`users/${userId}`);
+    const userDoc = await userDocRef.get();
+    if (!userDoc.exists) {
+        return { success: false, error: "User not found." };
     }
     const userData = userDoc.data() as UserProfile;
 
     if (userData.walletBalance < amount) {
-      return { success: false, error: "Insufficient wallet balance." };
+        return { success: false, error: "Insufficient wallet balance." };
     }
 
-    const requestColRef = collection(db, "withdrawal_requests");
-    const newRequestRef = doc(requestColRef);
-
-    await setDoc(newRequestRef, {
+    const requestColRef = db.collection('withdrawal_requests');
+    const newRequestRef = requestColRef.doc();
+    
+    await newRequestRef.set({
       requestId: newRequestRef.id,
       userId,
       userName: userData.name || "N/A",
@@ -194,160 +158,138 @@ export async function submitWithdrawalRequest(
       amount,
       upiId,
       status: "pending",
-      timestamp: serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     return { success: true };
   } catch (error: any) {
-    console.error("submitWithdrawalRequest error:", error);
+    console.error("Error submitting withdrawal request:", error);
     return { success: false, error: "Failed to submit request." };
   }
 }
 
-/**
- * getUtrFollowUpMessage - wrapper for AI flow
- */
-export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<string | null> {
-  try {
-    const result = await utrFollowUp(input);
-    return result.followUpMessage;
-  } catch (error) {
-    console.error("getUtrFollowUpMessage error:", error);
-    return "We've noticed your payment request is still pending. Please contact support for assistance.";
-  }
-}
-
-/**
- * createOrUpdateTournament
- * Accepts FormData (file upload optional) and saves to firestore.
- */
 export async function createOrUpdateTournament(
-  formData: FormData
+  tournamentData: TournamentFormData
 ): Promise<{ success: boolean; error?: string }> {
+  
   try {
-    const tournamentDataString = formData.get("tournamentData") as string;
-    if (!tournamentDataString) {
-      throw new Error("Tournament data is missing.");
+    // ખાતરી કરો કે date અને time સ્ટ્રિંગ તરીકે ઉપલબ્ધ છે અને ખાલી નથી
+    if (!tournamentData.date || !tournamentData.time || tournamentData.date.trim() === '' || tournamentData.time.trim() === '') {
+      throw new Error("Date and time are required.");
     }
-    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
     
-let imageUrl = tournamentData.imageUrl || "";
+    let imageUrl = tournamentData.imageUrl || "";
+    // If creating a new tournament (no ID) and no image URL is provided, set a default.
+    // જો કોઈ imageUrl પ્રદાન કરવામાં આવ્યું નથી, તો ડિફોલ્ટ સેટ કરો.
+    if (!imageUrl) { 
+        if (tournamentData.isMega) {
+            imageUrl = `/MegaTournaments.jpg`;
+        } else {
+            imageUrl = `/RegularTournaments.jpg`;
+        }
+    }
 
-if (!tournamentData.date || !tournamentData.time) {
-  throw new Error("Date and time are required.");
-}
-
+    // Date અને Time ને યોગ્ય રીતે જોડો અને Timestamp માં રૂપાંતરિત કરો
+    // ધ્યાનમાં રાખો કે Date કન્સ્ટ્રક્ટર "YYYY-MM-DDTHH:MM" ફોર્મેટને સારી રીતે હેન્ડલ કરે છે
     const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
     const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
 
-    const finalData: Omit<Tournament, "id"> = {
+    const finalData: Omit<Tournament, 'id'> & { date: admin.firestore.Timestamp } = {
       title: tournamentData.title || "",
       gameType: tournamentData.gameType || "Solo",
-      date: firestoreDate,
-      time: tournamentData.time || "",
+      date: firestoreDate, // અહીં Timestamp ઑબ્જેક્ટ સ્ટોર કરો
+      time: tournamentData.time || "", // સમયને સ્ટ્રિંગ તરીકે પણ રાખી શકો છો જો UI માં અલગથી દર્શાવવું હોય
       entryFee: tournamentData.entryFee || 0,
       slots: tournamentData.slots || 100,
       prize: tournamentData.prize || 0,
-      rules: Array.isArray(tournamentData.rules)
-        ? tournamentData.rules
-        : String(tournamentData.rules || "")
-            .split("\n")
-            .filter((r) => r.trim() !== ""),
+      rules: Array.isArray(tournamentData.rules) ? tournamentData.rules : String(tournamentData.rules || '').split('\n').filter(r => r.trim() !== ''),
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
-      imageUrl: imageUrl,
+      imageUrl: imageUrl, 
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
       winnerPrizes: tournamentData.winnerPrizes || [],
     };
-
+    
     if (tournamentData.id) {
-      const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
-      await setDoc(tournamentDocRef, finalData, { merge: true });
+        const tournamentDocRef = db.doc(`tournaments/${tournamentData.id}`);
+        await tournamentDocRef.set(finalData, { merge: true }); // merge: true નો ઉપયોગ કરો જેથી અન્ય ફીલ્ડ્સ ઓવરરાઈટ ન થાય
     } else {
-      await addDoc(collection(db, "tournaments"), finalData);
+        await db.collection('tournaments').add(finalData);
     }
-
+    
     return { success: true };
   } catch (error: any) {
-    console.error("createOrUpdateTournament error:", error);
-    return { success: false, error: error?.message || "Failed to save tournament." };
+    console.error('Error creating/updating tournament:', error);
+    return { success: false, error: error.message || 'Failed to save tournament.' };
   }
 }
 
-/**
- * deleteTournament
- */
 export async function deleteTournament(tournamentId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const tournamentDocRef = doc(db, "tournaments", tournamentId);
-    await deleteDoc(tournamentDocRef);
+    const tournamentDocRef = db.doc(`tournaments/${tournamentId}`);
+    await tournamentDocRef.delete();
     return { success: true };
   } catch (error: any) {
-    console.error("deleteTournament error:", error);
-    return { success: false, error: "Failed to delete tournament." };
+    console.error('Error deleting tournament:', error);
+    return { success: false, error: 'Failed to delete tournament.' };
   }
 }
 
-/**
- * updateWalletBalance
- */
 export async function updateWalletBalance(
   userId: string,
   amount: number,
-  type: "credit" | "debit"
+  type: 'credit' | 'debit'
 ): Promise<{ success: boolean; error?: string }> {
   if (amount <= 0) {
-    return { success: false, error: "Amount must be positive." };
+    return { success: false, error: 'Amount must be positive.' };
   }
 
   try {
-    await runTransaction(db, async (transaction) => {
-      const userDocRef = doc(db, "users", userId);
+    await db.runTransaction(async (transaction: Transaction) => {
+      const userDocRef = db.doc(`users/${userId}`);
       const userDoc = await transaction.get(userDocRef);
 
-      if (!userDoc.exists()) {
-        throw new Error("User not found.");
+      if (!userDoc.exists) {
+        throw new Error('User not found.');
       }
 
       const userProfile = userDoc.data() as UserProfile;
       let newBalance: number;
 
-      if (type === "credit") {
+      if (type === 'credit') {
         newBalance = userProfile.walletBalance + amount;
       } else {
         if (userProfile.walletBalance < amount) {
-          throw new Error("Insufficient funds for debit.");
+          throw new Error('Insufficient funds for debit.');
         }
         newBalance = userProfile.walletBalance - amount;
       }
-
+      
       transaction.update(userDocRef, { walletBalance: newBalance });
 
-      const transactionDocRef = doc(collection(db, "transactions"));
+      const transactionDocRef = db.collection('transactions').doc();
       transaction.set(transactionDocRef, {
         txnId: transactionDocRef.id,
         userId,
         amount,
         type,
-        status: "success",
-        timestamp: serverTimestamp(),
+        status: 'success',
+        timestamp: FieldValue.serverTimestamp(),
         description: `Admin ${type}`,
       });
     });
 
     return { success: true };
   } catch (error: any) {
-    console.error("updateWalletBalance error:", error);
-    return { success: false, error: error?.message || "Failed to update balance." };
+    console.error('Error updating wallet balance:', error);
+    return { success: false, error: error.message };
   }
 }
 
-/**
- * sendNotification
- */
+
 export async function sendNotification(
-  targetUserId: string,
+  targetUserId: string, // "all" for everyone
   title: string,
   message: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -356,110 +298,96 @@ export async function sendNotification(
   }
 
   try {
-    await addDoc(collection(db, "notifications"), {
+    await db.collection("notifications").add({
       userId: targetUserId,
       title,
       message,
-      timestamp: serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
       isRead: false,
     });
     return { success: true };
   } catch (error: any) {
-    console.error("sendNotification error:", error);
+    console.error("Error sending notification:", error);
     return { success: false, error: "Failed to send notification." };
   }
 }
 
-/**
- * deleteUserNotification
- */
-export async function deleteUserNotification(
-  notificationId: string,
-  userId: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const notifDocRef = doc(db, "notifications", notificationId);
-    const notifDoc = await getDoc(notifDocRef);
 
-    if (!notifDoc.exists()) {
-      return { success: false, error: "Notification not found." };
+export async function deleteUserNotification(notificationId: string, userId: string): Promise<{ success: boolean, error?: string }> {
+    try {
+        const notifDocRef = db.doc(`notifications/${notificationId}`);
+        const notifDoc = await notifDocRef.get();
+
+        if (!notifDoc.exists) {
+            return { success: false, error: "Notification not found." };
+        }
+
+        const notification = notifDoc.data() as Notification;
+
+        if (notification.userId !== userId && notification.userId !== 'all') {
+            const userDoc = await db.doc(`users/${userId}`).get();
+            if (!userDoc.exists || (userDoc.data() as UserProfile).role !== 'admin') {
+               return { success: false, error: "You do not have permission to delete this notification." };
+            }
+        }
+
+        if (notification.userId === 'all') {
+             const userDoc = await db.doc(`users/${userId}`).get();
+            if (!userDoc.exists || (userDoc.data() as UserProfile).role !== 'admin') {
+               return { success: false, error: "You cannot delete global announcements." };
+            }
+        }
+
+
+        await notifDocRef.delete();
+        return { success: true };
+
+    } catch (error: any) {
+        console.error("Error deleting notification:", error);
+        return { success: false, error: "Failed to delete notification." };
     }
-
-    const notification = notifDoc.data() as Notification;
-
-    if (notification.userId !== userId && notification.userId !== "all") {
-      const userDoc = await getDoc(doc(db, "users", userId));
-      if (!userDoc.exists() || (userDoc.data() as UserProfile).role !== "admin") {
-        return { success: false, error: "You do not have permission to delete this notification." };
-      }
-    }
-
-    if (notification.userId === "all") {
-      const userDoc = await getDoc(doc(db, "users", userId));
-      if (!userDoc.exists() || (userDoc.data() as UserProfile).role !== "admin") {
-        return { success: false, error: "You cannot delete global announcements." };
-      }
-    }
-
-    await deleteDoc(notifDocRef);
-    return { success: true };
-  } catch (error: any) {
-    console.error("deleteUserNotification error:", error);
-    return { success: false, error: "Failed to delete notification." };
-  }
 }
 
-/**
- * updateUserProfileName
- */
-export async function updateUserProfileName(
-  userId: string,
-  newName: string
-): Promise<{ success: boolean; error?: string }> {
+export async function updateUserProfileName(userId: string, newName: string): Promise<{ success: boolean, error?: string }> {
   if (!newName || newName.trim().length === 0) {
     return { success: false, error: "Name cannot be empty." };
   }
   try {
-    const userDocRef = doc(db, "users", userId);
-    await updateDoc(userDocRef, { name: newName.trim() });
+    const userDocRef = db.doc(`users/${userId}`);
+    await userDocRef.update({ name: newName.trim() });
     return { success: true };
   } catch (error: any) {
-    console.error("updateUserProfileName error:", error);
+    console.error("Error updating user name:", error);
     return { success: false, error: "Failed to update name." };
   }
 }
 
-/**
- * deleteUserNotifications (batch)
- */
 export async function deleteUserNotifications(userId: string): Promise<{ success: boolean; error?: string }> {
-  if (!userId) {
-    return { success: false, error: "User ID is required." };
-  }
-  try {
-    const q = query(collection(db, "notifications"), where("userId", "==", userId));
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-      return { success: true };
+    if (!userId) {
+        return { success: false, error: "User ID is required." };
     }
+    try {
+        const q = db.collection("notifications").where("userId", "==", userId);
+        const querySnapshot = await q.get();
 
-    const batch = writeBatch(db);
-    querySnapshot.forEach((d) => {
-      batch.delete(d.ref);
-    });
+        if (querySnapshot.empty) {
+            return { success: true }; 
+        }
+        
+        const batch = db.batch();
+        querySnapshot.forEach((doc: QueryDocumentSnapshot) => {
+            batch.delete(doc.ref);
+        });
 
-    await batch.commit();
-    return { success: true };
-  } catch (error: any) {
-    console.error("deleteUserNotifications error:", error);
-    return { success: false, error: "Failed to clear notifications." };
-  }
+        await batch.commit();
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error deleting user notifications:", error);
+        return { success: false, error: "Failed to clear notifications." };
+    }
 }
 
-/**
- * declareResult
- */
+
 export async function declareResult(
   tournamentId: string,
   tournamentTitle: string,
@@ -471,170 +399,213 @@ export async function declareResult(
   }
 
   try {
-    const batch = writeBatch(db);
-    const resultDocRef = doc(db, "results", tournamentId);
-
+    const batch = db.batch();
+    const resultDocRef = db.doc(`results/${tournamentId}`);
+    
     const sortedResults = results
       .sort((a, b) => b.points - a.points)
-      .map((r, index) => ({ ...r, rank: index + 1 }));
-
+      .map((r, index) => ({...r, rank: index + 1}));
+    
     batch.set(resultDocRef, {
       tournamentId,
       tournamentTitle,
       isMega,
       results: sortedResults,
-      declaredAt: serverTimestamp(),
+      declaredAt: FieldValue.serverTimestamp(),
     });
 
     for (const result of sortedResults) {
+      if (!result.userId) continue;
+
       const title = `Result Declared: ${tournamentTitle}`;
       let message = `Congratulations! You secured rank #${result.rank} with ${result.points} points.`;
-
+      
       if (result.prize && result.prize > 0) {
-        message += ` You've won ?${result.prize}!`;
-        const userDocRef = doc(db, "users", result.userId);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const userProfile = userDoc.data() as UserProfile;
-          const newBalance = (userProfile.walletBalance || 0) + result.prize;
-          batch.update(userDocRef, { walletBalance: newBalance });
+        message += ` You've won ₹${result.prize}!`;
+        const userDocRef = db.doc(`users/${result.userId}`);
+        const userDoc = await userDocRef.get();
+        if (userDoc.exists) {
+            const userProfile = userDoc.data() as UserProfile;
+            const newBalance = userProfile.walletBalance + result.prize;
+            batch.update(userDocRef, { walletBalance: newBalance });
 
-          const transactionDocRef = doc(collection(db, "transactions"));
-          batch.set(transactionDocRef, {
-            txnId: transactionDocRef.id,
-            userId: result.userId,
-            amount: result.prize,
-            type: "credit",
-            status: "success",
-            timestamp: serverTimestamp(),
-            description: `Prize money for ${tournamentTitle}`,
-          });
+            const transactionDocRef = db.collection('transactions').doc();
+            batch.set(transactionDocRef, {
+                txnId: transactionDocRef.id,
+                userId: result.userId,
+                amount: result.prize,
+                type: 'credit',
+                status: 'success',
+                timestamp: FieldValue.serverTimestamp(),
+                description: `Prize money for ${tournamentTitle}`,
+            });
         }
       }
-
-      const notificationDocRef = doc(collection(db, "notifications"));
+      
+      const notificationDocRef = db.collection("notifications").doc();
       batch.set(notificationDocRef, {
         userId: result.userId,
         title,
         message,
-        timestamp: serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
         isRead: false,
       });
     }
 
     await batch.commit();
+
     return { success: true };
   } catch (error: any) {
-    console.error("declareResult error:", error);
+    console.error("Error declaring result:", error);
     return { success: false, error: "Failed to declare result." };
   }
 }
 
-/**
- * updateWalletRequestStatus
- */
 export async function updateWalletRequestStatus(
   requestId: string,
   userId: string,
   amount: number,
-  newStatus: "approved" | "rejected"
+  newStatus: 'approved' | 'rejected'
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const requestDocRef = doc(db, "wallet_requests", requestId);
+    const requestDocRef = db.doc(`wallet_requests/${requestId}`);
 
-    if (newStatus === "approved") {
-      await runTransaction(db, async (transaction) => {
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await transaction.get(userDocRef);
+    if (newStatus === 'approved') {
+        await db.runTransaction(async (transaction: Transaction) => {
+            const userDocRef = db.doc(`users/${userId}`);
+            const userDoc = await transaction.get(userDocRef);
 
-        if (!userDoc.exists()) {
-          throw new Error("User not found.");
-        }
+            if (!userDoc.exists) {
+                throw new Error('User not found.');
+            }
 
-        const userProfile = userDoc.data() as UserProfile;
-        const newBalance = (userProfile.walletBalance || 0) + amount;
+            const userProfile = userDoc.data() as UserProfile;
+            const newBalance = userProfile.walletBalance + amount;
+            
+            transaction.update(userDocRef, { walletBalance: newBalance });
 
-        transaction.update(userDocRef, { walletBalance: newBalance });
+            const transactionDocRef = db.collection('transactions').doc();
+            transaction.set(transactionDocRef, {
+                txnId: transactionDocRef.id,
+                userId,
+                amount,
+                type: 'credit',
+                status: 'success',
+                timestamp: FieldValue.serverTimestamp(),
+                description: 'Wallet deposit approved',
+            });
 
-        const transactionDocRef = doc(collection(db, "transactions"));
-        transaction.set(transactionDocRef, {
-          txnId: transactionDocRef.id,
-          userId,
-          amount,
-          type: "credit",
-          status: "success",
-          timestamp: serverTimestamp(),
-          description: "Wallet deposit approved",
+            transaction.update(requestDocRef, { status: newStatus });
         });
 
-        transaction.update(requestDocRef, { status: newStatus });
-      });
+        await sendNotification(userId, "Deposit Approved", `Your request to add ₹${amount} has been approved.`);
 
-      await sendNotification(userId, "Deposit Approved", `Your request to add ?${amount} has been approved.`);
-    } else {
-      await updateDoc(requestDocRef, { status: newStatus });
-      await sendNotification(userId, "Deposit Rejected", `Your request to add ?${amount} has been rejected.`);
+    } else { // Rejected
+        await requestDocRef.update({ status: newStatus });
+        await sendNotification(userId, "Deposit Rejected", `Your request to add ₹${amount} has been rejected.`);
     }
 
     return { success: true };
   } catch (error: any) {
-    console.error("updateWalletRequestStatus error:", error);
-    return { success: false, error: error?.message || "Failed to update request." };
+    console.error("Error updating wallet request:", error);
+    return { success: false, error: error.message || 'Failed to update request.' };
   }
 }
 
-/**
- * updateWithdrawalRequestStatus
- */
 export async function updateWithdrawalRequestStatus(
   requestId: string,
   userId: string,
   amount: number,
-  newStatus: "approved" | "rejected"
+  newStatus: 'approved' | 'rejected'
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const requestDocRef = doc(db, "withdrawal_requests", requestId);
+    const requestDocRef = db.doc(`withdrawal_requests/${requestId}`);
 
-    if (newStatus === "approved") {
-      await runTransaction(db, async (transaction) => {
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await transaction.get(userDocRef);
+    if (newStatus === 'approved') {
+        await db.runTransaction(async (transaction: Transaction) => {
+            const userDocRef = db.doc(`users/${userId}`);
+            const userDoc = await transaction.get(userDocRef);
 
-        if (!userDoc.exists()) {
-          throw new Error("User not found.");
-        }
+            if (!userDoc.exists) {
+                throw new Error('User not found.');
+            }
 
-        const userProfile = userDoc.data() as UserProfile;
-        if ((userProfile.walletBalance || 0) < amount) {
-          throw new Error("Insufficient funds for withdrawal.");
-        }
-        const newBalance = (userProfile.walletBalance || 0) - amount;
+            const userProfile = userDoc.data() as UserProfile;
+            if (userProfile.walletBalance < amount) {
+                throw new Error('Insufficient funds for withdrawal.');
+            }
+            const newBalance = userProfile.walletBalance - amount;
+            
+            transaction.update(userDocRef, { walletBalance: newBalance });
 
-        transaction.update(userDocRef, { walletBalance: newBalance });
+            const transactionDocRef = db.collection('transactions').doc();
+            transaction.set(transactionDocRef, {
+                txnId: transactionDocRef.id,
+                userId,
+                amount,
+                type: 'debit',
+                status: 'success',
+                timestamp: FieldValue.serverTimestamp(),
+                description: 'Withdrawal approved',
+            });
 
-        const transactionDocRef = doc(collection(db, "transactions"));
-        transaction.set(transactionDocRef, {
-          txnId: transactionDocRef.id,
-          userId,
-          amount,
-          type: "debit",
-          status: "success",
-          timestamp: serverTimestamp(),
-          description: "Withdrawal approved",
+            transaction.update(requestDocRef, { status: newStatus });
         });
 
-        transaction.update(requestDocRef, { status: newStatus });
-      });
+        await sendNotification(userId, "Withdrawal Approved", `Your request to withdraw ₹${amount} has been approved.`);
 
-      await sendNotification(userId, "Withdrawal Approved", `Your withdrawal of ?${amount} has been approved.`);
-    } else {
-      await updateDoc(requestDocRef, { status: newStatus });
-      await sendNotification(userId, "Withdrawal Rejected", `Your withdrawal of ?${amount} has been rejected.`);
+    } else { // Rejected
+        await requestDocRef.update({ status: newStatus });
+        await sendNotification(userId, "Withdrawal Rejected", `Your request to withdraw ₹${amount} has been rejected.`);
     }
 
     return { success: true };
   } catch (error: any) {
-    console.error("updateWithdrawalRequestStatus error:", error);
-    return { success: false, error: error?.message || "Failed to update withdrawal request." };
+    console.error("Error updating withdrawal request:", error);
+    return { success: false, error: error.message || 'Failed to update request.' };
+  }
+}
+
+
+export async function updatePaymentSettings(formData: FormData): Promise<{ success: boolean; error?: string }> {
+  try {
+    const upiId = formData.get('upiId') as string;
+    const qrImageFile = formData.get('qrImageFile') as File | null;
+    let qrImageUrl: string | undefined = "";
+
+    const configDocRef = db.doc("config/payment");
+    const currentConfigDoc = await configDocRef.get();
+    const currentConfig = currentConfigDoc.exists ? currentConfigDoc.data() as AppConfig : { upiId: "", qrImageUrl: "" };
+    
+    qrImageUrl = currentConfig.qrImageUrl; // Keep old image by default
+
+    if (qrImageFile && qrImageFile.size > 0) { // ખાતરી કરો કે ફાઇલ ખરેખર અપલોડ થઈ છે
+      const bucket = adminStorage.bucket();
+      const fileName = `config/${uuidv4()}-${qrImageFile.name}`;
+      const file = bucket.file(fileName);
+      const fileBuffer = Buffer.from(await qrImageFile.arrayBuffer());
+
+      await file.save(fileBuffer, {
+        metadata: { contentType: qrImageFile.type },
+      });
+
+      const [url] = await file.getSignedUrl({
+        action: 'read',
+        expires: '03-09-2491'
+      });
+      qrImageUrl = url;
+    }
+
+    const newConfig: AppConfig = {
+      upiId: upiId,
+      qrImageUrl: qrImageUrl,
+    };
+
+    await configDocRef.set(newConfig, { merge: true }); // merge: true નો ઉપયોગ કરો જેથી અન્ય ફીલ્ડ્સ ઓવરરાઈટ ન થાય
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating payment settings:", error);
+    return { success: false, error: error.message || "Failed to update settings." };
   }
 }
