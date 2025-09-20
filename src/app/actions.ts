@@ -188,25 +188,25 @@ export async function createOrUpdateTournament(
     }
 
     const finalData: Omit<Tournament, "id"> & { date: admin.firestore.Timestamp | null } = {
-      title: tournamentData.title || "",
-      gameType: tournamentData.gameType || "Solo",
-      date: firestoreDate,   // ✅ fixed
-      time: tournamentData.time || "",
-      entryFee: tournamentData.entryFee || 0,
-      slots: tournamentData.slots || 100,
-      prize: tournamentData.prize || 0,
-      rules: Array.isArray(tournamentData.rules)
-        ? tournamentData.rules
-        : String(tournamentData.rules || "")
-            .split("\n")
-            .filter((r) => r.trim() !== ""),
-      status: tournamentData.status || "draft",
-      isMega: tournamentData.isMega || false,
-      imageUrl,
-      roomId: tournamentData.roomId || "",
-      roomPassword: tournamentData.roomPassword || "",
-      winnerPrizes: tournamentData.winnerPrizes || [],
-    };
+  title: tournamentData.title || "",
+  gameType: tournamentData.gameType || "Solo",
+  date: firestoreDate,
+  time: tournamentData.time || "",
+  entryFee: tournamentData.entryFee || 0,
+  slots: tournamentData.slots || 100,
+  prize: tournamentData.prize || 0,
+  rules: Array.isArray(tournamentData.rules)
+    ? tournamentData.rules
+    : String(tournamentData.rules || "")
+        .split("\n")
+        .filter((r) => r.trim() !== ""),
+  status: tournamentData.status ? tournamentData.status : "published", // ✅ FIXED
+  isMega: tournamentData.isMega || false,
+  imageUrl,
+  roomId: tournamentData.roomId || "",
+  roomPassword: tournamentData.roomPassword || "",
+  winnerPrizes: tournamentData.winnerPrizes || [],
+};
 
     if (tournamentData.id) {
       const tournamentDocRef = db.doc(`tournaments/${tournamentData.id}`);
