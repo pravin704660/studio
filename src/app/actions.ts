@@ -1,10 +1,9 @@
- 
 "use server";
 
 import { getFirestore, Timestamp, FieldValue, Transaction, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { adminApp, adminStorage } from "@/lib/firebase/server";
 import type { Tournament, UserProfile, TournamentFormData, Notification, PlayerResult, AppConfig, UTRFollowUpInput } from "@/lib/types";
-import { v4 as uuidvv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import type admin from 'firebase-admin';
 
 
@@ -193,13 +192,35 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 }
 
 export async function createOrUpdateTournament(
-  tournamentData: TournamentFormData
+  formData: FormData
 ): Promise<{ success: boolean; error?: string }> {
   
   try {
+    const tournamentDataString = formData.get('tournamentData') as string;
+    if (!tournamentDataString) {
+      throw new Error("Tournament data is missing.");
+    }
+    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
+    const imageFile = formData.get('imageFile') as File | null;
+
     let imageUrl = tournamentData.imageUrl || "";
 
-    if (!imageUrl && !tournamentData.id) {
+    if (imageFile) {
+      const bucket = adminStorage.bucket();
+      const fileName = `tournaments/${uuidv4()}-${imageFile.name}`;
+      const file = bucket.file(fileName);
+      const fileBuffer = Buffer.from(await imageFile.arrayBuffer());
+
+      await file.save(fileBuffer, {
+        metadata: { contentType: imageFile.type },
+      });
+
+      const [url] = await file.getSignedUrl({
+        action: 'read',
+        expires: '03-09-2491'
+      });
+      imageUrl = url;
+    } else if (!imageUrl && !tournamentData.id) {
         // Only set default if no image URL is present and it's a new tournament
         if (tournamentData.isMega) {
             imageUrl = `/MegaTournaments.jpg`;
@@ -436,21 +457,21 @@ export async function declareResult(
       declaredAt: FieldValue.serverTimestamp(),
     });
 
-    const notificationPromises = sortedResults.map(async (result) => {
+    for (const result of sortedResults) {
+      if (!result.userId) continue;
+
       const title = `Result Declared: ${tournamentTitle}`;
       let message = `Congratulations! You secured rank #${result.rank} with ${result.points} points.`;
       
       if (result.prize && result.prize > 0) {
         message += ` You've won ₹${result.prize}!`;
-        // Credit the prize to the user's wallet
         const userDocRef = db.doc(`users/${result.userId}`);
-        const userDoc = await userDocRef.get(); // Use getDoc instead of transaction.get in batch
+        const userDoc = await userDocRef.get();
         if (userDoc.exists) {
             const userProfile = userDoc.data() as UserProfile;
             const newBalance = userProfile.walletBalance + result.prize;
             batch.update(userDocRef, { walletBalance: newBalance });
 
-            // Create a transaction record
             const transactionDocRef = db.collection('transactions').doc();
             batch.set(transactionDocRef, {
                 txnId: transactionDocRef.id,
@@ -472,9 +493,8 @@ export async function declareResult(
         timestamp: FieldValue.serverTimestamp(),
         isRead: false,
       });
-    });
+    }
 
-    await Promise.all(notificationPromises);
     await batch.commit();
 
     return { success: true };
@@ -604,7 +624,7 @@ export async function updatePaymentSettings(formData: FormData): Promise<{ succe
 
     if (qrImageFile) {
       const bucket = adminStorage.bucket();
-      const fileName = `config/${uuidvv4()}-${qrImageFile.name}`;
+      const fileName = `config/${uuidv4()}-${qrImageFile.name}`;
       const file = bucket.file(fileName);
       const fileBuffer = Buffer.from(await qrImageFile.arrayBuffer());
 
