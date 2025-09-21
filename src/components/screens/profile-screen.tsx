@@ -7,14 +7,33 @@ import { signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, User, Mail, Shield, Gamepad2, Edit, Save, X, FileText, Inbox, Share2 } from "lucide-react";
+import {
+  LogOut,
+  User,
+  Mail,
+  Shield,
+  Gamepad2,
+  Edit,
+  Save,
+  X,
+  FileText,
+  Inbox,
+  Share2,
+} from "lucide-react";
 import Link from "next/link";
 import { Spinner } from "../ui/spinner";
 import { Input } from "../ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfileName } from "@/app/actions";
 
-type Screen = "home" | "wallet" | "mega-result" | "tournaments" | "profile" | "rules" | "inbox";
+type Screen =
+  | "home"
+  | "wallet"
+  | "mega-result"
+  | "tournaments"
+  | "profile"
+  | "rules"
+  | "inbox";
 
 interface ProfileScreenProps {
   setActiveScreen: (screen: Screen) => void;
@@ -45,53 +64,87 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
       toast({ title: "Success", description: "Your name has been updated." });
       setIsEditingName(false);
     } else {
-      toast({ variant: "destructive", title: "Error", description: result.error });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: result.error,
+      });
     }
     setIsSaving(false);
   };
 
-   const handleShare = async () => {
-  if (!user) {
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "You must be logged in to share.",
-    });
-    return;
-  }
-
-  const apkLink = `${window.location.origin}/PUBG1STAR.apk`;
-  const referralLink = `${window.location.origin}/?ref=${user.uid}`;
-  const referralText = `🔥 Join me on PUBG1STAR and get ₹10 bonus!\n\n📥 Download APK: ${apkLink}\n👉 Referral Link: ${referralLink}`;
-
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: "PUBG1STAR Referral",
-        text: referralText,
-        url: referralLink, // WhatsApp / Telegram automatically detect કરે છે
-      });
-      console.log("Shared successfully!");
-    } catch (error) {
-      console.error("Share cancelled:", error);
-    }
-  } else {
-    // fallback for PC browsers
-    try {
-      await navigator.clipboard.writeText(referralText);
-      toast({
-        title: "Link Copied!",
-        description: "Referral text copied to clipboard. Paste it in WhatsApp/Telegram to share.",
-      });
-    } catch {
+  // 🔹 Share handler
+  const handleShare = async (platform?: string) => {
+    if (!user) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not copy the link.",
+        description: "You must be logged in to share.",
       });
+      return;
     }
-  }
-};
+
+    const apkLink = `${window.location.origin}/PUBG1STAR.apk`;
+    const referralLink = `${window.location.origin}/?ref=${user.uid}`;
+    const referralText = `🔥 Join me on PUBG1STAR and get ₹10 bonus!\n\n📥 Download APK: ${apkLink}\n👉 Referral Link: ${referralLink}`;
+
+    // ✅ Custom platform links
+    if (platform === "whatsapp") {
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent(referralText)}`,
+        "_blank"
+      );
+      return;
+    }
+    if (platform === "telegram") {
+      window.open(
+        `https://t.me/share/url?url=${encodeURIComponent(
+          referralLink
+        )}&text=${encodeURIComponent(referralText)}`,
+        "_blank"
+      );
+      return;
+    }
+    if (platform === "facebook") {
+      window.open(
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+          referralLink
+        )}`,
+        "_blank"
+      );
+      return;
+    }
+
+    // ✅ Default system share (for mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "PUBG1STAR Referral",
+          text: referralText,
+          url: referralLink,
+        });
+      } catch (error) {
+        console.error("Share cancelled:", error);
+      }
+    } else {
+      // fallback (desktop copy link)
+      try {
+        await navigator.clipboard.writeText(referralText);
+        toast({
+          title: "Link Copied!",
+          description:
+            "Referral text copied to clipboard. Paste it in WhatsApp/Telegram to share.",
+        });
+      } catch {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not copy the link.",
+        });
+      }
+    }
+  };
+
   if (loading || !user) {
     return (
       <div className="flex h-64 w-full items-center justify-center">
@@ -206,10 +259,41 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
             </Link>
           )}
 
-          <Button variant="outline" className="w-full" onClick={handleShare}>
-            <Share2 className="mr-2 h-4 w-4" />
-            Refer &amp; Earn
-          </Button>
+          {/* 🔹 Share buttons */}
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleShare()}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Refer &amp; Earn (System Share)
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleShare("whatsapp")}
+            >
+              Share on WhatsApp
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleShare("telegram")}
+            >
+              Share on Telegram
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleShare("facebook")}
+            >
+              Share on Facebook
+            </Button>
+          </div>
 
           <Button
             variant="outline"
@@ -229,7 +313,11 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
             Inbox
           </Button>
 
-          <Button variant="destructive" className="w-full" onClick={handleLogout}>
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={handleLogout}
+          >
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
