@@ -46,16 +46,21 @@ export default function HomeScreen() {
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="flex justify-center">
-        <Image
-          src="/home/Homapageimage.jpg"
-          alt="Homepage Banner"
-          width={1600}
-          height={900}
-          className="w-full max-w-4xl h-auto object-contain rounded-lg"
-          priority
-        />
-      </div>
+      <div className="flex flex-col items-center">
+  <Image
+    src="/home/Homepageimage.jpg"
+    alt="Homepage Banner"
+    width={1600}
+    height={902}
+    className="w-full max-w-4xl h-auto object-contain rounded-lg"
+    priority
+  />
+
+  {/* Image પછી text */}
+  <h2 className="mt-6 text-3xl font-bold text-center text-yellow-400 drop-shadow-lg opacity-90 tracking-wide">
+    YOUR WIN TOURNAMENTS
+  </h2>
+</div>
 
       {/* Tournament Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
