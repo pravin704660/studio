@@ -83,18 +83,20 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
             
-<Image
-  src={
-    tournament.imageUrl && tournament.imageUrl.trim()
-      ? tournament.imageUrl
-      : tournament.isMega
-      ? "/megatournaments.jpg"   // mega tournament default
-      : "/regulartournaments.jpg" // regular tournament default
-  }
-  alt={tournament.title || "Tournament"}
-  fill
-  className="object-cover"
-/>
+<div className="relative h-48 w-full">
+  <Image
+    src={
+      tournament.imageUrl && tournament.imageUrl.trim()
+        ? tournament.imageUrl
+        : tournament.type?.toLowerCase() === "mega"
+        ? "/megatournament.jpg"
+        : "/regulartournament.jpg"
+    }
+    alt={tournament.title || "Tournament"}
+    fill
+    className="object-cover"
+  />
+</div>
   alt={tournament.title}
   fill
   className="object-cover"
