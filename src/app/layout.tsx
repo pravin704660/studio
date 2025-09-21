@@ -21,6 +21,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        {/* 👇 Mobile માં zoom disable / Desktop માં normal */}
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+          media="(max-width: 1024px)"
+        />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0"
+          media="(min-width: 1025px)"
+        />
+      </head>
       <body className={`${inter.variable} font-body antialiased`}>
         <AuthProvider>
           {children}
