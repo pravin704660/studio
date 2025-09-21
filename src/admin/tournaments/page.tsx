@@ -74,9 +74,27 @@ const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
   prize: 0,
   rules: [],
   status: "draft",
-  type: "regular",   // 👈 regular/mega select option mate
+  type: "regular",   // 👈 regular/mega select option mate 
+  <div className="flex flex-col gap-2">
+  <label className="text-sm font-medium">Image URL</label>
+  <input
+    type="text"
+    name="imageUrl"
+    placeholder="Enter image URL"
+    value={formData.imageUrl || ""}
+    onChange={(e) =>
+      setFormData({ ...formData, imageUrl: e.target.value })
+    }
+    className="border rounded-md p-2"
+  />
+  <p className="text-xs text-muted-foreground">
+    Leave blank for default tournament image
+  </p>
+</div>
+    
   roomId: "",
-  roomPassword: "",
+  roomPassword: "", 
+  imageUrl: "",
   winnerPrizes: [
     { rank: "1st", prize: 0 },
     { rank: "2nd", prize: 0 },
@@ -85,7 +103,7 @@ const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
   ],
 };
 </div>
-  imageUrl: "",
+  
   winnerPrizes: [
     { rank: "1st", prize: 0 },
     { rank: "2nd", prize: 0 },
