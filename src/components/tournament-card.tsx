@@ -88,8 +88,8 @@ export default function TournamentCard({
               tournament.imageUrl && tournament.imageUrl.trim()
                 ? tournament.imageUrl
                 : tournament.type?.toLowerCase() === "mega"
-                ? "/megatournament.jpg"
-                : "/regulartournament.jpg"
+                ? "/megatournaments.jpg"
+                : "/regulartournaments.jpg"
             }
             alt={tournament.title || "Tournament"}
             fill
