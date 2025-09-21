@@ -1,8 +1,6 @@
 
 "use client";
 
-import regularImg from "@/public/regulartournaments.jpg";
-import megaImg from "@/public/megatournaments.jpg";
 
 import Image from "next/image";
 
@@ -88,10 +86,10 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
 <Image
   src={
     tournament.imageUrl && tournament.imageUrl.trim()
-      ? tournament.imageUrl // જો Admin panel માં custom image હોય તો
+      ? tournament.imageUrl
       : tournament.isMega
-      ? megaImg             // જો Mega tournament હોય તો
-      : regularImg          // બાકી Regular tournament માટે
+      ? "/megatournaments.jpg"
+      : "/regulartournaments.jpg"
   }
   alt={tournament.title || "Tournament"}
   fill
