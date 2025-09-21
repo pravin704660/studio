@@ -102,15 +102,7 @@ const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
     { rank: "4th", prize: 0 },
   ],
 };
-</div>
-  
-  winnerPrizes: [
-    { rank: "1st", prize: 0 },
-    { rank: "2nd", prize: 0 },
-    { rank: "3rd", prize: 0 },
-    { rank: "4th", prize: 0 },
-  ],
-};
+
 
 export default function ManageTournamentsPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
