@@ -44,11 +44,9 @@ export default function HomeScreen() {
   }, [user]);
 
   return (
-    <div className="space-y-6">
-      {/* Banner */}
-      <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center">
   <Image
-    src="/home/Homepageimage.jpg"
+    src="/home/Homepageimage.jpg"   // <-- public/home/Homepageimage.jpg માં હોવું જોઈએ
     alt="Homepage Banner"
     width={1600}
     height={902}
