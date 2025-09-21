@@ -55,7 +55,53 @@ export default function HomeScreen() {
           className="w-full max-w-4xl h-auto object-contain rounded-lg"
           priority
         />
+      </div> 
+      /* --- Paste this RIGHT AFTER your banner Image div closing tag --- */
+/* Example: after
+   </div>   <-- (the div that wraps the <Image .../>)
+   paste the code below
+*/
+
+{/* Banner subtitle / single-line marquee */}
+<div className="mt-4 flex items-center justify-center">
+  <div
+    className="w-full max-w-4xl overflow-hidden rounded-md bg-transparent"
+    aria-hidden={false}
+  >
+    <div
+      className="whitespace-nowrap py-3 text-center text-2xl font-extrabold tracking-wide"
+      style={{
+        color: "#FFD54F", /* yellow tone */
+        opacity: 0.95,
+      }}
+    >
+      {/* marquee inner: move left-to-right using CSS animation */}
+      <div
+        className="inline-block will-change-transform"
+        style={{
+          display: "inline-block",
+          paddingLeft: "100%", // start off-screen right
+          animation: "marquee 14s linear infinite",
+        }}
+      >
+        YOUR WIN TOURNAMENTS
       </div>
+    </div>
+  </div>
+</div>
+
+{/* Add this <style jsx> (or put rules in globals.css) */}
+<style jsx>{`
+  @keyframes marquee {
+    0% { transform: translateX(0%); }         /* starts off right because paddingLeft */
+    100% { transform: translateX(-100%); }    /* move fully left */
+  }
+
+  /* smaller screens: make font smaller */
+  @media (max-width: 640px) {
+    .text-2xl { font-size: 1.125rem; } /* reduce a bit on mobile */
+  }
+`}</style>
 
       {/* Tournament Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
