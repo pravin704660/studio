@@ -82,14 +82,14 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
     <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
-            ournaments/MegaTournaments.jpg"   // ✅ Mega Tournament default
+            
 <Image
   src={
     tournament.imageUrl && tournament.imageUrl.trim()
       ? tournament.imageUrl
       : tournament.isMega
-      ? "/megatournaments.jpg"
-      : "/regulartournaments.jpg"
+      ? "/megatournament.jpg"   // mega tournament default
+      : "/regulartournament.jpg" // regular tournament default
   }
   alt={tournament.title || "Tournament"}
   fill
