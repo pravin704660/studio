@@ -62,25 +62,33 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
 
   const apkLink = `${window.location.origin}/PUBG1STAR.apk`;
   const referralLink = `${window.location.origin}/?ref=${user.uid}`;
-  const referralText = `🔥 Join me on PUBG1STAR and get ₹10 bonus!\n\n📥 Download: ${apkLink}\n👉 Referral: ${referralLink}`;
+  const referralText = `🔥 Join me on PUBG1STAR and get ₹10 bonus!\n\n📥 Download APK: ${apkLink}\n👉 Referral Link: ${referralLink}`;
 
   if (navigator.share) {
     try {
       await navigator.share({
         title: "PUBG1STAR Referral",
         text: referralText,
-        url: referralLink, // optional but good
+        url: referralLink, // WhatsApp / Telegram automatically detect કરે છે
       });
+      console.log("Shared successfully!");
     } catch (error) {
       console.error("Share cancelled:", error);
     }
   } else {
-    // fallback (PC browsers)
+    // fallback for PC browsers
     try {
       await navigator.clipboard.writeText(referralText);
-      toast({ title: "Link Copied!", description: "Referral text copied to clipboard." });
+      toast({
+        title: "Link Copied!",
+        description: "Referral text copied to clipboard. Paste it in WhatsApp/Telegram to share.",
+      });
     } catch {
-      toast({ variant: "destructive", title: "Error", description: "Could not copy the link." });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not copy the link.",
+      });
     }
   }
 };
