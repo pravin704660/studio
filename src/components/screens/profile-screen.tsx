@@ -50,53 +50,40 @@ export default function ProfileScreen({ setActiveScreen }: ProfileScreenProps) {
     setIsSaving(false);
   };
 
-  const handleShare = async () => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You must be logged in to share.",
+   const handleShare = async () => {
+  if (!user) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "You must be logged in to share.",
+    });
+    return;
+  }
+
+  const apkLink = `${window.location.origin}/PUBG1STAR.apk`;
+  const referralLink = `${window.location.origin}/?ref=${user.uid}`;
+  const referralText = `🔥 Join me on PUBG1STAR and get ₹10 bonus!\n\n📥 Download: ${apkLink}\n👉 Referral: ${referralLink}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "PUBG1STAR Referral",
+        text: referralText,
+        url: referralLink, // optional but good
       });
-      return;
+    } catch (error) {
+      console.error("Share cancelled:", error);
     }
-
-    // Direct APK link from public folder
-    const apkLink = `${window.location.origin}/PUBG1STAR.apk`;
-
-    // Referral link with UID
-    const referralLink = `${window.location.origin}/?ref=${user.uid}`;
-
-    const referralText = `🔥 Join me on PUBG1STAR and get ₹10 bonus when you sign up!\n\n` +
-                         `📥 Download the app here: ${apkLink}\n\n` +
-                         `👉 Use my referral link: ${referralLink}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Join PUBG1STAR!",
-          text: referralText,
-          url: apkLink, // APK download priority
-        });
-      } catch (error) {
-        console.error("Error sharing:", error);
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(referralText);
-        toast({
-          title: "Link Copied!",
-          description: "Referral message copied to clipboard.",
-        });
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not copy the link.",
-        });
-      }
+  } else {
+    // fallback (PC browsers)
+    try {
+      await navigator.clipboard.writeText(referralText);
+      toast({ title: "Link Copied!", description: "Referral text copied to clipboard." });
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Could not copy the link." });
     }
-  };
-
+  }
+};
   if (loading || !user) {
     return (
       <div className="flex h-64 w-full items-center justify-center">
