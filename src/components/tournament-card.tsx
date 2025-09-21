@@ -87,14 +87,16 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             ournaments/MegaTournaments.jpg"   // ✅ Mega Tournament default
 <Image
   src={
-    tournament.imageUrl && tournament.imageUrl.trim() !== ""
-      ? (tournament.imageUrl.startsWith("http")
-          ? tournament.imageUrl
-          : tournament.imageUrl)
-      : (tournament.type && tournament.type.toLowerCase() === "mega"
-          ? "/tournaments/MegaTournaments.jpg"
-          : "/tournaments/RegularTournaments.jpg")
+    tournament.imageUrl && tournament.imageUrl.trim()
+      ? tournament.imageUrl // જો Admin panel માં custom image હોય તો
+      : tournament.isMega
+      ? megaImg             // જો Mega tournament હોય તો
+      : regularImg          // બાકી Regular tournament માટે
   }
+  alt={tournament.title || "Tournament"}
+  fill
+  className="object-cover"
+/>
   alt={tournament.title}
   fill
   className="object-cover"
