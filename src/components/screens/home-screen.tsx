@@ -56,8 +56,7 @@ export default function HomeScreen() {
           priority
         />
       </div> 
-      /* --- Paste this RIGHT AFTER your banner Image div closing tag --- */
-/* Example: after
+      
    </div>   <-- (the div that wraps the <Image .../>)
    paste the code below
 */
