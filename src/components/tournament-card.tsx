@@ -1,7 +1,11 @@
 
 "use client";
 
+import regularImg from "@/public/regulartournaments.jpg";
+import megaImg from "@/public/megatournaments.jpg";
+
 import Image from "next/image";
+
 import type { Tournament, WinnerPrize } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
