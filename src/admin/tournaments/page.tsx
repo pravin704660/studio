@@ -260,27 +260,26 @@ export default function ManageTournamentsPage() {
     setIsSubmitting(true);
 
     try {
-      const data = new FormData();
-      if (imageFile) {
-        data.append("imageFile", imageFile);
-      }
+  const tournamentDataForAction: TournamentFormData = {
+    ...formData,
+    isMega: formData.type === "mega",   // mega hoy to true
+    type: formData.type || "regular",   // default regular
+    winnerPrizes: formData.winnerPrizes?.filter(
+      (p) => p.rank && p.prize > 0
+    ),
+  };
 
-      const tournamentDataForAction: TournamentFormData = {
-        ...formData,
-        isMega: false,
-        winnerPrizes: formData.winnerPrizes?.filter((p) => p.rank && p.prize > 0),
-      };
-      if (editingTournamentId) {
-        tournamentDataForAction.id = editingTournamentId;
-      }
+  const result = editingTournamentId
+    ? await createOrUpdateTournament({
+        ...tournamentDataForAction,
+        id: editingTournamentId,
+      })
+    : await createOrUpdateTournament(tournamentDataForAction);
 
-      data.append("tournamentData", JSON.stringify(tournamentDataForAction));
-
-      const result = await createOrUpdateTournament(data);
-
-      if (result.success) {
-        toast({ title: "Success", description: "Tournament saved successfully." });
-        setIsDialogOpen(false);
+  if (result.success) {
+    toast({ title: "Success", description: "Tournament saved successfully." });
+    setIsDialogOpen(false);
+  }
         refreshTournaments();
       } else {
         throw new Error(result.error || "Failed to save tournament.");
