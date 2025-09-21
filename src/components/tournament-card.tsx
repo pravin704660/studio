@@ -88,8 +88,8 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
     tournament.imageUrl && tournament.imageUrl.trim()
       ? tournament.imageUrl
       : tournament.isMega
-      ? "/megatournament.jpg"   // mega tournament default
-      : "/regulartournament.jpg" // regular tournament default
+      ? "/megatournaments.jpg"   // mega tournament default
+      : "/regulartournaments.jpg" // regular tournament default
   }
   alt={tournament.title || "Tournament"}
   fill
