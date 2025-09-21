@@ -26,7 +26,7 @@ export interface Tournament {
   slots: number;
   prize: number;
   rules: string[];
-  imageUrl: string;
+  imageUrl?: string;   // 👈 added here
   status: 'published' | 'draft' | 'cancelled' | 'completed' | 'live';
   isMega?: boolean;
   roomId?: string;
@@ -38,20 +38,19 @@ export interface TournamentFormData {
   id?: string;
   title: string;
   gameType: string;
-  date: string | Date | Timestamp;
+  date: any;
   time: string;
   entryFee: number;
   slots: number;
   prize: number;
-  rules: string[] | string;
+  rules: string[];
+  imageUrl?: string;   // 👈 added here
   status: 'published' | 'draft' | 'cancelled' | 'completed' | 'live';
   isMega?: boolean;
-  imageUrl?: string;
   roomId?: string;
   roomPassword?: string;
   winnerPrizes?: WinnerPrize[];
 }
-
 export interface Entry {
   entryId: string;
   tournamentId: string;
