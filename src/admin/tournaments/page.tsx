@@ -19,7 +19,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import Link from "next/link";
-import { ArrowLeft, PlusCircle, Trash2, Pencil, Plus, X } from "lucide-react";
+import { ArrowLeft, PlusCircle, Trash2, Pencil } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -39,13 +39,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { createOrUpdateTournament, deleteTournament } from "@/app/actions";
 import {
   AlertDialog,
@@ -63,7 +56,6 @@ import { Textarea } from "@/components/ui/textarea";
 
 const PAGE_SIZE = 10;
 
-// ? Clean initial form data
 const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
   title: "",
   gameType: "Solo",
@@ -74,26 +66,9 @@ const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
   prize: 0,
   rules: [],
   status: "draft",
-  type: "regular",   // 👈 regular/mega select option mate 
-  <div className="flex flex-col gap-2">
-  <label className="text-sm font-medium">Image URL</label>
-  <input
-    type="text"
-    name="imageUrl"
-    placeholder="Enter image URL"
-    value={formData.imageUrl || ""}
-    onChange={(e) =>
-      setFormData({ ...formData, imageUrl: e.target.value })
-    }
-    className="border rounded-md p-2"
-  />
-  <p className="text-xs text-muted-foreground">
-    Leave blank for default tournament image
-  </p>
-</div>
-    
+  type: "regular",
   roomId: "",
-  roomPassword: "", 
+  roomPassword: "",
   imageUrl: "",
   winnerPrizes: [
     { rank: "1st", prize: 0 },
@@ -102,7 +77,6 @@ const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
     { rank: "4th", prize: 0 },
   ],
 };
-
 
 export default function ManageTournamentsPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -121,8 +95,13 @@ export default function ManageTournamentsPage() {
     initialFormData as TournamentFormData & { date: string }
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [editingTournamentId, setEditingTournamentId] = useState<string | null>(null);
+
+  // 🔹 For joined users dialog
+  const [isUsersDialogOpen, setIsUsersDialogOpen] = useState(false);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
+  const [joinedUsers, setJoinedUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || userProfile?.role !== "admin")) {
@@ -200,7 +179,6 @@ export default function ManageTournamentsPage() {
   const handleOpenNewDialog = () => {
     setEditingTournamentId(null);
     setFormData(initialFormData as TournamentFormData & { date: string });
-    setImageFile(null);
     setIsDialogOpen(true);
   };
 
@@ -231,31 +209,6 @@ export default function ManageTournamentsPage() {
     }));
   };
 
-  const handlePrizeChange = (index: number, field: keyof WinnerPrize, value: string | number) => {
-    const newPrizes = [...(formData.winnerPrizes || [])];
-    (newPrizes[index] as any)[field] =
-      field === "prize" ? (value === "" ? 0 : Number(value)) : value;
-    setFormData((prev) => ({ ...prev, winnerPrizes: newPrizes }));
-  };
-
-  const addPrizeField = () => {
-    setFormData((prev) => ({
-      ...prev,
-      winnerPrizes: [...(prev.winnerPrizes || []), { rank: "", prize: 0 }],
-    }));
-  };
-
-  const removePrizeField = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      winnerPrizes: prev.winnerPrizes?.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.title || !formData.date || !formData.time) {
@@ -270,37 +223,32 @@ export default function ManageTournamentsPage() {
     setIsSubmitting(true);
 
     try {
-  const tournamentDataForAction: TournamentFormData = {
-    ...formData,
-    isMega: formData.type === "mega",   // mega hoy to true
-    type: formData.type || "regular",   // default regular
-    winnerPrizes: formData.winnerPrizes?.filter(
-      (p) => p.rank && p.prize > 0
-    ),
-  };
+      const tournamentDataForAction: TournamentFormData = {
+        ...formData,
+        isMega: formData.type === "mega",
+        type: formData.type || "regular",
+        winnerPrizes: formData.winnerPrizes?.filter(
+          (p) => p.rank && p.prize > 0
+        ),
+      };
 
-  const result = editingTournamentId
-    ? await createOrUpdateTournament({
-        ...tournamentDataForAction,
-        id: editingTournamentId,
-      })
-    : await createOrUpdateTournament(tournamentDataForAction);
+      const result = editingTournamentId
+        ? await createOrUpdateTournament({
+            ...tournamentDataForAction,
+            id: editingTournamentId,
+          })
+        : await createOrUpdateTournament(tournamentDataForAction);
 
-  if (result.success) {
-    toast({ title: "Success", description: "Tournament saved successfully." });
-    setIsDialogOpen(false);
-  }
+      if (result.success) {
+        toast({ title: "Success", description: "Tournament saved successfully." });
+        setIsDialogOpen(false);
         refreshTournaments();
       } else {
         throw new Error(result.error || "Failed to save tournament.");
       }
     } catch (error: any) {
-      console.error("Detailed Error saving tournament:", error);
-      let description = "An unknown error occurred. Please check the console for more details.";
-      if (error.message) {
-        description = error.message;
-      }
-      toast({ variant: "destructive", title: "Error saving tournament", description });
+      console.error("Error saving tournament:", error);
+      toast({ variant: "destructive", title: "Error", description: error.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -318,13 +266,20 @@ export default function ManageTournamentsPage() {
     setIsDeleting(false);
   };
 
-  if (authLoading || userProfile?.role !== "admin") {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+  // 🔹 Fetch joined users
+  const fetchJoinedUsers = async (tournamentId: string) => {
+    setLoadingUsers(true);
+    try {
+      const usersCollection = collection(db, "tournaments", tournamentId, "joinedUsers");
+      const snapshot = await getDocs(usersCollection);
+      const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setJoinedUsers(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   const getDisplayDate = (date: any) => {
     if (!date) return "N/A";
@@ -340,6 +295,14 @@ export default function ManageTournamentsPage() {
     }
     return "Invalid Date";
   };
+
+  if (authLoading || userProfile?.role !== "admin") {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -381,8 +344,8 @@ export default function ManageTournamentsPage() {
                     <TableRow key={t.id}>
                       <TableCell className="font-medium">{t.title}</TableCell>
                       <TableCell>{getDisplayDate(t.date)}</TableCell>
-                      <TableCell>?{t.entryFee}</TableCell>
-                      <TableCell>?{t.prize}</TableCell>
+                      <TableCell>₹{t.entryFee}</TableCell>
+                      <TableCell>₹{t.prize}</TableCell>
                       <TableCell>
                         <Badge
                           variant={t.status === "published" ? "default" : "secondary"}
@@ -397,6 +360,17 @@ export default function ManageTournamentsPage() {
                           onClick={() => handleOpenEditDialog(t)}
                         >
                           <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedTournamentId(t.id);
+                            fetchJoinedUsers(t.id);
+                            setIsUsersDialogOpen(true);
+                          }}
+                        >
+                          View Users
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -441,109 +415,34 @@ export default function ManageTournamentsPage() {
         </div>
       </main>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col">
+      {/* 🔹 Joined Users Dialog */}
+      <Dialog open={isUsersDialogOpen} onOpenChange={setIsUsersDialogOpen}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingTournamentId ? "Edit Tournament" : "Create New Tournament"}
+              Joined Users (
+              {joinedUsers.length}/
+              {tournaments.find(x => x.id === selectedTournamentId)?.slots || 0} slots)
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto pr-2">
-            <ScrollArea className="h-full pr-4">
-              <form onSubmit={handleFormSubmit} className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleFormChange}
-                  />
-                </div>
-                {/* ? Image URL field */}
-                <div className="space-y-2">
-                  <Label htmlFor="imageUrl">Image URL (from /public/tournaments)</Label>
-                  <Input
-                    id="imageUrl"
-                    name="imageUrl"
-                    type="text"
-                    placeholder="/tournaments/myimage.jpg"
-                    value={(formData as any).imageUrl || ""}
-                    onChange={handleFormChange}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Example: <code>/tournaments/sample.jpg</code>
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Date</Label>
-                    <Input
-                      id="date"
-                      name="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={handleFormChange}
-                    />
+          {loadingUsers ? (
+            <Spinner size="lg" />
+          ) : (
+            <div className="max-h-80 overflow-y-auto space-y-2">
+              {joinedUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No users joined yet.</p>
+              ) : (
+                joinedUsers.map((user, idx) => (
+                  <div key={user.id} className="flex justify-between border p-2 rounded">
+                    <span>{idx + 1}. {user.username || user.id}</span>
+                    <span className="text-xs text-muted-foreground">{user.email || ""}</span>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="time">Time</Label>
-                    <Input
-                      id="time"
-                      name="time"
-                      type="time"
-                      value={formData.time}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="rules">Rules (one per line)</Label>
-                  <Textarea
-                    id="rules"
-                    name="rules"
-                    value={formData.rules as string}
-                    onChange={handleFormChange}
-                    rows={4}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="entryFee">Entry Fee</Label>
-                    <Input
-                      id="entryFee"
-                      name="entryFee"
-                      type="number"
-                      value={formData.entryFee}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="prize">Prize Pool</Label>
-                    <Input
-                      id="prize"
-                      name="prize"
-                      type="number"
-                      value={formData.prize}
-                      onChange={handleFormChange}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slots">Slots</Label>
-                  <Input
-                    id="slots"
-                    name="slots"
-                    type="number"
-                    value={formData.slots}
-                    onChange={handleFormChange}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="roomId">Room ID</Label>
-                    <Input
-                      id="roomId"
-                      name="roomId"
-                      value={formData.roomId}
-                      onChange={handleFormChange}
+                ))
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
