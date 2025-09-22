@@ -201,13 +201,15 @@ className="object-cover"
   <div className="w-full bg-gray-700 rounded-full h-2">
     <div
       className="bg-primary h-2 rounded-full transition-all duration-300"
-      style={{ width: ${(joinedCount / tournament.slots) * 100}% }}
+      style={{
+        width: `${tournament.slots > 0 ? (joinedCount / tournament.slots) * 100 : 0}%`,
+      }}
     />
   </div>
   <p className="text-xs text-center mt-1 text-muted-foreground">
-    {joinedCount} / {tournament.slots} Joined
+    {joinedCount} / {tournament.slots || 0} Joined
   </p>
-</div>  
+</div>
 
   {/* Footer */}  
   <CardFooter className="p-4 pt-0 flex items-center gap-2">  
