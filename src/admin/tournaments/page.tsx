@@ -230,48 +230,49 @@ export default function ManageTournamentsPage() {
                           {t.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        {/* ✏ Edit */}
-                        <Button variant="outline" size="icon">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                      <TableCell className="text-right space-x-2 flex justify-end items-center gap-2">
+  {/* ✏ Edit */}
+  <Button variant="outline" size="icon">
+    <Pencil className="h-4 w-4" />
+  </Button>
 
-                        {/* 👥 View Users */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedTournamentId(t.id);
-                            fetchJoinedUsers(t.id);
-                            setIsUsersDialogOpen(true);
-                          }}
-                        >
-                          View Users
-                        </Button>
+  {/* 👥 View Users */}
+  <Button
+    variant="secondary"
+    size="sm"
+    className="px-3"
+    onClick={() => {
+      setSelectedTournamentId(t.id);
+      fetchJoinedUsers(t.id);
+      setIsUsersDialogOpen(true);
+    }}
+  >
+    👥 View Users
+  </Button>
 
-                        {/* 🗑 Delete */}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete the tournament and all related data.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(t.id)}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
+  {/* 🗑 Delete */}
+  <AlertDialog>
+    <AlertDialogTrigger asChild>
+      <Button variant="destructive" size="icon">
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </AlertDialogTrigger>
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+        <AlertDialogDescription>
+          This will permanently delete the tournament and all related data.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <AlertDialogAction onClick={() => handleDelete(t.id)}>
+          Delete
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
