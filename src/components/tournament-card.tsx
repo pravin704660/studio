@@ -5,7 +5,6 @@ import type { Tournament } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { joinTournament } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { Spinner } from "./ui/spinner";
@@ -20,12 +19,15 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "./ui/scroll-area";
 
+// ✅ Firestore imports
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
+
 interface TournamentCardProps {
   tournament: Tournament;
   showCredentials?: boolean;
 }
 
-// Prize rank colors
 const prizeIcons: { [key: string]: string } = {
   "1st": "text-yellow-400",
   "2nd": "text-gray-400",
@@ -40,10 +42,10 @@ export default function TournamentCard({
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
 
-  // Example: if your backend provides joinedUsers count
-  const joinedCount = tournament.joinedUsers || 0; // 👈 make sure your Tournament type has joinedUsers
+  const joinedCount = tournament.joinedUsers || 0;
   const totalSlots = tournament.slots || 0;
 
+  // ✅ Firestore Join Logic
   const handleJoin = async () => {
     if (!user) {
       toast({
@@ -56,20 +58,21 @@ export default function TournamentCard({
 
     setIsJoining(true);
     try {
-      const result = await joinTournament(tournament.id, user.uid);
-      if (result.success) {
-        toast({
-          title: "Successfully Joined!",
-          description: `You have joined the ${tournament.title} tournament.`,
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Join Failed",
-          description: result.error,
-        });
-      }
+      const userRef = doc(db, "tournaments", tournament.id, "joinedUsers", user.uid);
+
+      await setDoc(userRef, {
+        username: user.displayName || "Guest",
+        email: user.email || "",
+        uid: user.uid,
+        joinedAt: new Date(),
+      });
+
+      toast({
+        title: "Successfully Joined!",
+        description: `You have joined the ${tournament.title} tournament.`,
+      });
     } catch (error) {
+      console.error("Error joining tournament:", error);
       toast({
         variant: "destructive",
         title: "An Error Occurred",
@@ -85,7 +88,7 @@ export default function TournamentCard({
 
   return (
     <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
-      {/* Header with image */}
+      {/* Header */}
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
           <Image
