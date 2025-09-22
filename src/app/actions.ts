@@ -226,47 +226,57 @@ export async function createOrUpdateTournament(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const tournamentDataString = formData.get("tournamentData") as string;
+
     if (!tournamentDataString) {
       throw new Error("Tournament data is missing.");
     }
+
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
 
-// 🟢 finalData બનાવો
-const finalData: Omit<Tournament, "id"> = {
-  title: tournamentData.title || "",
-  gameType: tournamentData.gameType || "Solo",
-  date: firestoreDate,
-  time: tournamentData.time || "",
-  entryFee: tournamentData.entryFee || 0,
-  slots: tournamentData.slots || 100,
-  prize: tournamentData.prize || 0,
-  rules: Array.isArray(tournamentData.rules)
-    ? tournamentData.rules
-    : String(tournamentData.rules || "")
-        .split("\n")
-        .filter((r) => r.trim() !== ""),
-  status: tournamentData.status || "draft",
-  isMega: tournamentData.isMega || false,
-  imageUrl:
-    tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
-      ? tournamentData.imageUrl
-      : tournamentData.type === "mega"
-      ? "/tournaments/MegaTournaments.jpg"
-      : "/tournaments/RegularTournaments.jpg",
+    // 🟢 date/time required validation
+    if (!tournamentData.date || !tournamentData.time) {
+      throw new Error("Date and time are required.");
+    }
 
-  roomId: tournamentData.roomId || "",
-  roomPassword: tournamentData.roomPassword || "",
-  winnerPrizes: tournamentData.winnerPrizes || [],
+    const firestoreDate = Timestamp.fromDate(new Date(tournamentData.date));
 
-  // 🟢 joinedUsers field add કરો
-  joinedUsers: tournamentData.joinedUsers || [],
-};
+    // 🟢 finalData with joinedUsers added
+    const finalData: Omit<Tournament, "id"> = {
+      title: tournamentData.title || "",
+      gameType: tournamentData.gameType || "Solo",
+      date: firestoreDate,
+      time: tournamentData.time || "",
+      entryFee: tournamentData.entryFee || 0,
+      slots: tournamentData.slots || 100,
+      prize: tournamentData.prize || 0,
+      rules: Array.isArray(tournamentData.rules)
+        ? tournamentData.rules
+        : String(tournamentData.rules || "")
+            .split("\n")
+            .filter((r) => r.trim() !== ""),
+      status: tournamentData.status || "draft",
+      isMega: tournamentData.isMega || false,
+      imageUrl:
+        tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
+          ? tournamentData.imageUrl
+          : tournamentData.type === "mega"
+          ? "/tournaments/MegaTournaments.jpg"
+          : "/tournaments/RegularTournaments.jpg",
 
-console.log("🔥 Tournament Final Data:", finalData);
+      roomId: tournamentData.roomId || "",
+      roomPassword: tournamentData.roomPassword || "",
+      winnerPrizes: tournamentData.winnerPrizes || [],
 
+      // 🟢 New field
+      joinedUsers: tournamentData.joinedUsers || [],
+    };
+
+    console.log("🔥 Tournament Final Data:", finalData);
+
+    // 🟢 Firestore save logic
     if (tournamentData.id) {
       const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
-      await setDoc(tournamentDocRef, finalData, { merge: false });
+      await setDoc(tournamentDocRef, finalData, { merge: true });
     } else {
       await addDoc(collection(db, "tournaments"), finalData);
     }
@@ -277,7 +287,6 @@ console.log("🔥 Tournament Final Data:", finalData);
     return { success: false, error: error?.message || "Failed to save tournament." };
   }
 }
-
 /**
  * deleteTournament
  */
