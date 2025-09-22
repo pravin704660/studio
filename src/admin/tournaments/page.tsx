@@ -64,8 +64,8 @@ const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
   entryFee: 0,
   slots: 100,
   prize: 0,
-  rules: [], 
-  joinedUsers: []
+  rules: [],
+  joinedUsers: [], // ✅ joinedUsers field added here
   status: "draft",
   type: "regular",
   roomId: "",
