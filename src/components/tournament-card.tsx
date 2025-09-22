@@ -78,6 +78,11 @@ export default function TournamentCard({
   const hasWinnerPrizes =
     tournament.winnerPrizes && tournament.winnerPrizes.length > 0;
 
+  // Joined Users Count
+  const joinedCount = tournament.joinedUsers
+    ? tournament.joinedUsers.length
+    : 0;
+
   return (
     <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
       {/* Header with image */}
@@ -124,6 +129,10 @@ export default function TournamentCard({
             <Users className="h-6 w-6 text-cyan-400" />
             <span className="mt-1 text-sm font-semibold">Total Slots</span>
             <span className="text-lg font-bold">{tournament.slots}</span>
+            {/* Joined Users Line */}
+            <span className="text-sm text-muted-foreground">
+              {joinedCount} / {tournament.slots} Joined
+            </span>
           </div>
           <div className="flex flex-col items-center">
             <Calendar className="h-6 w-6 text-green-400" />
