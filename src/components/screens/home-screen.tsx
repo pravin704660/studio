@@ -56,10 +56,12 @@ export default function HomeScreen() {
           priority
         />
       </div> 
-      <div className="rounded-lg border-2 border-primary bg-primary/10 p-2 w-fit mx-auto text-center">
-  <h2 className="animate-pulse text-xl font-bold text-red-500">
-    YOU WIN YOU TOURNAMENTS
-  </h2>
+      <div className="flex justify-center">
+  <div className="rounded-lg border-2 border-primary bg-primary/10 py-4 w-full max-w-4xl text-center">
+    <h2 className="animate-pulse text-xl font-bold text-red-500">
+      YOU WIN YOU TOURNAMENTS
+    </h2>
+  </div>
 </div>
       
    
