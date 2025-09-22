@@ -14,7 +14,7 @@ import {
   DocumentData,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import type { Tournament, TournamentFormData } from "@/lib/types";
+import type { Tournament } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
@@ -37,7 +37,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { createOrUpdateTournament, deleteTournament } from "@/app/actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,30 +48,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { deleteTournament } from "@/app/actions";
 
 const PAGE_SIZE = 10;
-
-const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
-  title: "",
-  gameType: "Solo",
-  date: "",
-  time: "",
-  entryFee: 0,
-  slots: 100,
-  prize: 0,
-  rules: [],
-  status: "draft",
-  type: "regular",
-  roomId: "",
-  roomPassword: "",
-  imageUrl: "",
-  winnerPrizes: [
-    { rank: "1st", prize: 0 },
-    { rank: "2nd", prize: 0 },
-    { rank: "3rd", prize: 0 },
-    { rank: "4th", prize: 0 },
-  ],
-};
 
 export default function ManageTournamentsPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -86,19 +64,20 @@ export default function ManageTournamentsPage() {
     useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
-  // 🔹 For joined users dialog
+  // Dialog states
   const [isUsersDialogOpen, setIsUsersDialogOpen] = useState(false);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
   const [joinedUsers, setJoinedUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  // ✅ Protect admin route
   useEffect(() => {
     if (!authLoading && (!user || userProfile?.role !== "admin")) {
       router.push("/");
     }
   }, [user, userProfile, authLoading, router]);
 
-  // 🔹 Fetch tournaments
+  // ✅ Fetch tournaments
   const fetchTournaments = async (initial = false) => {
     if (initial) {
       setLoading(true);
@@ -129,12 +108,12 @@ export default function ManageTournamentsPage() {
         );
       }
 
-      const tournamentsSnapshot = await getDocs(q);
-      const newTournaments = tournamentsSnapshot.docs.map(
+      const snapshot = await getDocs(q);
+      const newTournaments = snapshot.docs.map(
         (doc) => ({ ...doc.data(), id: doc.id } as Tournament)
       );
 
-      const lastVisible = tournamentsSnapshot.docs[tournamentsSnapshot.docs.length - 1];
+      const lastVisible = snapshot.docs[snapshot.docs.length - 1];
       setLastDoc(lastVisible);
 
       if (newTournaments.length < PAGE_SIZE) setHasMore(false);
@@ -159,7 +138,7 @@ export default function ManageTournamentsPage() {
     }
   }, [userProfile]);
 
-  // 🔹 Fetch joined users from Firebase
+  // ✅ Fetch joined users
   const fetchJoinedUsers = async (tournamentId: string) => {
     setLoadingUsers(true);
     try {
@@ -171,6 +150,21 @@ export default function ManageTournamentsPage() {
       console.error("Error fetching users:", error);
     } finally {
       setLoadingUsers(false);
+    }
+  };
+
+  // ✅ Delete tournament
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTournament(id);
+      setTournaments((prev) => prev.filter((t) => t.id !== id));
+      toast({ title: "Deleted", description: "Tournament deleted successfully." });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to delete tournament. ${error.message}`,
+      });
     }
   };
 
@@ -200,7 +194,7 @@ export default function ManageTournamentsPage() {
             </Link>
             <h1 className="text-2xl font-bold">Manage Tournaments</h1>
           </div>
-          <Button onClick={() => toast({ title: "Coming Soon", description: "Tournament create/edit works already added above." })}>
+          <Button onClick={() => toast({ title: "Coming Soon", description: "Tournament create/edit feature already available." })}>
             <PlusCircle className="mr-2 h-4 w-4" />
             New Tournament
           </Button>
@@ -237,12 +231,12 @@ export default function ManageTournamentsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        {/* ✏ Edit Button */}
+                        {/* ✏ Edit */}
                         <Button variant="outline" size="icon">
                           <Pencil className="h-4 w-4" />
                         </Button>
 
-                        {/* 👥 View Users Button */}
+                        {/* 👥 View Users */}
                         <Button
                           variant="outline"
                           size="sm"
@@ -255,7 +249,7 @@ export default function ManageTournamentsPage() {
                           View Users
                         </Button>
 
-                        {/* 🗑 Delete Button */}
+                        {/* 🗑 Delete */}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="icon">
@@ -264,14 +258,16 @@ export default function ManageTournamentsPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                               <AlertDialogDescription>
                                 This will permanently delete the tournament and all related data.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction>Delete</AlertDialogAction>
+                              <AlertDialogAction onClick={() => handleDelete(t.id)}>
+                                Delete
+                              </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -311,10 +307,7 @@ export default function ManageTournamentsPage() {
                 <p className="text-sm text-muted-foreground">No users joined yet.</p>
               ) : (
                 joinedUsers.map((user, idx) => (
-                  <div
-                    key={user.id}
-                    className="flex justify-between border p-2 rounded"
-                  >
+                  <div key={user.id} className="flex justify-between border p-2 rounded">
                     <span>{idx + 1}. {user.username || user.id}</span>
                     <span className="text-xs text-muted-foreground">
                       {user.email || ""}
