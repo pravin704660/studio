@@ -25,6 +25,7 @@ interface TournamentCardProps {
   showCredentials?: boolean;
 }
 
+// Prize rank colors
 const prizeIcons: { [key: string]: string } = {
   "1st": "text-yellow-400",
   "2nd": "text-gray-400",
@@ -38,6 +39,10 @@ export default function TournamentCard({
   const { user } = useAuth();
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
+
+  // Example: if your backend provides joinedUsers count
+  const joinedCount = tournament.joinedUsers || 0; // 👈 make sure your Tournament type has joinedUsers
+  const totalSlots = tournament.slots || 0;
 
   const handleJoin = async () => {
     if (!user) {
@@ -77,11 +82,6 @@ export default function TournamentCard({
 
   const hasWinnerPrizes =
     tournament.winnerPrizes && tournament.winnerPrizes.length > 0;
-
-  // Joined Users Count
-  const joinedCount = tournament.joinedUsers
-    ? tournament.joinedUsers.length
-    : 0;
 
   return (
     <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
@@ -129,10 +129,6 @@ export default function TournamentCard({
             <Users className="h-6 w-6 text-cyan-400" />
             <span className="mt-1 text-sm font-semibold">Total Slots</span>
             <span className="text-lg font-bold">{tournament.slots}</span>
-            {/* Joined Users Line */}
-            <span className="text-sm text-muted-foreground">
-              {joinedCount} / {tournament.slots} Joined
-            </span>
           </div>
           <div className="flex flex-col items-center">
             <Calendar className="h-6 w-6 text-green-400" />
@@ -148,6 +144,7 @@ export default function TournamentCard({
           </div>
         </div>
 
+        {/* Prize Distribution */}
         {hasWinnerPrizes && (
           <>
             <Separator className="my-4" />
@@ -157,10 +154,7 @@ export default function TournamentCard({
               </h4>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-left">
                 {tournament.winnerPrizes?.map((prize, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 text-sm"
-                  >
+                  <div key={index} className="flex items-center gap-2 text-sm">
                     <Award
                       className={`h-4 w-4 ${
                         prizeIcons[prize.rank] || "text-blue-400"
@@ -177,6 +171,7 @@ export default function TournamentCard({
           </>
         )}
 
+        {/* Room Credentials */}
         {showCredentials && (tournament.roomId || tournament.roomPassword) && (
           <>
             <Separator className="my-4" />
@@ -199,6 +194,19 @@ export default function TournamentCard({
           </>
         )}
       </CardContent>
+
+      {/* Progress Line */}
+      <div className="px-4 mb-2">
+        <div className="w-full bg-gray-700 rounded-full h-2">
+          <div
+            className="bg-primary h-2 rounded-full transition-all duration-300"
+            style={{ width: `${(joinedCount / totalSlots) * 100}%` }}
+          />
+        </div>
+        <p className="text-xs text-center mt-1 text-muted-foreground">
+          {joinedCount} / {totalSlots} Joined
+        </p>
+      </div>
 
       {/* Footer */}
       <CardFooter className="p-4 pt-0 flex items-center gap-2">
