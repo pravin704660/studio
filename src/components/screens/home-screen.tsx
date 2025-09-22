@@ -59,7 +59,7 @@ export default function HomeScreen() {
       <div className="flex justify-center">
   <div className="rounded-lg border-2 border-primary bg-primary/10 py-4 w-full max-w-4xl text-center">
     <h2 className="animate-pulse text-xl font-bold text-red-500">
-      YOU WIN YOU TOURNAMENTS
+      YOUR WIN YOU TOURNAMENTS
     </h2>
   </div>
 </div>
