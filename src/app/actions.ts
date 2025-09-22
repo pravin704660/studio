@@ -270,7 +270,7 @@ imageUrl:
 
     if (tournamentData.id) {
       const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
-      await setDoc(tournamentDocRef, finalData, { merge: true });
+      await setDoc(tournamentDocRef, finalData, { merge: false });
     } else {
       await addDoc(collection(db, "tournaments"), finalData);
     }
