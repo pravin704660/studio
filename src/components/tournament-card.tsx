@@ -197,17 +197,17 @@ className="object-cover"
   </CardContent>  
 
   {/* Progress Line */}  
-  <div className="px-4 mb-2">  
-    <div className="w-full bg-gray-700 rounded-full h-2">  
-      <div  
-        className="bg-primary h-2 rounded-full transition-all duration-300"  
-        style={{ width: `${(joinedCount / totalSlots) * 100}%` }}  
-      />  
-    </div>  
-    <p className="text-xs text-center mt-1 text-muted-foreground">  
-      {joinedCount} / {totalSlots} Joined  
-    </p>  
-  </div>  
+  <div className="px-4">
+  <div className="w-full bg-gray-700 rounded-full h-2">
+    <div
+      className="bg-primary h-2 rounded-full transition-all duration-300"
+      style={{ width: ${(joinedCount / tournament.slots) * 100}% }}
+    />
+  </div>
+  <p className="text-xs text-center mt-1 text-muted-foreground">
+    {joinedCount} / {tournament.slots} Joined
+  </p>
+</div>  
 
   {/* Footer */}  
   <CardFooter className="p-4 pt-0 flex items-center gap-2">  
