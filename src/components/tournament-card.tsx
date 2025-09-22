@@ -7,249 +7,245 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { joinTournament } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Spinner } from "./ui/spinner";
 import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users } from "lucide-react";
 import { Separator } from "./ui/separator";
 import {
-Dialog,
-DialogContent,
-DialogHeader,
-DialogTitle,
-DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "./ui/scroll-area";
+import { db } from "@/lib/firebase/client";
+import { doc, onSnapshot } from "firebase/firestore";
 
 interface TournamentCardProps {
-tournament: Tournament;
-showCredentials?: boolean;
+  tournament: Tournament;
+  showCredentials?: boolean;
 }
 
 // Prize rank colors
 const prizeIcons: { [key: string]: string } = {
-"1st": "text-yellow-400",
-"2nd": "text-gray-400",
-"3rd": "text-orange-400",
+  "1st": "text-yellow-400",
+  "2nd": "text-gray-400",
+  "3rd": "text-orange-400",
 };
 
 export default function TournamentCard({
-tournament,
-showCredentials = false,
+  tournament,
+  showCredentials = false,
 }: TournamentCardProps) {
-const { user } = useAuth();
-const { toast } = useToast();
-const [isJoining, setIsJoining] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isJoining, setIsJoining] = useState(false);
 
-// Example: if your backend provides joinedUsers count
-const joinedCount = tournament.joinedUsers || 0; // 👈 make sure your Tournament type has joinedUsers
-const totalSlots = tournament.slots || 0;
+  // ✅ Realtime joined users count
+  const [joinedCount, setJoinedCount] = useState(0);
+  useEffect(() => {
+    if (!tournament?.id) return;
 
-const handleJoin = async () => {
-if (!user) {
-toast({
-variant: "destructive",
-title: "Not Authenticated",
-description: "You must be logged in to join a tournament.",
-});
-return;
-}
+    const unsub = onSnapshot(doc(db, "tournaments", tournament.id), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setJoinedCount(data.joinedUsers?.length || 0);
+      }
+    });
 
-setIsJoining(true);  
-try {  
-  const result = await joinTournament(tournament.id, user.uid);  
-  if (result.success) {  
-    toast({  
-      title: "Successfully Joined!",  
-      description: `You have joined the ${tournament.title} tournament.`,  
-    });  
-  } else {  
-    toast({  
-      variant: "destructive",  
-      title: "Join Failed",  
-      description: result.error,  
-    });  
-  }  
-} catch (error) {  
-  toast({  
-    variant: "destructive",  
-    title: "An Error Occurred",  
-    description: "Could not join the tournament. Please try again.",  
-  });  
-} finally {  
-  setIsJoining(false);  
-}
+    return () => unsub();
+  }, [tournament?.id]);
 
-};
+  const totalSlots = tournament.slots || 0;
 
-const hasWinnerPrizes =
-tournament.winnerPrizes && tournament.winnerPrizes.length > 0;
+  const handleJoin = async () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Not Authenticated",
+        description: "You must be logged in to join a tournament.",
+      });
+      return;
+    }
 
-return (
-<Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
-{/* Header with image */}
-<CardHeader className="p-0">
-<div className="relative h-48 w-full">
-<Image
-src={
-tournament.imageUrl && tournament.imageUrl.trim()
-? tournament.imageUrl
-: tournament.type?.toLowerCase() === "mega"
-? "/megatournaments.jpg"
-: "/regulartournaments.jpg"
-}
-alt={tournament.title || "Tournament"}
-fill
-className="object-cover"
-/>
-<div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-<div className="absolute bottom-4 left-4">
-<CardTitle className="text-2xl font-black text-white">
-{tournament.title}
-</CardTitle>
-<p className="font-semibold text-primary-foreground/80">
-{tournament.gameType}
-</p>
-</div>
-</div>
-</CardHeader>
+    setIsJoining(true);
+    try {
+      const result = await joinTournament(tournament.id, user.uid);
+      if (result.success) {
+        toast({
+          title: "Successfully Joined!",
+          description: `You have joined the ${tournament.title} tournament.`,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Join Failed",
+          description: result.error,
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "An Error Occurred",
+        description: "Could not join the tournament. Please try again.",
+      });
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
-{/* Content */}  
-  <CardContent className="p-4">  
-    <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-4">  
-      <div className="flex flex-col items-center">  
-        <Ticket className="h-6 w-6 text-primary" />  
-        <span className="mt-1 text-sm font-semibold">Entry Fee</span>  
-        <span className="text-lg font-bold">₹{tournament.entryFee}</span>  
-      </div>  
-      <div className="flex flex-col items-center">  
-        <Trophy className="h-6 w-6 text-amber-400" />  
-        <span className="mt-1 text-sm font-semibold">Prize Pool</span>  
-        <span className="text-lg font-bold">₹{tournament.prize}</span>  
-      </div>  
-      <div className="flex flex-col items-center">  
-        <Users className="h-6 w-6 text-cyan-400" />  
-        <span className="mt-1 text-sm font-semibold">Total Slots</span>  
-        <span className="text-lg font-bold">{tournament.slots}</span>  
-      </div>  
-      <div className="flex flex-col items-center">  
-        <Calendar className="h-6 w-6 text-green-400" />  
-        <span className="mt-1 text-sm font-semibold">Starts</span>  
-        <span className="text-lg font-bold">  
-          {tournament.date?.toDate().toLocaleTimeString([], {  
-            hour: "2-digit",  
-            minute: "2-digit",  
-          })}{" "}  
-          -{" "}  
-          {tournament.date?.toDate().toLocaleDateString()}  
-        </span>  
-      </div>  
-    </div>  
+  const hasWinnerPrizes = tournament.winnerPrizes && tournament.winnerPrizes.length > 0;
 
-    {/* Prize Distribution */}  
-    {hasWinnerPrizes && (  
-      <>  
-        <Separator className="my-4" />  
-        <div className="space-y-2 text-center">  
-          <h4 className="text-sm font-semibold text-muted-foreground">  
-            Prize Distribution  
-          </h4>  
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-left">  
-            {tournament.winnerPrizes?.map((prize, index) => (  
-              <div key={index} className="flex items-center gap-2 text-sm">  
-                <Award  
-                  className={`h-4 w-4 ${  
-                    prizeIcons[prize.rank] || "text-blue-400"  
-                  }`}  
-                />  
-                <span>  
-                  {prize.rank} Prize:{" "}  
-                  <span className="font-bold">₹{prize.prize}</span>  
-                </span>  
-              </div>  
-            ))}  
-          </div>  
-        </div>  
-      </>  
-    )}  
+  return (
+    <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
+      {/* Header with image */}
+      <CardHeader className="p-0">
+        <div className="relative h-48 w-full">
+          <Image
+            src={
+              tournament.imageUrl && tournament.imageUrl.trim()
+                ? tournament.imageUrl
+                : tournament.type?.toLowerCase() === "mega"
+                ? "/megatournaments.jpg"
+                : "/regulartournaments.jpg"
+            }
+            alt={tournament.title || "Tournament"}
+            fill
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+          <div className="absolute bottom-4 left-4">
+            <CardTitle className="text-2xl font-black text-white">{tournament.title}</CardTitle>
+            <p className="font-semibold text-primary-foreground/80">{tournament.gameType}</p>
+          </div>
+        </div>
+      </CardHeader>
 
-    {/* Room Credentials */}  
-    {showCredentials && (tournament.roomId || tournament.roomPassword) && (  
-      <>  
-        <Separator className="my-4" />  
-        <div className="grid grid-cols-2 gap-4 text-center">  
-          <div className="flex flex-col items-center">  
-            <UserCheck className="h-6 w-6 text-blue-400" />  
-            <span className="mt-1 text-sm font-semibold">Room ID</span>  
-            <span className="text-lg font-bold">  
-              {tournament.roomId || "N/A"}  
-            </span>  
-          </div>  
-          <div className="flex flex-col items-center">  
-            <KeyRound className="h-6 w-6 text-purple-400" />  
-            <span className="mt-1 text-sm font-semibold">Password</span>  
-            <span className="text-lg font-bold">  
-              {tournament.roomPassword || "N/A"}  
-            </span>  
-          </div>  
-        </div>  
-      </>  
-    )}  
-  </CardContent>  
+      {/* Content */}
+      <CardContent className="p-4">
+        <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-4">
+          <div className="flex flex-col items-center">
+            <Ticket className="h-6 w-6 text-primary" />
+            <span className="mt-1 text-sm font-semibold">Entry Fee</span>
+            <span className="text-lg font-bold">₹{tournament.entryFee}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <Trophy className="h-6 w-6 text-amber-400" />
+            <span className="mt-1 text-sm font-semibold">Prize Pool</span>
+            <span className="text-lg font-bold">₹{tournament.prize}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <Users className="h-6 w-6 text-cyan-400" />
+            <span className="mt-1 text-sm font-semibold">Total Slots</span>
+            <span className="text-lg font-bold">{tournament.slots}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <Calendar className="h-6 w-6 text-green-400" />
+            <span className="mt-1 text-sm font-semibold">Starts</span>
+            <span className="text-lg font-bold">
+              {tournament.date?.toDate().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}{" "}
+              - {tournament.date?.toDate().toLocaleDateString()}
+            </span>
+          </div>
+        </div>
 
-  {/* Progress Line */}  
-  <div className="px-4">
-  <div className="w-full bg-gray-700 rounded-full h-2">
-    <div
-      className="bg-primary h-2 rounded-full transition-all duration-300"
-      style={{
-        width: `${tournament.slots > 0 ? (joinedCount / tournament.slots) * 100 : 0}%`,
-      }}
-    />
-  </div>
-  <p className="text-xs text-center mt-1 text-muted-foreground">
-    {joinedCount} / {tournament.slots || 0} Joined
-  </p>
-</div>
+        {/* Prize Distribution */}
+        {hasWinnerPrizes && (
+          <>
+            <Separator className="my-4" />
+            <div className="space-y-2 text-center">
+              <h4 className="text-sm font-semibold text-muted-foreground">Prize Distribution</h4>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-left">
+                {tournament.winnerPrizes?.map((prize, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm">
+                    <Award className={`h-4 w-4 ${prizeIcons[prize.rank] || "text-blue-400"}`} />
+                    <span>
+                      {prize.rank} Prize: <span className="font-bold">₹{prize.prize}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
-  {/* Footer */}  
-  <CardFooter className="p-4 pt-0 flex items-center gap-2">  
-    <Dialog>  
-      <DialogTrigger asChild>  
-        <Button variant="outline" className="w-full">  
-          <List className="mr-2 h-4 w-4" />  
-          View Rules  
-        </Button>  
-      </DialogTrigger>  
-      <DialogContent>  
-        <DialogHeader>  
-          <DialogTitle>{tournament.title} - Rules</DialogTitle>  
-        </DialogHeader>  
-        <ScrollArea className="max-h-[60vh] pr-4">  
-          {tournament.rules.length > 0 ? (  
-            <ul className="list-disc space-y-2 pl-5 text-muted-foreground">  
-              {tournament.rules.map((rule, index) => (  
-                <li key={index}>{rule}</li>  
-              ))}  
-            </ul>  
-          ) : (  
-            <p className="text-center text-muted-foreground">  
-              No rules specified for this tournament.  
-            </p>  
-          )}  
-        </ScrollArea>  
-      </DialogContent>  
-    </Dialog>  
+        {/* Room Credentials */}
+        {showCredentials && (tournament.roomId || tournament.roomPassword) && (
+          <>
+            <Separator className="my-4" />
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div className="flex flex-col items-center">
+                <UserCheck className="h-6 w-6 text-blue-400" />
+                <span className="mt-1 text-sm font-semibold">Room ID</span>
+                <span className="text-lg font-bold">{tournament.roomId || "N/A"}</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <KeyRound className="h-6 w-6 text-purple-400" />
+                <span className="mt-1 text-sm font-semibold">Password</span>
+                <span className="text-lg font-bold">{tournament.roomPassword || "N/A"}</span>
+              </div>
+            </div>
+          </>
+        )}
+      </CardContent>
 
-    <Button  
-      className="w-full text-lg font-bold"  
-      size="lg"  
-      onClick={handleJoin}  
-      disabled={isJoining || showCredentials}  
-    >  
-      {isJoining ? <Spinner /> : showCredentials ? "Joined" : "Join Now"}  
-    </Button>  
-  </CardFooter>  
-</Card>
+      {/* ✅ Progress Line (Realtime joinedCount) */}
+      <div className="px-4">
+        <div className="w-full bg-gray-700 rounded-full h-2">
+          <div
+            className="bg-primary h-2 rounded-full transition-all duration-300"
+            style={{
+              width: `${totalSlots > 0 ? (joinedCount / totalSlots) * 100 : 0}%`,
+            }}
+          />
+        </div>
+        <p className="text-xs text-center mt-1 text-muted-foreground">
+          {joinedCount} / {totalSlots} Joined
+        </p>
+      </div>
 
-);
+      {/* Footer */}
+      <CardFooter className="p-4 pt-0 flex items-center gap-2">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="w-full">
+              <List className="mr-2 h-4 w-4" />
+              View Rules
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{tournament.title} - Rules</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh] pr-4">
+              {tournament.rules.length > 0 ? (
+                <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
+                  {tournament.rules.map((rule, index) => (
+                    <li key={index}>{rule}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-center text-muted-foreground">
+                  No rules specified for this tournament.
+                </p>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+
+        <Button
+          className="w-full text-lg font-bold"
+          size="lg"
+          onClick={handleJoin}
+          disabled={isJoining || showCredentials}
+        >
+          {isJoining ? <Spinner /> : showCredentials ? "Joined" : "Join Now"}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
 }
