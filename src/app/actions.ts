@@ -264,7 +264,8 @@ imageUrl:
       
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
-      winnerPrizes: tournamentData.winnerPrizes || [],
+      winnerPrizes: tournamentData.winnerPrizes || [], 
+      joinedUsers: tournamentData.joinedUsers ?? [],
     };
 
     if (tournamentData.id) {
