@@ -53,7 +53,15 @@ export default function TournamentCard({
     const unsub = onSnapshot(doc(db, "tournaments", tournament.id), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setJoinedCount(data.joinedUsers?.length || 0);
+
+        // ✅ Array + Number બંને handle
+        if (Array.isArray(data.joinedUsers)) {
+          setJoinedCount(data.joinedUsers.length);
+        } else if (typeof data.joinedUsers === "number") {
+          setJoinedCount(data.joinedUsers);
+        } else {
+          setJoinedCount(0);
+        }
       }
     });
 
@@ -189,7 +197,7 @@ export default function TournamentCard({
         )}
       </CardContent>
 
-      {/* Progress Line */}
+      {/* ✅ Progress Line */}
       <div className="px-4">
         <div className="w-full bg-gray-700 rounded-full h-2">
           <div
