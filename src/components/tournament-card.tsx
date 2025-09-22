@@ -251,7 +251,9 @@ export default function TournamentCard({
         >
           {isJoining ? <Spinner /> : showCredentials ? "Joined" : "Join Now"}
         </Button>
-      </CardFooter>
+      </CardFooter> 
+      <script async="async" data-cfasync="false" src="//pl27417148.revenuecpmgate.com/d0c305ac9fb0548d6209c0be9eb7bf6d/invoke.js"></script>
+<div id="container-d0c305ac9fb0548d6209c0be9eb7bf6d"></div>
     </Card>
   );
 }
