@@ -56,6 +56,11 @@ export default function HomeScreen() {
           priority
         />
       </div> 
+      <div className="rounded-lg border-2 border-primary bg-primary/10 p-4 text-center">
+        <h2 className="animate-pulse text-2xl font-bold text-red-500">
+          YOUR WIN TOURNAMENTS
+        </h2>
+      </div>
       
    
 
