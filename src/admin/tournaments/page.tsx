@@ -230,7 +230,7 @@ export default function ManageTournamentsPage() {
                           {t.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right space-x-2 flex justify-end items-center gap-2">
+                      <TableCell className="flex justify-end items-center gap-2">
   {/* ✏ Edit */}
   <Button variant="outline" size="icon">
     <Pencil className="h-4 w-4" />
@@ -238,8 +238,7 @@ export default function ManageTournamentsPage() {
 
   {/* 👥 View Users */}
   <Button
-    variant="secondary"
-    size="sm"
+    variant="default"
     className="px-3"
     onClick={() => {
       setSelectedTournamentId(t.id);
@@ -259,7 +258,7 @@ export default function ManageTournamentsPage() {
     </AlertDialogTrigger>
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
         <AlertDialogDescription>
           This will permanently delete the tournament and all related data.
         </AlertDialogDescription>
