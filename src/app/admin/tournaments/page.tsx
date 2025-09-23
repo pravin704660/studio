@@ -142,18 +142,20 @@ export default function ManageTournamentsPage() {
     const handleOpenEditDialog = (tournament: Tournament) => {
   setEditingTournamentId(tournament.id);
 
+  // Firestore Timestamp → JS Date
   const date =
     tournament.date instanceof Timestamp
       ? tournament.date.toDate()
       : new Date(tournament.date);
 
+  // ✅ Proper strings banavo
   const dateString = date.toISOString().split("T")[0]; // yyyy-mm-dd
-  const timeString = date.toISOString().split("T")[1].slice(0, 5); // HH:MM 👈 add this
+  const timeString = date.toTimeString().slice(0, 5);  // HH:MM
 
   setFormData({
     ...tournament,
-    date: dateString,      // ✅ date restore
-    time: timeString,      // ✅ time restore (important)
+    date: dateString,       // 👈 હવે khali નહિ રહે
+    time: timeString,       // 👈 time field prefill થશે
     rules: Array.isArray(tournament.rules)
       ? tournament.rules.join("\n")
       : tournament.rules,
