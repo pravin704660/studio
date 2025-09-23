@@ -159,10 +159,7 @@ export default function TournamentCard({
             <Calendar className="h-6 w-6 text-green-400" />
             <span className="mt-1 text-sm font-semibold">Starts</span>
             <span className="text-lg font-bold">
-              {tournament.date?.toDate().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}{" "}
+              {tournament.time || tournament.date?.toDate().toISOString().slice(11, 16)}
               -{" "}
               {tournament.date?.toDate().toLocaleDateString()}
             </span>
