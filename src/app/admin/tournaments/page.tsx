@@ -139,15 +139,30 @@ export default function ManageTournamentsPage() {
 
   const handleOpenEditDialog = (tournament: Tournament) => {
     setEditingTournamentId(tournament.id);
-    const date = tournament.date instanceof Timestamp ? tournament.date.toDate() : new Date(tournament.date);
-    const dateString = date.toISOString().split('T')[0];
-    
-    setFormData({
-        ...tournament,
-        date: dateString,
-        rules: Array.isArray(tournament.rules) ? tournament.rules.join('\n') : tournament.rules,
-        winnerPrizes: tournament.winnerPrizes && tournament.winnerPrizes.length > 0 ? tournament.winnerPrizes : initialFormData.winnerPrizes,
-    });
+    const handleOpenEditDialog = (tournament: Tournament) => {
+  setEditingTournamentId(tournament.id);
+
+  const date =
+    tournament.date instanceof Timestamp
+      ? tournament.date.toDate()
+      : new Date(tournament.date);
+
+  const dateString = date.toISOString().split("T")[0]; // yyyy-mm-dd
+  const timeString = date.toISOString().split("T")[1].slice(0, 5); // HH:MM 👈 add this
+
+  setFormData({
+    ...tournament,
+    date: dateString,      // ✅ date restore
+    time: timeString,      // ✅ time restore (important)
+    rules: Array.isArray(tournament.rules)
+      ? tournament.rules.join("\n")
+      : tournament.rules,
+    winnerPrizes:
+      tournament.winnerPrizes && tournament.winnerPrizes.length > 0
+        ? tournament.winnerPrizes
+        : initialFormData.winnerPrizes,
+  });
+};
     setImageFile(null);
     setIsDialogOpen(true);
   };
