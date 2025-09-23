@@ -226,21 +226,20 @@ export async function createOrUpdateTournament(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const tournamentDataString = formData.get("tournamentData") as string;
-
     if (!tournamentDataString) {
       throw new Error("Tournament data is missing.");
     }
-
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
+    
+let imageUrl = tournamentData.imageUrl || "";
 
-    // 🟢 date/time required validation
-    if (!tournamentData.date || !tournamentData.time) {
-      throw new Error("Date and time are required.");
-    }
+if (!tournamentData.date || !tournamentData.time) {
+  throw new Error("Date and time are required.");
+}
 
-    const firestoreDate = Timestamp.fromDate(new Date(tournamentData.date));
+    const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
+    const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
 
-    // 🟢 finalData with joinedUsers added
     const finalData: Omit<Tournament, "id"> = {
       title: tournamentData.title || "",
       gameType: tournamentData.gameType || "Solo",
@@ -256,24 +255,12 @@ export async function createOrUpdateTournament(
             .filter((r) => r.trim() !== ""),
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
-      imageUrl:
-        tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
-          ? tournamentData.imageUrl
-          : tournamentData.type === "mega"
-          ? "/tournaments/MegaTournaments.jpg"
-          : "/tournaments/RegularTournaments.jpg",
-
+      imageUrl: imageUrl,
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
       winnerPrizes: tournamentData.winnerPrizes || [],
-
-      // 🟢 New field
-      joinedUsers: tournamentData.joinedUsers || [],
     };
 
-    console.log("🔥 Tournament Final Data:", finalData);
-
-    // 🟢 Firestore save logic
     if (tournamentData.id) {
       const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
       await setDoc(tournamentDocRef, finalData, { merge: true });
@@ -287,6 +274,7 @@ export async function createOrUpdateTournament(
     return { success: false, error: error?.message || "Failed to save tournament." };
   }
 }
+
 /**
  * deleteTournament
  */
