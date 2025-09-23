@@ -234,61 +234,62 @@ export async function createOrUpdateTournament(
 
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
 
-    // 🟢 date/time required validation
-    if (!tournamentData.date || !tournamentData.time) {
-      throw new Error("Date and time are required.");
-    }
+// 🟢 date/time required validation
+if (!tournamentData.date || !tournamentData.time) {
+  throw new Error("Date and time are required.");
+}
 
-    // 🟢 date + time combine કરો
-    const dateTimeString = `${tournamentData.date}T${tournamentData.time}:00`;
-    const localDate = new Date(dateTimeString);
-    const firestoreDate = Timestamp.fromDate(localDate);
+// 🟢 date + time combine કરો → Local timezone respect સાથે
+const [hours, minutes] = tournamentData.time.split(":").map(Number);
+const baseDate = new Date(tournamentData.date);
+baseDate.setHours(hours, minutes, 0, 0);
+const firestoreDate = Timestamp.fromDate(baseDate);
 
-    // 🟢 finalData (joinedUsers વગર)
-    const {
-      joinedUsers, // joinedUsers અલગ પાડી લો
-      ...rest
-    } = tournamentData;
+// 🟢 finalData (joinedUsers વગર)
+const {
+  joinedUsers, // joinedUsers અલગ પાડી લો
+  ...rest
+} = tournamentData;
 
-    const finalData: Omit<Tournament, "id"> = {
-      title: rest.title || "",
-      gameType: rest.gameType || "Solo",
-      date: firestoreDate, // ✅ હવે full date + time Timestamp છે
-      entryFee: rest.entryFee || 0,
-      slots: rest.slots || 100,
-      prize: rest.prize || 0,
-      rules: Array.isArray(rest.rules)
-        ? rest.rules
-        : String(rest.rules || "")
-            .split("\n")
-            .filter((r) => r.trim() !== ""),
-      status: rest.status || "draft",
-      isMega: rest.isMega || false,
-      imageUrl:
-        rest.imageUrl && rest.imageUrl.trim() !== ""
-          ? rest.imageUrl
-          : rest.type === "mega"
-          ? "/tournaments/MegaTournaments.jpg"
-          : "/tournaments/RegularTournaments.jpg",
-      roomId: rest.roomId || "",
-      roomPassword: rest.roomPassword || "",
-      winnerPrizes: rest.winnerPrizes || [],
-    };
+const finalData: Omit<Tournament, "id"> = {
+  title: rest.title || "",
+  gameType: rest.gameType || "Solo",
+  date: firestoreDate, // ✅ હવે full date + time Timestamp છે
+  entryFee: rest.entryFee || 0,
+  slots: rest.slots || 100,
+  prize: rest.prize || 0,
+  rules: Array.isArray(rest.rules)
+    ? rest.rules
+    : String(rest.rules || "")
+        .split("\n")
+        .filter((r) => r.trim() !== ""),
+  status: rest.status || "draft",
+  isMega: rest.isMega || false,
+  imageUrl:
+    rest.imageUrl && rest.imageUrl.trim() !== ""
+      ? rest.imageUrl
+      : rest.type === "mega"
+      ? "/tournaments/MegaTournaments.jpg"
+      : "/tournaments/RegularTournaments.jpg",
+  roomId: rest.roomId || "",
+  roomPassword: rest.roomPassword || "",
+  winnerPrizes: rest.winnerPrizes || [],
+};
 
-    console.log("🔥 Tournament Final Data:", finalData);
+console.log("🔥 Tournament Final Data:", finalData);
 
-    // 🟢 Firestore save logic
-    if (tournamentData.id) {
-      // Update વખતે joinedUsers reset ના થાય
-      const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
-      await setDoc(tournamentDocRef, finalData, { merge: true });
-    } else {
-      // New Tournament → joinedUsers initialize
-      await addDoc(collection(db, "tournaments"), {
-        ...finalData,
-        joinedUsers: [],
-      });
-    }
+// 🟢 Firestore save logic
+if (tournamentData.id) {
+  // Update વખતે joinedUsers reset ના થાય
+  const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
+  await setDoc(tournamentDocRef, finalData, { merge: true });
+} else {
+  // New Tournament → joinedUsers initialize
+  await addDoc(collection(db, "tournaments"), {
+    ...finalData,
+    joinedUsers: [],
+  });
+}
 
     return { success: true };
   } catch (error: any) {
