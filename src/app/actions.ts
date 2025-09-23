@@ -234,52 +234,60 @@ export async function createOrUpdateTournament(
 
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
 
-    // ?? date/time required validation
+    // 🟢 date/time required validation
     if (!tournamentData.date || !tournamentData.time) {
       throw new Error("Date and time are required.");
     }
 
-    const firestoreDate = Timestamp.fromDate(new Date(tournamentData.date));
+    // 🟢 date + time combine કરો
+    const dateTimeString = `${tournamentData.date}T${tournamentData.time}:00`;
+    const localDate = new Date(dateTimeString);
+    const firestoreDate = Timestamp.fromDate(localDate);
 
-    // ?? finalData with joinedUsers added
+    // 🟢 finalData (joinedUsers વગર)
+    const {
+      joinedUsers, // joinedUsers અલગ પાડી લો
+      ...rest
+    } = tournamentData;
+
     const finalData: Omit<Tournament, "id"> = {
-      title: tournamentData.title || "",
-      gameType: tournamentData.gameType || "Solo",
-      date: firestoreDate,
-      time: tournamentData.time || "",
-      entryFee: tournamentData.entryFee || 0,
-      slots: tournamentData.slots || 100,
-      prize: tournamentData.prize || 0,
-      rules: Array.isArray(tournamentData.rules)
-        ? tournamentData.rules
-        : String(tournamentData.rules || "")
+      title: rest.title || "",
+      gameType: rest.gameType || "Solo",
+      date: firestoreDate, // ✅ હવે full date + time Timestamp છે
+      entryFee: rest.entryFee || 0,
+      slots: rest.slots || 100,
+      prize: rest.prize || 0,
+      rules: Array.isArray(rest.rules)
+        ? rest.rules
+        : String(rest.rules || "")
             .split("\n")
             .filter((r) => r.trim() !== ""),
-      status: tournamentData.status || "draft",
-      isMega: tournamentData.isMega || false,
+      status: rest.status || "draft",
+      isMega: rest.isMega || false,
       imageUrl:
-        tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
-          ? tournamentData.imageUrl
-          : tournamentData.type === "mega"
+        rest.imageUrl && rest.imageUrl.trim() !== ""
+          ? rest.imageUrl
+          : rest.type === "mega"
           ? "/tournaments/MegaTournaments.jpg"
           : "/tournaments/RegularTournaments.jpg",
-
-      roomId: tournamentData.roomId || "",
-      roomPassword: tournamentData.roomPassword || "",
-      winnerPrizes: tournamentData.winnerPrizes || [],
-
-      // ?? New field
-      joinedUsers: tournamentData.joinedUsers || [],
+      roomId: rest.roomId || "",
+      roomPassword: rest.roomPassword || "",
+      winnerPrizes: rest.winnerPrizes || [],
     };
 
-    console.log("?? Tournament Final Data:", finalData);
+    console.log("🔥 Tournament Final Data:", finalData);
 
-    // ?? Firestore save logic
+    // 🟢 Firestore save logic
     if (tournamentData.id) {
+      // Update વખતે joinedUsers reset ના થાય
       const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
       await setDoc(tournamentDocRef, finalData, { merge: true });
     } else {
-      await addDoc(collection(db, "tournaments"), finalData);
+      // New Tournament → joinedUsers initialize
+      await addDoc(collection(db, "tournaments"), {
+        ...finalData,
+        joinedUsers: [],
+      });
     }
 
     return { success: true };
