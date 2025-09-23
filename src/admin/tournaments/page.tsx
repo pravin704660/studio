@@ -187,17 +187,18 @@ export default function ManageTournamentsPage() {
     setEditingTournamentId(tournament.id);
     const date =
       tournament.date instanceof Timestamp ? tournament.date.toDate() : new Date(tournament.date);
-    const dateString = date.toISOString().split("T")[0];
+    const timeString = date.toTimeString().slice(0, 5); // ⏰ HH:MM format
 
-    setFormData({
-      ...tournament,
-      date: dateString,
-      rules: Array.isArray(tournament.rules) ? tournament.rules.join("\n") : tournament.rules,
-      winnerPrizes:
-        tournament.winnerPrizes && tournament.winnerPrizes.length > 0
-          ? tournament.winnerPrizes
-          : initialFormData.winnerPrizes,
-    });
+setFormData({
+  ...tournament,
+  date: dateString,
+  time: timeString, // ✅ fix: time prefill karo
+  rules: Array.isArray(tournament.rules) ? tournament.rules.join("\n") : tournament.rules,
+  winnerPrizes:
+    tournament.winnerPrizes && tournament.winnerPrizes.length > 0
+      ? tournament.winnerPrizes
+      : initialFormData.winnerPrizes,
+});
 
     setIsDialogOpen(true);
   };
