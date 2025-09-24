@@ -175,6 +175,7 @@ export default function TournamentCard({
 
         {/* Prize Distribution */}
         {hasWinnerPrizes && (
+        {hasWinnerPrizes && (
           <>
             <Separator className="my-4" />
             <div className="space-y-2 text-center">
