@@ -9,7 +9,7 @@ import { joinTournament } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { Spinner } from "./ui/spinner";
-import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users } from "lucide-react";
+import { Ticket, Trophy, Calendar, Award, List, Users } from "lucide-react";
 import { Separator } from "./ui/separator";
 import {
   Dialog,
@@ -162,6 +162,7 @@ export default function TournamentCard({
               {tournament.date?.toDate().toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
+                hour12: true, // ✅ AM/PM format
               })}{" "}
               -{" "}
               {tournament.date?.toDate().toLocaleDateString()}
@@ -170,7 +171,6 @@ export default function TournamentCard({
         </div>
 
         {/* Prize Distribution */}
-        {hasWinnerPrizes && (
         {hasWinnerPrizes && (
           <>
             <Separator className="my-4" />
