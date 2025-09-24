@@ -17,6 +17,7 @@ import {
   where,
   getDocs,
   writeBatch,
+  increment, // ✅ આ લાઇન ઉમેરી છે
 } from "firebase/firestore";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type {
@@ -75,6 +76,11 @@ export async function joinTournament(
 
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
+      
+      // ✅ આ લાઇન ઉમેરી છે
+      transaction.update(tournamentDocRef, { 
+          joinedUsersCount: increment(1) 
+      });
 
       const entryDocRef = doc(collection(db, "entries"));
       transaction.set(entryDocRef, {
@@ -242,17 +248,16 @@ export async function createOrUpdateTournament(
     const dateUTC = new Date(dateIST.getTime() - (330 * 60 * 1000));
     const firestoreDate = Timestamp.fromDate(dateUTC);
 
-    // ✅ ડિફોલ્ટ ઈમેજ માટે સુધારેલો પાથ
     const finalImageUrl = tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
       ? tournamentData.imageUrl
       : tournamentData.isMega
-      ? "/MegaTournaments.jpg" // ✅ પાથ સુધાર્યો
-      : "/RegularTournaments.jpg"; // ✅ પાથ સુધાર્યો
+      ? "/tournaments/MegaTournaments.jpg"
+      : "/tournaments/RegularTournaments.jpg";
 
     const finalData: Omit<Tournament, "id" | "time"> = {
       title: tournamentData.title || "",
       gameType: tournamentData.gameType || "Solo",
-      date: firestoreDate, 
+      date: firestoreDate,
       entryFee: tournamentData.entryFee || 0,
       slots: tournamentData.slots || 100,
       prize: tournamentData.prize || 0,
@@ -269,8 +274,6 @@ export async function createOrUpdateTournament(
       winnerPrizes: tournamentData.winnerPrizes || [],
     };
     
-    console.log("🔥 Tournament Final Data:", finalData);
-    
     if (tournamentData.id) {
         const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
         await setDoc(tournamentDocRef, finalData, { merge: true });
@@ -278,11 +281,12 @@ export async function createOrUpdateTournament(
         await addDoc(collection(db, "tournaments"), {
             ...finalData,
             joinedUsers: [],
+            joinedUsersCount: 0, // ✅ આ લાઇન ઉમેરી છે
         });
     }
 
     return { success: true };
-    
+
   } catch (error: any) {
     console.error("createOrUpdateTournament error:", error);
     return { success: false, error: error?.message || "Failed to save tournament." };
