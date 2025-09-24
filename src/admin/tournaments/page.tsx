@@ -182,22 +182,23 @@ export default function ManageTournamentsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleOpenEditDialog = (tournament: Tournament) => {
+ const handleOpenEditDialog = (tournament: Tournament) => {
     setEditingTournamentId(tournament.id);
+
+    // ✅ ખાતરી કરો કે તારીખ અને સમય યોગ્ય રીતે ફોર્મેટ થયેલ છે
     const date =
-      tournament.date instanceof Timestamp ? tournament.date.toDate() : new Date(tournament.date);
-    
-    // ✅ તારીખને YYYY-MM-DD ફોર્મેટમાં કન્વર્ટ કરો
+      tournament.date instanceof Timestamp
+        ? tournament.date.toDate()
+        : new Date(tournament.date);
+
     const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
     const dateString = `${year}-${month}-${day}`;
-    
     const timeString = date.toTimeString().slice(0, 5); // HH:MM ફોર્મેટ
 
-
     setFormData({
-      // ✅ અહીં દરેક ફીલ્ડને સ્પષ્ટ રીતે સેટ કરો જેથી ખાલી ન રહે
+      // ✅ દરેક ફીલ્ડ માટે ખાલી સ્ટ્રિંગ અથવા 0 ને ડિફોલ્ટ વેલ્યુ તરીકે સેટ કરો
       title: tournament.title || "",
       gameType: tournament.gameType || "Solo",
       date: dateString,
@@ -211,9 +212,15 @@ export default function ManageTournamentsPage() {
       roomId: tournament.roomId || "",
       roomPassword: tournament.roomPassword || "",
       imageUrl: tournament.imageUrl || "",
-      winnerPrizes: tournament.winnerPrizes && tournament.winnerPrizes.length > 0
+      winnerPrizes:
+        Array.isArray(tournament.winnerPrizes) && tournament.winnerPrizes.length > 0
           ? tournament.winnerPrizes
-          : initialFormData.winnerPrizes,
+          : [
+              { rank: "1st", prize: 0 },
+              { rank: "2nd", prize: 0 },
+              { rank: "3rd", prize: 0 },
+              { rank: "4th", prize: 0 },
+            ],
     });
 
     setIsDialogOpen(true);
