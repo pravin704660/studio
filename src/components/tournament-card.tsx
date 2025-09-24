@@ -1,15 +1,15 @@
 "use client";
 
 import Image from "next/image";
+import { useState, useEffect } from "react"; // ✅ useEffect ઉમેરો
 import type { Tournament, WinnerPrize } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { joinTournament } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
 import { Spinner } from "./ui/spinner";
-import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users, Clock } from "lucide-react"; // ✅ Add Clock icon
+import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users, Clock } from "lucide-react";
 import { Separator } from "./ui/separator";
 import {
   Dialog,
@@ -19,7 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "./ui/scroll-area";
-
+import { Progress } from "@/components/ui/progress";
 
 interface TournamentCardProps {
     tournament: Tournament;
@@ -32,10 +32,51 @@ const prizeIcons: { [key: string]: string } = {
     '3rd': "text-orange-400",
 };
 
+// ✅ ટાઈમ ફોર્મેટ કરવા માટે એક હેલ્પર ફંક્શન
+const formatTime = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
+
 export default function TournamentCard({ tournament, showCredentials = false }: TournamentCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
+  
+  // ✅ નવા સ્ટેટ વેરીએબલ્સ
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [showRoomDetails, setShowRoomDetails] = useState(showCredentials);
+
+  // ✅ ટાઈમર લોજિક
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+
+    if (tournament.status === 'live' && tournament.date) {
+      const startTime = tournament.date.toDate().getTime();
+      const endTime = startTime + 5 * 60 * 1000; // 5 મિનિટ ઉમેરો
+      
+      const updateTimer = () => {
+        const now = new Date().getTime();
+        const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+        setTimeRemaining(remaining);
+
+        if (remaining <= 0) {
+          setShowRoomDetails(true);
+          if (timer) clearInterval(timer);
+        }
+      };
+
+      updateTimer();
+      timer = setInterval(updateTimer, 1000);
+    } else {
+      setTimeRemaining(null);
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [tournament.status, tournament.date]);
 
   const handleJoin = async () => {
     if (!user) {
@@ -74,8 +115,7 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
   };
   
   const hasWinnerPrizes = tournament.winnerPrizes && tournament.winnerPrizes.length > 0;
-
-  // ✅ New functions to handle date and time display
+  
   const getDisplayDate = () => {
     if (tournament.date) {
         const date = tournament.date.toDate();
@@ -87,7 +127,6 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
   const getDisplayTime = () => {
     if (tournament.date) {
         const date = tournament.date.toDate();
-        // Return time in HH:MM format (e.g., 09:30 AM)
         return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
     }
     return "N/A";
@@ -102,10 +141,10 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
                 tournament.imageUrl
                   ? (tournament.imageUrl.startsWith("http")
                       ? tournament.imageUrl
-                      : `/tournaments/${tournament.imageUrl}`) // ✅ Path fixed to /tournaments
+                      : `/tournaments/${tournament.imageUrl}`)
                   : (tournament.type === "mega"
                       ? "/tournaments/MegaTournaments.jpg"
-                      : "/tournaments/RegularTournaments.jpg") // ✅ Path fixed to /tournaments
+                      : "/tournaments/RegularTournaments.jpg")
               }
               alt={tournament.title}
               fill
@@ -133,7 +172,9 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
              <div className="flex flex-col items-center">
                 <Users className="h-6 w-6 text-cyan-400" />
                 <span className="mt-1 text-sm font-semibold">Total Slots</span>
-                <span className="text-lg font-bold">{tournament.slots}</span>
+                <span className="text-lg font-bold">
+                    {tournament.joinedUsersCount || 0}/{tournament.slots}
+                </span>
             </div>
             <div className="flex flex-col items-center">
                 <Calendar className="h-6 w-6 text-green-400" />
@@ -141,7 +182,6 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
                 <span className="text-lg font-bold">
                     {getDisplayDate()}
                     <br/>
-                    {/* ✅ New Clock icon and time display */}
                     <span className="flex items-center gap-1 text-sm font-medium">
                         <Clock className="h-4 w-4" />
                         {getDisplayTime()}
@@ -150,6 +190,13 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             </div>
         </div>
         
+        <div className="mt-4 flex flex-col items-center w-full">
+            <Progress
+                value={((tournament.joinedUsersCount || 0) / tournament.slots) * 100}
+                className="w-full h-2"
+            />
+        </div>
+
         {hasWinnerPrizes && (
              <>
                 <Separator className="my-4" />
@@ -167,21 +214,29 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             </>
         )}
 
-        {showCredentials && (tournament.roomId || tournament.roomPassword) && (
+        {/* ✅ Room credentials and timer display */}
+        {(showRoomDetails || (tournament.status === 'live' && timeRemaining !== null)) && (
             <>
                 <Separator className="my-4" />
-                <div className="grid grid-cols-2 gap-4 text-center">
+                {timeRemaining > 0 ? (
                     <div className="flex flex-col items-center">
-                        <UserCheck className="h-6 w-6 text-blue-400" />
-                        <span className="mt-1 text-sm font-semibold">Room ID</span>
-                        <span className="text-lg font-bold">{tournament.roomId || "N/A"}</span>
+                        <span className="text-sm font-semibold text-yellow-500">Room credentials will be available in:</span>
+                        <span className="text-2xl font-bold text-yellow-500 mt-1">{formatTime(timeRemaining)}</span>
                     </div>
-                     <div className="flex flex-col items-center">
-                        <KeyRound className="h-6 w-6 text-purple-400" />
-                        <span className="mt-1 text-sm font-semibold">Password</span>
-                        <span className="text-lg font-bold">{tournament.roomPassword || "N/A"}</span>
+                ) : (
+                    <div className="grid grid-cols-2 gap-4 text-center">
+                        <div className="flex flex-col items-center">
+                            <UserCheck className="h-6 w-6 text-blue-400" />
+                            <span className="mt-1 text-sm font-semibold">Room ID</span>
+                            <span className="text-lg font-bold">{tournament.roomId || "N/A"}</span>
+                        </div>
+                         <div className="flex flex-col items-center">
+                            <KeyRound className="h-6 w-6 text-purple-400" />
+                            <span className="mt-1 text-sm font-semibold">Password</span>
+                            <span className="text-lg font-bold">{tournament.roomPassword || "N/A"}</span>
+                        </div>
                     </div>
-                </div>
+                )}
             </>
         )}
       </CardContent>
