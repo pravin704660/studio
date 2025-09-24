@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "./ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
+import { Timestamp } from "firebase/firestore";
 
 interface TournamentCardProps {
     tournament: Tournament;
@@ -33,53 +35,50 @@ const prizeIcons: { [key: string]: string } = {
 };
 
 const formatTime = (seconds: number) => {
-  if (seconds < 0) return "00:00"; // ⏱️ સમય 0 થી ઓછો ન થાય તે માટે
+  if (seconds < 0) return "00:00";
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
-export default function TournamentCard({ tournament, showCredentials = false }: TournamentCardProps) {
+export default function TournamentCard({ tournament }: TournamentCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
   
-  // ✅ નવા સ્ટેટ વેરીએબલ ઉમેર્યા
+  // ✅ New state to track the timer
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
-  const [showRoomDetails, setShowRoomDetails] = useState(false);
-  
+
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
     let countdownInterval: NodeJS.Timeout | null = null;
+    const now = new Date().getTime();
 
-    if (tournament.status === 'live') {
-      // ✅ સ્ટેટસ 'live' થાય ત્યારે રૂમની વિગતો તરત બતાવો
-      setShowRoomDetails(true);
-      setTimeRemaining(5 * 60); // 5 મિનિટ (300 સેકન્ડ)
+    // ✅ Calculate the end time from the fixed database timestamp
+    const liveStartTime = (tournament.liveStartTime instanceof Timestamp) ? tournament.liveStartTime.toDate().getTime() : now;
+    const endTime = liveStartTime + 5 * 60 * 1000;
+    
+    // ✅ This logic will be consistent across all page visits
+    const initialRemaining = Math.max(0, Math.floor((endTime - now) / 1000));
+    setTimeRemaining(initialRemaining);
 
-      // ✅ 5 મિનિટ પછી રૂમની વિગતો છુપાવવા માટે ટાઈમઆઉટ સેટ કરો
-      timer = setTimeout(() => {
-        setShowRoomDetails(false);
-        setTimeRemaining(0);
-      }, 5 * 60 * 1000); // 5 મિનિટ
-
-      // ✅ દર સેકન્ડે ટાઈમર અપડેટ કરવા માટે ઇન્ટરવલ સેટ કરો
+    if (tournament.status === 'live' && initialRemaining > 0) {
       countdownInterval = setInterval(() => {
-        setTimeRemaining((prevTime) => (prevTime !== null ? prevTime - 1 : 0));
+        const currentRemaining = Math.max(0, Math.floor((endTime - new Date().getTime()) / 1000));
+        setTimeRemaining(currentRemaining);
+        if (currentRemaining <= 0) {
+          clearInterval(countdownInterval);
+        }
       }, 1000);
-
+    } else if (tournament.status === 'live' && initialRemaining <= 0) {
+       setTimeRemaining(0);
     } else {
-      // ✅ જો સ્ટેટસ 'live' ન હોય તો બધા ટાઈમર અને વિગતો સાફ કરો
-      setShowRoomDetails(showCredentials);
-      setTimeRemaining(null);
+       setTimeRemaining(null);
     }
 
-    // ✅ ક્લીનઅપ ફંક્શન
     return () => {
-      if (timer) clearInterval(timer);
       if (countdownInterval) clearInterval(countdownInterval);
     };
-  }, [tournament.status, showCredentials]);
+  }, [tournament.status, tournament.liveStartTime]);
 
   const handleJoin = async () => {
     if (!user) {
@@ -134,6 +133,9 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
     }
     return "N/A";
   };
+
+  const showCredentials = tournament.status === 'live' && timeRemaining !== null && timeRemaining > 0;
+  const timerHasExpired = tournament.status === 'live' && timeRemaining !== null && timeRemaining <= 0;
 
   return (
     <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
@@ -222,8 +224,7 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             </>
         )}
 
-        {/* ✅ Room Details નો ભાગ અપડેટ કર્યો છે */}
-        {showRoomDetails && tournament.status === 'live' && (
+        {showCredentials && (
             <>
                 <Separator className="my-4" />
                 {timeRemaining !== null && timeRemaining > 0 ? (
