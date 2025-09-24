@@ -1,5 +1,4 @@
-
-  "use server";
+"use server";
 
 import { db } from "@/lib/firebase/client";
 import { adminStorage } from "@/lib/firebase/server";
@@ -227,34 +226,25 @@ export async function createOrUpdateTournament(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const tournamentDataString = formData.get("tournamentData") as string;
-
     if (!tournamentDataString) {
       throw new Error("Tournament data is missing.");
     }
-
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
+    
+let imageUrl = tournamentData.imageUrl || "";
 
-    // 🟢 Validate date & time
-    if (!tournamentData.date || !tournamentData.time) {
-      throw new Error("Date and time are required.");
-    }
+if (!tournamentData.date || !tournamentData.time) {
+  throw new Error("Date and time are required.");
+}
 
-    // 🟢 Combine date + time (with AM/PM support)
-    let hours = 0, minutes = 0;
-    if (tournamentData.time.includes(":")) {
-      const [h, m] = tournamentData.time.split(":");
-      hours = parseInt(h, 10);
-      minutes = parseInt(m, 10);
-    }
-    const baseDate = new Date(tournamentData.date);
-    baseDate.setHours(hours, minutes, 0, 0);
-    const firestoreDate = Timestamp.fromDate(baseDate);
+    const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
+    const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
 
-    // 🟢 Prepare final data
     const finalData: Omit<Tournament, "id"> = {
       title: tournamentData.title || "",
       gameType: tournamentData.gameType || "Solo",
       date: firestoreDate,
+      time: tournamentData.time || "",
       entryFee: tournamentData.entryFee || 0,
       slots: tournamentData.slots || 100,
       prize: tournamentData.prize || 0,
@@ -265,30 +255,17 @@ export async function createOrUpdateTournament(
             .filter((r) => r.trim() !== ""),
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
-      imageUrl:
-        tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
-          ? tournamentData.imageUrl
-          : tournamentData.type === "mega"
-          ? "/tournaments/MegaTournaments.jpg"
-          : "/tournaments/RegularTournaments.jpg",
+      imageUrl: imageUrl,
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
       winnerPrizes: tournamentData.winnerPrizes || [],
     };
 
-    console.log("🔥 Tournament Final Data:", finalData);
-
-    // 🟢 Firestore save logic
     if (tournamentData.id) {
-      // Update: preserve joinedUsers
       const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
       await setDoc(tournamentDocRef, finalData, { merge: true });
     } else {
-      // New Tournament → joinedUsers initialize
-      await addDoc(collection(db, "tournaments"), {
-        ...finalData,
-        joinedUsers: [],
-      });
+      await addDoc(collection(db, "tournaments"), finalData);
     }
 
     return { success: true };
@@ -297,6 +274,7 @@ export async function createOrUpdateTournament(
     return { success: false, error: error?.message || "Failed to save tournament." };
   }
 }
+
 /**
  * deleteTournament
  */
@@ -513,7 +491,7 @@ export async function declareResult(
       let message = `Congratulations! You secured rank #${result.rank} with ${result.points} points.`;
 
       if (result.prize && result.prize > 0) {
-        message += ` You've won ?${result.prize}!`;
+        message += ` You've won ₹${result.prize}!`;
         const userDocRef = doc(db, "users", result.userId);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
@@ -592,10 +570,10 @@ export async function updateWalletRequestStatus(
         transaction.update(requestDocRef, { status: newStatus });
       });
 
-      await sendNotification(userId, "Deposit Approved", `Your request to add ?${amount} has been approved.`);
+      await sendNotification(userId, "Deposit Approved", `Your request to add ₹${amount} has been approved.`);
     } else {
       await updateDoc(requestDocRef, { status: newStatus });
-      await sendNotification(userId, "Deposit Rejected", `Your request to add ?${amount} has been rejected.`);
+      await sendNotification(userId, "Deposit Rejected", `Your request to add ₹${amount} has been rejected.`);
     }
 
     return { success: true };
@@ -648,10 +626,10 @@ export async function updateWithdrawalRequestStatus(
         transaction.update(requestDocRef, { status: newStatus });
       });
 
-      await sendNotification(userId, "Withdrawal Approved", `Your withdrawal of ?${amount} has been approved.`);
+      await sendNotification(userId, "Withdrawal Approved", `Your withdrawal of ₹${amount} has been approved.`);
     } else {
       await updateDoc(requestDocRef, { status: newStatus });
-      await sendNotification(userId, "Withdrawal Rejected", `Your withdrawal of ?${amount} has been rejected.`);
+      await sendNotification(userId, "Withdrawal Rejected", `Your withdrawal of ₹${amount} has been rejected.`);
     }
 
     return { success: true };
