@@ -170,7 +170,7 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
                 <Users className="h-6 w-6 text-cyan-400" />
                 <span className="mt-1 text-sm font-semibold">Total Slots</span>
                 <span className="text-lg font-bold">
-                    {tournament.joinedUsersCount || 0}/{tournament.slots}
+                    {tournament.slots} {/* ✅ ફક્ત કુલ સ્લોટ્સ બતાવો */}
                 </span>
             </div>
             <div className="flex flex-col items-center">
@@ -187,6 +187,19 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             </div>
         </div>
         
+        {/* ✅ પ્રોગ્રેસ બાર અહીં ખસેડ્યો છે */}
+        <div className="mt-4 w-full">
+             <div className="relative h-2 bg-gray-200 rounded-full">
+                <div 
+                    className="absolute h-full rounded-full bg-cyan-400 transition-all duration-300" 
+                    style={{ width: `${((tournament.joinedUsersCount || 0) / tournament.slots) * 100}%` }}
+                />
+            </div>
+            <div className="mt-1 text-sm font-semibold text-right">
+                {tournament.joinedUsersCount || 0} / {tournament.slots}
+            </div>
+        </div>
+
         {hasWinnerPrizes && (
              <>
                 <Separator className="my-4" />
@@ -229,22 +242,10 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             </>
         )}
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex flex-col sm:flex-row items-center gap-2"> {/* ✅ અહીં flex-col ઉમેર્યું છે */}
-        {/* ✅ પ્રોગ્રેસ બાર અહીં ખસેડ્યો છે */}
-        <div className="w-full sm:w-1/2 flex flex-col items-center sm:items-start text-sm">
-             <div className="relative h-2 bg-gray-200 rounded-full w-full">
-                <div 
-                    className="absolute h-full rounded-full bg-cyan-400 transition-all duration-300" 
-                    style={{ width: `${((tournament.joinedUsersCount || 0) / tournament.slots) * 100}%` }}
-                />
-            </div>
-            <div className="mt-1 font-semibold text-right w-full">
-                {tournament.joinedUsersCount || 0} / {tournament.slots}
-            </div>
-        </div>
+      <CardFooter className="p-4 pt-0 flex items-center gap-2"> {/* ✅ અહીં flex-col હટાવી દીધું */}
          <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full">
                     <List className="mr-2 h-4 w-4" />
                     View Rules
                 </Button>
@@ -266,7 +267,7 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
                 </ScrollArea>
             </DialogContent>
         </Dialog>
-        <Button className="w-full sm:w-auto text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining || showCredentials}>
+        <Button className="w-full text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining || showCredentials}>
           {isJoining ? <Spinner /> : (showCredentials ? "Joined" : "Join Now")}
         </Button>
       </CardFooter>
