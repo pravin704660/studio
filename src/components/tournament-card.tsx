@@ -156,18 +156,22 @@ export default function TournamentCard({
             <span className="text-lg font-bold">{tournament.slots}</span>
           </div>
           <div className="flex flex-col items-center">
-            <Calendar className="h-6 w-6 text-green-400" />
-            <span className="mt-1 text-sm font-semibold">Starts</span>
-            <span className="text-lg font-bold">
-              {tournament.date?.toDate().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}{" "}
-              -{" "}
-              {tournament.date?.toDate().toLocaleDateString()}
-            </span>
-          </div>
-        </div>
+  <Calendar className="h-6 w-6 text-green-400" />
+  <span className="mt-1 text-sm font-semibold">Starts</span>
+  <span className="text-lg font-bold">
+    {tournament.date?.toDate().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,   // ✅ AM/PM show કરશે
+    })}{" "}
+    -{" "}
+    {tournament.date?.toDate().toLocaleDateString([], {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })}
+  </span>
+</div>
 
         {/* Prize Distribution */}
         {hasWinnerPrizes && (
