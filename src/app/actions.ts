@@ -235,18 +235,19 @@ export async function createOrUpdateTournament(
       throw new Error("Date and time are required.");
     }
 
-    // Combine date and time into a single string
     const [year, month, day] = tournamentData.date.split('-').map(Number);
     const [hour, minute] = tournamentData.time.split(':').map(Number);
     
-    // Create a Date object in IST (local time)
     const dateIST = new Date(year, month - 1, day, hour, minute);
-
-    // Subtract 5.5 hours (330 minutes) to get the UTC time
     const dateUTC = new Date(dateIST.getTime() - (330 * 60 * 1000));
-
-    // Create a Firestore Timestamp from the corrected UTC date
     const firestoreDate = Timestamp.fromDate(dateUTC);
+
+    // ✅ ડિફોલ્ટ ઈમેજ માટે સુધારેલો પાથ
+    const finalImageUrl = tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
+      ? tournamentData.imageUrl
+      : tournamentData.isMega
+      ? "/MegaTournaments.jpg" // ✅ પાથ સુધાર્યો
+      : "/RegularTournaments.jpg"; // ✅ પાથ સુધાર્યો
 
     const finalData: Omit<Tournament, "id" | "time"> = {
       title: tournamentData.title || "",
@@ -262,11 +263,7 @@ export async function createOrUpdateTournament(
             .filter((r) => r.trim() !== ""),
       status: tournamentData.status || "draft",
       isMega: tournamentData.isMega || false,
-      imageUrl: tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
-          ? tournamentData.imageUrl
-          : tournamentData.type === "mega"
-          ? "/tournaments/MegaTournaments.jpg"
-          : "/tournaments/RegularTournaments.jpg",
+      imageUrl: finalImageUrl,
       roomId: tournamentData.roomId || "",
       roomPassword: tournamentData.roomPassword || "",
       winnerPrizes: tournamentData.winnerPrizes || [],
@@ -274,20 +271,16 @@ export async function createOrUpdateTournament(
     
     console.log("🔥 Tournament Final Data:", finalData);
     
-    // ✅ Firestore save logic
     if (tournamentData.id) {
-        // Update existing tournament
         const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
         await setDoc(tournamentDocRef, finalData, { merge: true });
     } else {
-        // Create new tournament with joinedUsers array
         await addDoc(collection(db, "tournaments"), {
             ...finalData,
             joinedUsers: [],
         });
     }
 
-    // ✅ Return success object
     return { success: true };
     
   } catch (error: any) {
