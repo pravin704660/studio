@@ -9,7 +9,7 @@ import { joinTournament } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 import { Spinner } from "./ui/spinner";
-import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users } from "lucide-react";
+import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users, Clock } from "lucide-react"; // ✅ Add Clock icon
 import { Separator } from "./ui/separator";
 import {
   Dialog,
@@ -75,24 +75,42 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
   
   const hasWinnerPrizes = tournament.winnerPrizes && tournament.winnerPrizes.length > 0;
 
+  // ✅ New functions to handle date and time display
+  const getDisplayDate = () => {
+    if (tournament.date) {
+        const date = tournament.date.toDate();
+        return date.toLocaleDateString();
+    }
+    return "N/A";
+  };
+  
+  const getDisplayTime = () => {
+    if (tournament.date) {
+        const date = tournament.date.toDate();
+        // Return time in HH:MM format (e.g., 09:30 AM)
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+    return "N/A";
+  };
+
   return (
     <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
       <CardHeader className="p-0">
         <div className="relative h-48 w-full">
             <Image
-  src={
-    tournament.imageUrl
-      ? (tournament.imageUrl.startsWith("http")
-          ? tournament.imageUrl
-          : `/tournament/${tournament.imageUrl}`)
-      : (tournament.type === "mega"
-          ? "/tournament/MegaTournaments.jpg"
-          : "/tournament/RegularTournaments.jpg")
-  }
-  alt={tournament.title}
-  fill
-  className="object-cover"
-/>
+              src={
+                tournament.imageUrl
+                  ? (tournament.imageUrl.startsWith("http")
+                      ? tournament.imageUrl
+                      : `/tournaments/${tournament.imageUrl}`) // ✅ Path fixed to /tournaments
+                  : (tournament.type === "mega"
+                      ? "/tournaments/MegaTournaments.jpg"
+                      : "/tournaments/RegularTournaments.jpg") // ✅ Path fixed to /tournaments
+              }
+              alt={tournament.title}
+              fill
+              className="object-cover"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
             <div className="absolute bottom-4 left-4">
                 <CardTitle className="text-2xl font-black text-white">{tournament.title}</CardTitle>
@@ -120,7 +138,15 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             <div className="flex flex-col items-center">
                 <Calendar className="h-6 w-6 text-green-400" />
                 <span className="mt-1 text-sm font-semibold">Starts</span>
-                <span className="text-lg font-bold">{tournament.date.toDate().toLocaleDateString()}</span>
+                <span className="text-lg font-bold">
+                    {getDisplayDate()}
+                    <br/>
+                    {/* ✅ New Clock icon and time display */}
+                    <span className="flex items-center gap-1 text-sm font-medium">
+                        <Clock className="h-4 w-4" />
+                        {getDisplayTime()}
+                    </span>
+                </span>
             </div>
         </div>
         
