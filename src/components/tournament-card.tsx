@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react"; // ✅ useEffect ઉમેરો
+import { useState, useEffect } from "react";
 import type { Tournament, WinnerPrize } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,6 @@ const prizeIcons: { [key: string]: string } = {
     '3rd': "text-orange-400",
 };
 
-// ✅ ટાઈમ ફોર્મેટ કરવા માટે એક હેલ્પર ફંક્શન
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
@@ -44,17 +43,15 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
   
-  // ✅ નવા સ્ટેટ વેરીએબલ્સ
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [showRoomDetails, setShowRoomDetails] = useState(showCredentials);
 
-  // ✅ ટાઈમર લોજિક
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
 
     if (tournament.status === 'live' && tournament.date) {
       const startTime = tournament.date.toDate().getTime();
-      const endTime = startTime + 5 * 60 * 1000; // 5 મિનિટ ઉમેરો
+      const endTime = startTime + 5 * 60 * 1000;
       
       const updateTimer = () => {
         const now = new Date().getTime();
@@ -141,10 +138,10 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
                 tournament.imageUrl
                   ? (tournament.imageUrl.startsWith("http")
                       ? tournament.imageUrl
-                      : `/tournaments/${tournament.imageUrl}`)
-                  : (tournament.type === "mega"
-                      ? "/tournaments/MegaTournaments.jpg"
-                      : "/tournaments/RegularTournaments.jpg")
+                      : tournament.imageUrl)
+                  : (tournament.isMega
+                      ? "/MegaTournaments.jpg"
+                      : "/RegularTournaments.jpg")
               }
               alt={tournament.title}
               fill
@@ -190,13 +187,6 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             </div>
         </div>
         
-        <div className="mt-4 flex flex-col items-center w-full">
-            <Progress
-                value={((tournament.joinedUsersCount || 0) / tournament.slots) * 100}
-                className="w-full h-2"
-            />
-        </div>
-
         {hasWinnerPrizes && (
              <>
                 <Separator className="my-4" />
@@ -214,7 +204,6 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             </>
         )}
 
-        {/* ✅ Room credentials and timer display */}
         {(showRoomDetails || (tournament.status === 'live' && timeRemaining !== null)) && (
             <>
                 <Separator className="my-4" />
@@ -240,10 +229,22 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
             </>
         )}
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex items-center gap-2">
+      <CardFooter className="p-4 pt-0 flex flex-col sm:flex-row items-center gap-2"> {/* ✅ અહીં flex-col ઉમેર્યું છે */}
+        {/* ✅ પ્રોગ્રેસ બાર અહીં ખસેડ્યો છે */}
+        <div className="w-full sm:w-1/2 flex flex-col items-center sm:items-start text-sm">
+             <div className="relative h-2 bg-gray-200 rounded-full w-full">
+                <div 
+                    className="absolute h-full rounded-full bg-cyan-400 transition-all duration-300" 
+                    style={{ width: `${((tournament.joinedUsersCount || 0) / tournament.slots) * 100}%` }}
+                />
+            </div>
+            <div className="mt-1 font-semibold text-right w-full">
+                {tournament.joinedUsersCount || 0} / {tournament.slots}
+            </div>
+        </div>
          <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full sm:w-auto">
                     <List className="mr-2 h-4 w-4" />
                     View Rules
                 </Button>
@@ -265,7 +266,7 @@ export default function TournamentCard({ tournament, showCredentials = false }: 
                 </ScrollArea>
             </DialogContent>
         </Dialog>
-        <Button className="w-full text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining || showCredentials}>
+        <Button className="w-full sm:w-auto text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining || showCredentials}>
           {isJoining ? <Spinner /> : (showCredentials ? "Joined" : "Join Now")}
         </Button>
       </CardFooter>
