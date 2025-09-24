@@ -12,6 +12,8 @@ import {
   startAfter,
   QueryDocumentSnapshot,
   DocumentData,
+  doc,
+  getDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Tournament, TournamentFormData, WinnerPrize } from "@/lib/types";
@@ -56,7 +58,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const PAGE_SIZE = 10;
 
-const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
+const initialFormData: Omit<TournamentFormData, "id"> = {
   title: "",
   gameType: "Solo",
   date: "",
@@ -65,9 +67,8 @@ const initialFormData: Omit<TournamentFormData, "id" | "date"> = {
   slots: 100,
   prize: 0,
   rules: [],
-  joinedUsers: [], // ✅ joinedUsers field added here
   status: "draft",
-  type: "regular",
+  isMega: false,
   roomId: "",
   roomPassword: "",
   imageUrl: "",
@@ -92,8 +93,8 @@ export default function ManageTournamentsPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [formData, setFormData] = useState<TournamentFormData & { date: string }>(
-    initialFormData as TournamentFormData & { date: string }
+  const [formData, setFormData] = useState<TournamentFormData>(
+    initialFormData as TournamentFormData
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTournamentId, setEditingTournamentId] = useState<string | null>(null);
@@ -126,7 +127,6 @@ export default function ManageTournamentsPage() {
       if (lastDoc && !initial) {
         q = query(
           tournamentsCollection,
-          where("isMega", "==", false),
           orderBy("date", "desc"),
           startAfter(lastDoc),
           limit(PAGE_SIZE)
@@ -134,7 +134,6 @@ export default function ManageTournamentsPage() {
       } else {
         q = query(
           tournamentsCollection,
-          where("isMega", "==", false),
           orderBy("date", "desc"),
           limit(PAGE_SIZE)
         );
@@ -179,7 +178,7 @@ export default function ManageTournamentsPage() {
 
   const handleOpenNewDialog = () => {
     setEditingTournamentId(null);
-    setFormData(initialFormData as TournamentFormData & { date: string });
+    setFormData(initialFormData as TournamentFormData);
     setIsDialogOpen(true);
   };
 
@@ -187,30 +186,57 @@ export default function ManageTournamentsPage() {
     setEditingTournamentId(tournament.id);
     const date =
       tournament.date instanceof Timestamp ? tournament.date.toDate() : new Date(tournament.date);
-    const timeString = date.toTimeString().slice(0, 5); // ⏰ HH:MM format
+    
+    // ✅ તારીખને YYYY-MM-DD ફોર્મેટમાં કન્વર્ટ કરો
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+    
+    const timeString = date.toTimeString().slice(0, 5); // HH:MM ફોર્મેટ
 
-setFormData({
-  ...tournament,
-  date: dateString,
-  time: timeString, // ✅ fix: time prefill karo
-  rules: Array.isArray(tournament.rules) ? tournament.rules.join("\n") : tournament.rules,
-  winnerPrizes:
-    tournament.winnerPrizes && tournament.winnerPrizes.length > 0
-      ? tournament.winnerPrizes
-      : initialFormData.winnerPrizes,
-});
+
+    setFormData({
+      // ✅ અહીં દરેક ફીલ્ડને સ્પષ્ટ રીતે સેટ કરો જેથી ખાલી ન રહે
+      title: tournament.title || "",
+      gameType: tournament.gameType || "Solo",
+      date: dateString,
+      time: timeString,
+      entryFee: tournament.entryFee || 0,
+      slots: tournament.slots || 100,
+      prize: tournament.prize || 0,
+      rules: Array.isArray(tournament.rules) ? tournament.rules.join("\n") : "",
+      status: tournament.status || "draft",
+      isMega: tournament.isMega || false,
+      roomId: tournament.roomId || "",
+      roomPassword: tournament.roomPassword || "",
+      imageUrl: tournament.imageUrl || "",
+      winnerPrizes: tournament.winnerPrizes && tournament.winnerPrizes.length > 0
+          ? tournament.winnerPrizes
+          : initialFormData.winnerPrizes,
+    });
 
     setIsDialogOpen(true);
   };
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "number" ? (value === "" ? 0 : Number(value)) : value,
-    }));
+    if (name.startsWith("winnerPrizes")) {
+      const [_, index, key] = name.split(".");
+      const newPrizes = [...(formData.winnerPrizes || initialFormData.winnerPrizes)];
+      newPrizes[Number(index)][key as 'rank' | 'prize'] = key === 'prize' ? Number(value) : value;
+      setFormData((prev) => ({
+        ...prev,
+        winnerPrizes: newPrizes,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === "number" ? (value === "" ? 0 : Number(value)) : value,
+      }));
+    }
   };
-
+  
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.title || !formData.date || !formData.time) {
@@ -225,10 +251,15 @@ setFormData({
     setIsSubmitting(true);
 
     try {
+      const rulesArray = typeof formData.rules === 'string' 
+        ? formData.rules.split("\n").map(rule => rule.trim()).filter(rule => rule.length > 0)
+        : formData.rules;
+      
       const tournamentDataForAction: TournamentFormData = {
         ...formData,
-        isMega: formData.type === "mega",
-        type: formData.type || "regular",
+        rules: rulesArray,
+        isMega: formData.isMega,
+        type: formData.isMega ? "mega" : "regular",
         winnerPrizes: formData.winnerPrizes?.filter(
           (p) => p.rank && p.prize > 0
         ),
@@ -272,12 +303,32 @@ setFormData({
   const fetchJoinedUsers = async (tournamentId: string) => {
     setLoadingUsers(true);
     try {
-      const usersCollection = collection(db, "tournaments", tournamentId, "joinedUsers");
-      const snapshot = await getDocs(usersCollection);
-      const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setJoinedUsers(users);
+      const entriesCollection = collection(db, "entries");
+      const q = query(entriesCollection, where("tournamentId", "==", tournamentId));
+      const entriesSnapshot = await getDocs(q);
+      const entries = entriesSnapshot.docs.map(doc => doc.data());
+      
+      const userIds = entries.map(entry => entry.userId);
+      const uniqueUserIds = [...new Set(userIds)];
+      
+      const userDetails = [];
+      for(const userId of uniqueUserIds) {
+        const userDocRef = doc(db, "users", userId);
+        const userDoc = await getDoc(userDocRef);
+        if(userDoc.exists()) {
+          const userData = userDoc.data();
+          userDetails.push({ id: userId, username: userData.name, email: userData.email });
+        }
+      }
+      
+      setJoinedUsers(userDetails);
     } catch (error) {
       console.error("Error fetching users:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch joined users."
+      });
     } finally {
       setLoadingUsers(false);
     }
@@ -416,6 +467,203 @@ setFormData({
           )}
         </div>
       </main>
+      
+      {/* 🔹 Tournament Create/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTournamentId ? "Edit Tournament" : "New Tournament"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleFormSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleFormChange}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="gameType">Game Type</Label>
+                <select
+                  id="gameType"
+                  name="gameType"
+                  value={formData.gameType}
+                  onChange={handleFormChange}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="Solo">Solo</option>
+                  <option value="Duo">Duo</option>
+                  <option value="Squad">Squad</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input
+                    id="date"
+                    name="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="time">Time</Label>
+                  <Input
+                    id="time"
+                    name="time"
+                    type="time"
+                    value={formData.time}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="entryFee">Entry Fee</Label>
+                  <Input
+                    id="entryFee"
+                    name="entryFee"
+                    type="number"
+                    value={formData.entryFee}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="slots">Slots</Label>
+                  <Input
+                    id="slots"
+                    name="slots"
+                    type="number"
+                    value={formData.slots}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="grid gap-2">
+                  <Label htmlFor="prize">Prize Pool</Label>
+                  <Input
+                    id="prize"
+                    name="prize"
+                    type="number"
+                    value={formData.prize}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="imageUrl">Image URL</Label>
+                    <Input
+                      id="imageUrl"
+                      name="imageUrl"
+                      value={formData.imageUrl}
+                      onChange={handleFormChange}
+                    />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="rules">Rules (one per line)</Label>
+                <Textarea
+                  id="rules"
+                  name="rules"
+                  value={formData.rules}
+                  onChange={handleFormChange}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="roomId">Room ID</Label>
+                <Input
+                  id="roomId"
+                  name="roomId"
+                  value={formData.roomId}
+                  onChange={handleFormChange}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="roomPassword">Password</Label>
+                <Input
+                  id="roomPassword"
+                  name="roomPassword"
+                  value={formData.roomPassword}
+                  onChange={handleFormChange}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="status">Status</Label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleFormChange}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                  <option value="live">Live</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div className="grid gap-2">
+                  <Label htmlFor="isMega">Is Mega Tournament?</Label>
+                  <input
+                    type="checkbox"
+                    id="isMega"
+                    name="isMega"
+                    checked={formData.isMega}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isMega: e.target.checked }))}
+                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                  />
+                </div>
+            </div>
+            {/* Winner Prizes Section */}
+            <div>
+              <h3 className="text-lg font-semibold mt-4">Prize Distribution</h3>
+              <div className="grid gap-2">
+                {formData.winnerPrizes?.map((prize, index) => (
+                  <div key={index} className="flex gap-2 items-end">
+                    <div className="grid gap-2 w-1/3">
+                      <Label htmlFor={`winnerPrizes.${index}.rank`}>Rank</Label>
+                      <Input
+                        id={`winnerPrizes.${index}.rank`}
+                        name={`winnerPrizes.${index}.rank`}
+                        value={prize.rank}
+                        onChange={handleFormChange}
+                      />
+                    </div>
+                    <div className="grid gap-2 w-2/3">
+                      <Label htmlFor={`winnerPrizes.${index}.prize`}>Prize Amount</Label>
+                      <Input
+                        id={`winnerPrizes.${index}.prize`}
+                        name={`winnerPrizes.${index}.prize`}
+                        type="number"
+                        value={prize.prize}
+                        onChange={handleFormChange}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Spinner /> : "Save Tournament"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* 🔹 Joined Users Dialog */}
       <Dialog open={isUsersDialogOpen} onOpenChange={setIsUsersDialogOpen}>
