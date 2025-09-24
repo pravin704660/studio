@@ -231,7 +231,6 @@ export async function createOrUpdateTournament(
     }
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
 
-    // ✅ Fix for Time Zone Issue: Manually convert IST to UTC
     if (!tournamentData.date || !tournamentData.time) {
       throw new Error("Date and time are required.");
     }
@@ -249,11 +248,10 @@ export async function createOrUpdateTournament(
     // Create a Firestore Timestamp from the corrected UTC date
     const firestoreDate = Timestamp.fromDate(dateUTC);
 
-    // 🔴 Remove the extra 'time' field, as it's now part of the 'date' Timestamp
     const finalData: Omit<Tournament, "id" | "time"> = {
       title: tournamentData.title || "",
       gameType: tournamentData.gameType || "Solo",
-      date: firestoreDate, // ✅ This now contains both date and time
+      date: firestoreDate, 
       entryFee: tournamentData.entryFee || 0,
       slots: tournamentData.slots || 100,
       prize: tournamentData.prize || 0,
@@ -276,7 +274,21 @@ export async function createOrUpdateTournament(
     
     console.log("🔥 Tournament Final Data:", finalData);
     
-    // ... rest of your code to save to Firestore
+    // ✅ Firestore save logic
+    if (tournamentData.id) {
+        // Update existing tournament
+        const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
+        await setDoc(tournamentDocRef, finalData, { merge: true });
+    } else {
+        // Create new tournament with joinedUsers array
+        await addDoc(collection(db, "tournaments"), {
+            ...finalData,
+            joinedUsers: [],
+        });
+    }
+
+    // ✅ Return success object
+    return { success: true };
     
   } catch (error: any) {
     console.error("createOrUpdateTournament error:", error);
