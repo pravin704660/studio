@@ -1,4 +1,4 @@
-   "use server";
+  "use server";
 
 import {
   doc,
@@ -77,13 +77,13 @@ export async function joinTournament(
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
-      // ✅ અહીં સુધારો છે: joinedAt ફીલ્ડમાં serverTimestamp() નો ઉપયોગ
+      // ✅ આ સૌથી મહત્વનો સુધારો છે: joinedAt ફીલ્ડમાં serverTimestamp() નો ઉપયોગ
       transaction.update(tournamentDocRef, { 
           joinedUsersCount: increment(1),
           joinedUsersList: arrayUnion({
               userId: userDoc.id,
               userName: userProfile.name || "Unknown User",
-              joinedAt: serverTimestamp(),
+              joinedAt: serverTimestamp(), // અહીં serverTimestamp() સીધા વપરાય છે.
           }),
       });
 
@@ -108,7 +108,7 @@ export async function joinTournament(
         description: `Entry for ${tournament.title}`,
       });
     });
-
+    
     return { success: true };
   } catch (error: any) {
     console.error("joinTournament error:", error);
