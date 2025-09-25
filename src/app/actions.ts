@@ -103,27 +103,36 @@ export async function joinTournament(
       });
     });
 
-    // notify admins
+    // ✅ આ નવો કોડ છે જે એડમિનને નોટિફાય કરશે
     const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
     const adminsSnapshot = await getDocs(adminsQuery);
+    
+    if (!adminsSnapshot.empty) {
+        const title = "New Tournament Entry";
+        const message = `${userProfileData.name || "A user"} has joined the tournament: ${tournamentData.title}.`;
+        
+        const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
+            const admin = adminDoc.data() as UserProfile;
+            const notifRef = doc(collection(db, "users", admin.uid, "notifications"));
+            return setDoc(notifRef, {
+                id: notifRef.id,
+                userId: admin.uid,
+                title,
+                message,
+                read: false,
+                timestamp: serverTimestamp(),
+            });
+        });
 
-    const title = "New Tournament Entry";
-    const message = `${userProfileData.name || "A user"} has joined the tournament: ${tournamentData.title}.`;
-
-    const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
-      const admin = adminDoc.data() as UserProfile;
-      // return sendNotification(admin.uid, title, message);
-    });
-
-    await Promise.all(notifPromises);
-
+        await Promise.all(notifPromises);
+    }
+    
     return { success: true };
   } catch (error: any) {
     console.error("joinTournament error:", error);
     return { success: false, error: error?.message || "Failed to join tournament." };
   }
 }
-
 /**
  * submitWalletRequest
  */
