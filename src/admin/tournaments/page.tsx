@@ -147,6 +147,7 @@ export default function ManageTournamentsPage() {
 
   const handleOpenEditDialog = (tournament: Tournament) => {
     setEditingTournamentId(tournament.id);
+    console.log("Debugging data:", tournament);
 
     // ✅ ખાતરી કરો કે તારીખ અને સમય યોગ્ય રીતે ફોર્મેટ થયેલ છે
     let date = null;
