@@ -77,13 +77,12 @@ export async function joinTournament(
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
-      // ✅ અહીં સુધારો છે: joinedAt ફીલ્ડમાં serverTimestamp() નો ઉપયોગ
       transaction.update(tournamentDocRef, { 
           joinedUsersCount: increment(1),
           joinedUsersList: arrayUnion({
               userId: userDoc.id,
               userName: userProfile.name || "Unknown User",
-              joinedAt: serverTimestamp(), // અહીં serverTimestamp() સીધા વપરાય છે.
+              joinedAt: serverTimestamp(),
           }),
       });
 
@@ -187,8 +186,8 @@ export async function createOrUpdateTournament(
     } else {
         await addDoc(collection(db, "tournaments"), {
             ...finalData,
-            joinedUsers: [],
-            joinedUsersCount: 0, // ✅ આ લાઇન ઉમેરવામાં આવી છે
+            joinedUsersList: [], // ✅ આ લાઇન સુધારેલી છે
+            joinedUsersCount: 0, 
         });
     }
 
@@ -249,9 +248,6 @@ export async function updateWalletBalance(
 
       transaction.update(userDocRef, { walletBalance: newBalance }); 
       
-      // ✅ અહીંથી ખોટી લાઇન કાઢી નાખવામાં આવી છે.
-      // transaction.update(tournamentDocRef, { joinedUsersCount: increment(1) }); 
-
       const transactionDocRef = doc(collection(db, "transactions"));
       transaction.set(transactionDocRef, {
         txnId: transactionDocRef.id,
