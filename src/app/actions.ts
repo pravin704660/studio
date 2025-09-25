@@ -242,12 +242,12 @@ export async function createOrUpdateTournament(
     const dateUTC = new Date(dateIST.getTime() - (330 * 60 * 1000));
     const firestoreDate = Timestamp.fromDate(dateUTC);
 
-    // ? ??????? ???? ???? ???????? ???
-    const finalImageUrl = tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
-      ? tournamentData.imageUrl
-      : tournamentData.isMega
-      ? "/MegaTournaments.jpg" // ? ??? ????????
-      : "/RegularTournaments.jpg"; // ? ??? ????????
+    const finalImageUrl =
+      tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
+        ? tournamentData.imageUrl
+        : tournamentData.isMega
+        ? "/tournaments/MegaTournaments.jpg"
+        : "/tournaments/RegularTournaments.jpg";
 
     const finalData: Omit<Tournament, "id" | "time"> = {
       title: tournamentData.title || "",
