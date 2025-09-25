@@ -16,7 +16,7 @@ import {
   writeBatch,
   increment,
   serverTimestamp,
-  arrayUnion, 
+  arrayUnion, // ✅ arrayUnion નો ઉપયોગ કરવા માટે import કરો
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
@@ -79,7 +79,7 @@ export async function joinTournament(
       
       transaction.update(tournamentDocRef, { 
           joinedUsersCount: increment(1),
-          joinedUsersList: arrayUnion({
+          joinedUsersList: arrayUnion({ // ✅ અહીં યુઝરની વિગતો ઉમેરવામાં આવે છે
               userId: userDoc.id,
               userName: userProfile.name || "Unknown User",
               joinedAt: serverTimestamp(),
@@ -107,6 +107,10 @@ export async function joinTournament(
         description: `Entry for ${tournament.title}`,
       });
     });
+
+    // ✅ હવે એડમિનને નોટિફિકેશન મોકલવાની જરૂર નથી
+    // આ કોડ દૂર કરવામાં આવ્યો છે
+    // કારણ કે માહિતી સીધી ટુર્નામેન્ટ ડોક્યુમેન્ટમાં સેવ થાય છે
     
     return { success: true };
   } catch (error: any) {
@@ -114,7 +118,6 @@ export async function joinTournament(
     return { success: false, error: error?.message || "Failed to join tournament." };
   }
 }
-
 /**
  * getUtrFollowUpMessage - wrapper for AI flow
  */
