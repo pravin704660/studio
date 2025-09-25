@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -7,7 +6,7 @@ import type { Tournament, WinnerPrize } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { joinTournament } from "@/app/actions";
+import { joinTournament, getTournamentEntries } from "@/app/actions"; // ✅ getTournamentEntries is imported
 import { useAuth } from "@/hooks/use-auth";
 import { Spinner } from "./ui/spinner";
 import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users, Clock } from "lucide-react";
@@ -46,6 +45,9 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
   
+  // ✅ New state to track if the current user has joined this specific tournament
+  const [hasJoined, setHasJoined] = useState(false);
+
   // ✅ New state to track the timer
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
@@ -80,6 +82,17 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
     };
   }, [tournament.status, tournament.liveStartTime]);
 
+  // ✅ New useEffect to check the user's join status
+  useEffect(() => {
+    const checkJoinStatus = async () => {
+      if (user && tournament) {
+        const result = await getTournamentEntries(tournament.id, user.uid);
+        setHasJoined(result.isJoined);
+      }
+    };
+    checkJoinStatus();
+  }, [user, tournament]);
+
   const handleJoin = async () => {
     if (!user) {
       toast({
@@ -98,6 +111,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
           title: "Successfully Joined!",
           description: `You have joined the ${tournament.title} tournament.`,
         });
+        setHasJoined(true); // ✅ Update the state on successful join
       } else {
         toast({
           variant: "destructive",
@@ -280,9 +294,26 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
                 </ScrollArea>
             </DialogContent>
         </Dialog>
-        <Button className="w-full text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining || showCredentials}>
-          {isJoining ? <Spinner /> : (showCredentials ? "Joined" : "Join Now")}
-        </Button>
+        
+        {/* ✅ This is the corrected button logic */}
+        {hasJoined ? (
+            <Button className="w-full text-lg font-bold bg-green-500" disabled>
+                Joined
+            </Button>
+        ) : tournament.status === 'live' ? (
+            <Button className="w-full text-lg font-bold bg-red-500" disabled>
+                Live
+            </Button>
+        ) : tournament.status === 'completed' ? (
+            <Button className="w-full text-lg font-bold bg-gray-500" disabled>
+                Completed
+            </Button>
+        ) : (
+            <Button className="w-full text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining}>
+              {isJoining ? <Spinner /> : "Join Now"}
+            </Button>
+        )}
+
       </CardFooter>
     </Card>
   );
