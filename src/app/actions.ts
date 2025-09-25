@@ -1,16 +1,13 @@
 "use server";
 
-import { db } from "@/lib/firebase/client";
-import { adminStorage } from "@/lib/firebase/server";
 import {
   doc,
-  runTransaction,
-  collection,
-  addDoc,
-  serverTimestamp,
   setDoc,
-  deleteDoc,
+  addDoc,
+  collection,
   Timestamp,
+  deleteDoc,
+  runTransaction,
   getDoc,
   updateDoc,
   query,
@@ -18,8 +15,9 @@ import {
   getDocs,
   writeBatch,
   increment,
-  // આ બધી વસ્તુઓ એક જ લાઇનમાં Import કરી છે જેથી ભૂલ ન આવે.
+  serverTimestamp,
 } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type {
   Tournament,
@@ -28,187 +26,9 @@ import type {
   Notification,
   PlayerResult,
   AppConfig,
-} from "./lib/types";
-import { v4 as uuidv4 } from "uuid";
+} from "@/lib/types";
 
-/**
- * joinTournament
- */
-export async function joinTournament(
-  tournamentId: string,
-  userId: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const entriesRef = collection(db, "entries");
-    const q = query(
-      entriesRef,
-      where("userId", "==", userId),
-      where("tournamentId", "==", tournamentId)
-    );
-    const existingEntrySnapshot = await getDocs(q);
-    if (!existingEntrySnapshot.empty) {
-      return { success: false, error: "You have already joined this tournament." };
-    }
-
-    const userDocRef = doc(db, "users", userId);
-    const tournamentDocRef = doc(db, "tournaments", tournamentId);
-
-    const [userDoc, tournamentDoc] = await Promise.all([getDoc(userDocRef), getDoc(tournamentDocRef)]);
-
-    if (!userDoc.exists()) throw new Error("User not found.");
-    if (!tournamentDoc.exists()) throw new Error("Tournament not found.");
-
-    const userProfileData = userDoc.data() as UserProfile;
-    const tournamentData = { ...tournamentDoc.data(), id: tournamentDoc.id } as Tournament;
-
-    await runTransaction(db, async (transaction) => {
-      const freshUserDoc = await transaction.get(userDocRef);
-      const freshTournamentDoc = await transaction.get(tournamentDocRef);
-
-      if (!freshUserDoc.exists()) throw new Error("User not found.");
-      if (!freshTournamentDoc.exists()) throw new Error("Tournament not found.");
-
-      const userProfile = freshUserDoc.data() as UserProfile;
-      const tournament = freshTournamentDoc.data() as Tournament;
-
-      if (userProfile.walletBalance < tournament.entryFee) {
-        throw new Error("Insufficient wallet balance.");
-      }
-
-      const newBalance = userProfile.walletBalance - tournament.entryFee;
-      transaction.update(userDocRef, { walletBalance: newBalance });
-      
-      transaction.update(tournamentDocRef, { 
-          joinedUsersCount: increment(1) 
-      });
-
-      const entryDocRef = doc(collection(db, "entries"));
-      transaction.set(entryDocRef, {
-        entryId: entryDocRef.id,
-        tournamentId,
-        userId,
-        status: "confirmed",
-        paidAmount: tournament.entryFee,
-        createdAt: serverTimestamp(),
-      });
-
-      const transactionDocRef = doc(collection(db, "transactions"));
-      transaction.set(transactionDocRef, {
-        txnId: transactionDocRef.id,
-        userId,
-        amount: tournament.entryFee,
-        type: "debit",
-        status: "success",
-        timestamp: serverTimestamp(),
-        description: `Entry for ${tournament.title}`,
-      });
-    });
-
-    // notify admins
-    const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
-    const adminsSnapshot = await getDocs(adminsQuery);
-
-    const title = "New Tournament Entry";
-    const message = `${userProfileData.name || "A user"} has joined the tournament: ${tournamentData.title}.`;
-
-    const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
-      const admin = adminDoc.data() as UserProfile;
-      return sendNotification(admin.uid, title, message);
-    });
-
-    await Promise.all(notifPromises);
-
-    return { success: true };
-  } catch (error: any) {
-    console.error("joinTournament error:", error);
-    return { success: false, error: error?.message || "Failed to join tournament." };
-  }
-}
-
-/**
- * submitWalletRequest
- */
-export async function submitWalletRequest(
-  userId: string,
-  amount: number,
-  utr: string
-): Promise<{ success: boolean; error?: string }> {
-  if (amount <= 0 || !utr) {
-    return { success: false, error: "Invalid amount or UTR code." };
-  }
-  try {
-    const userDocRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
-      return { success: false, error: "User not found." };
-    }
-    const userData = userDoc.data() as UserProfile;
-
-    const requestColRef = collection(db, "wallet_requests");
-    const newRequestRef = doc(requestColRef);
-
-    await setDoc(newRequestRef, {
-      requestId: newRequestRef.id,
-      userId,
-      userName: userData.name || "N/A",
-      userEmail: userData.email || "N/A",
-      amount,
-      utr,
-      status: "pending",
-      timestamp: serverTimestamp(),
-    });
-
-    return { success: true };
-  } catch (error: any) {
-    console.error("submitWalletRequest error:", error);
-    return { success: false, error: "Failed to submit request." };
-  }
-}
-
-/**
- * submitWithdrawalRequest
- */
-export async function submitWithdrawalRequest(
-  userId: string,
-  amount: number,
-  upiId: string
-): Promise<{ success: boolean; error?: string }> {
-  if (amount <= 0 || !upiId) {
-    return { success: false, error: "Invalid amount or UPI ID." };
-  }
-
-  try {
-    const userDocRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
-      return { success: false, error: "User not found." };
-    }
-    const userData = userDoc.data() as UserProfile;
-
-    if (userData.walletBalance < amount) {
-      return { success: false, error: "Insufficient wallet balance." };
-    }
-
-    const requestColRef = collection(db, "withdrawal_requests");
-    const newRequestRef = doc(requestColRef);
-
-    await setDoc(newRequestRef, {
-      requestId: newRequestRef.id,
-      userId,
-      userName: userData.name || "N/A",
-      userEmail: userData.email || "N/A",
-      amount,
-      upiId,
-      status: "pending",
-      timestamp: serverTimestamp(),
-    });
-
-    return { success: true };
-  } catch (error: any) {
-    console.error("submitWithdrawalRequest error:", error);
-    return { success: false, error: "Failed to submit request." };
-  }
-}
+// ✅ અહીં તમારી બધી આયાતો એક જ જગ્યાએ છે જેથી કોઈ ભૂલ ન થાય.
 
 /**
  * getUtrFollowUpMessage - wrapper for AI flow
