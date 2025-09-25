@@ -1,5 +1,4 @@
-   
-"use server";
+   "use server";
 
 import {
   doc,
@@ -17,7 +16,7 @@ import {
   writeBatch,
   increment,
   serverTimestamp,
-  arrayUnion, // ✅ arrayUnion નો ઉપયોગ કરવા માટે import કરો
+  arrayUnion, 
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
@@ -78,9 +77,10 @@ export async function joinTournament(
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
+      // ✅ અહીં સુધારો છે: joinedAt ફીલ્ડમાં serverTimestamp() નો ઉપયોગ
       transaction.update(tournamentDocRef, { 
           joinedUsersCount: increment(1),
-          joinedUsersList: arrayUnion({ // ✅ અહીં યુઝરની વિગતો ઉમેરવામાં આવે છે
+          joinedUsersList: arrayUnion({
               userId: userDoc.id,
               userName: userProfile.name || "Unknown User",
               joinedAt: serverTimestamp(),
@@ -109,119 +109,10 @@ export async function joinTournament(
       });
     });
 
-    // ✅ હવે એડમિનને નોટિફિકેશન મોકલવાની જરૂર નથી
-    // આ કોડ દૂર કરવામાં આવ્યો છે
-    // કારણ કે માહિતી સીધી ટુર્નામેન્ટ ડોક્યુમેન્ટમાં સેવ થાય છે
-    
     return { success: true };
   } catch (error: any) {
     console.error("joinTournament error:", error);
     return { success: false, error: error?.message || "Failed to join tournament." };
-  }
-}
-
-// ✅ આ ફંક્શન હજુ પણ જરૂરી છે, તેને ફાઇલમાં રાખજો.
-export async function getTournamentEntries(
-    tournamentId: string,
-    userId: string
-): Promise<{ isJoined: boolean }> {
-  try {
-    const entriesRef = collection(db, "entries");
-    const q = query(
-      entriesRef,
-      where("userId", "==", userId),
-      where("tournamentId", "==", tournamentId)
-    );
-    const existingEntrySnapshot = await getDocs(q);
-    
-    return { isJoined: !existingEntrySnapshot.empty };
-  } catch (error) {
-    console.error("Error checking tournament entry:", error);
-    return { isJoined: false };
-  }
-}
-/**
- * submitWalletRequest
- */
-export async function submitWalletRequest(
-  userId: string,
-  amount: number,
-  utr: string
-): Promise<{ success: boolean; error?: string }> {
-  if (amount <= 0 || !utr) {
-    return { success: false, error: "Invalid amount or UTR code." };
-  }
-  try {
-    const userDocRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
-      return { success: false, error: "User not found." };
-    }
-    const userData = userDoc.data() as UserProfile;
-
-    const requestColRef = collection(db, "wallet_requests");
-    const newRequestRef = doc(requestColRef);
-
-    await setDoc(newRequestRef, {
-      requestId: newRequestRef.id,
-      userId,
-      userName: userData.name || "N/A",
-      userEmail: userData.email || "N/A",
-      amount,
-      utr,
-      status: "pending",
-      timestamp: serverTimestamp(),
-    });
-
-    return { success: true };
-  } catch (error: any) {
-    console.error("submitWalletRequest error:", error);
-    return { success: false, error: "Failed to submit request." };
-  }
-}
-
-/**
- * submitWithdrawalRequest
- */
-export async function submitWithdrawalRequest(
-  userId: string,
-  amount: number,
-  upiId: string
-): Promise<{ success: boolean; error?: string }> {
-  if (amount <= 0 || !upiId) {
-    return { success: false, error: "Invalid amount or UPI ID." };
-  }
-
-  try {
-    const userDocRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
-      return { success: false, error: "User not found." };
-    }
-    const userData = userDoc.data() as UserProfile;
-
-    if (userData.walletBalance < amount) {
-      return { success: false, error: "Insufficient wallet balance." };
-    }
-
-    const requestColRef = collection(db, "withdrawal_requests");
-    const newRequestRef = doc(requestColRef);
-
-    await setDoc(newRequestRef, {
-      requestId: newRequestRef.id,
-      userId,
-      userName: userData.name || "N/A",
-      userEmail: userData.email || "N/A",
-      amount,
-      upiId,
-      status: "pending",
-      timestamp: serverTimestamp(),
-    });
-
-    return { success: true };
-  } catch (error: any) {
-    console.error("submitWithdrawalRequest error:", error);
-    return { success: false, error: "Failed to submit request." };
   }
 }
 
