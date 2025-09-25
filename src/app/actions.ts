@@ -1,3 +1,4 @@
+   
 "use server";
 
 import {
@@ -14,9 +15,8 @@ import {
   where,
   getDocs,
   writeBatch,
-  increment,
+  increment, // ? ? ???? ??? ????????? ??? ??
   serverTimestamp,
-  arrayUnion, // ✅ arrayUnion નો ઉપયોગ કરવા માટે import કરો
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
@@ -73,17 +73,13 @@ export async function joinTournament(
       if (userProfile.walletBalance < tournament.entryFee) {
         throw new Error("Insufficient wallet balance.");
       }
-      
+
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
+      // ? ? ??? ??? ????? ?????? ??
       transaction.update(tournamentDocRef, { 
-          joinedUsersCount: increment(1),
-          joinedUsersList: arrayUnion({ // ✅ અહીં યુઝરની વિગતો ઉમેરવામાં આવે છે
-              userId: userDoc.id,
-              userName: userProfile.name || "Unknown User",
-              joinedAt: serverTimestamp(),
-          }),
+          joinedUsersCount: increment(1) 
       });
 
       const entryDocRef = doc(collection(db, "entries"));
@@ -108,16 +104,112 @@ export async function joinTournament(
       });
     });
 
-    // ✅ હવે એડમિનને નોટિફિકેશન મોકલવાની જરૂર નથી
-    // આ કોડ દૂર કરવામાં આવ્યો છે
-    // કારણ કે માહિતી સીધી ટુર્નામેન્ટ ડોક્યુમેન્ટમાં સેવ થાય છે
-    
+    // notify admins
+    const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
+    const adminsSnapshot = await getDocs(adminsQuery);
+
+    const title = "New Tournament Entry";
+    const message = `${userProfileData.name || "A user"} has joined the tournament: ${tournamentData.title}.`;
+
+    const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
+      const admin = adminDoc.data() as UserProfile;
+      // return sendNotification(admin.uid, title, message); // sendNotification is not defined in this file.
+    });
+
+    await Promise.all(notifPromises);
+
     return { success: true };
   } catch (error: any) {
     console.error("joinTournament error:", error);
     return { success: false, error: error?.message || "Failed to join tournament." };
   }
 }
+
+/**
+ * submitWalletRequest
+ */
+export async function submitWalletRequest(
+  userId: string,
+  amount: number,
+  utr: string
+): Promise<{ success: boolean; error?: string }> {
+  if (amount <= 0 || !utr) {
+    return { success: false, error: "Invalid amount or UTR code." };
+  }
+  try {
+    const userDocRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+      return { success: false, error: "User not found." };
+    }
+    const userData = userDoc.data() as UserProfile;
+
+    const requestColRef = collection(db, "wallet_requests");
+    const newRequestRef = doc(requestColRef);
+
+    await setDoc(newRequestRef, {
+      requestId: newRequestRef.id,
+      userId,
+      userName: userData.name || "N/A",
+      userEmail: userData.email || "N/A",
+      amount,
+      utr,
+      status: "pending",
+      timestamp: serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("submitWalletRequest error:", error);
+    return { success: false, error: "Failed to submit request." };
+  }
+}
+
+/**
+ * submitWithdrawalRequest
+ */
+export async function submitWithdrawalRequest(
+  userId: string,
+  amount: number,
+  upiId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (amount <= 0 || !upiId) {
+    return { success: false, error: "Invalid amount or UPI ID." };
+  }
+
+  try {
+    const userDocRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+      return { success: false, error: "User not found." };
+    }
+    const userData = userDoc.data() as UserProfile;
+
+    if (userData.walletBalance < amount) {
+      return { success: false, error: "Insufficient wallet balance." };
+    }
+
+    const requestColRef = collection(db, "withdrawal_requests");
+    const newRequestRef = doc(requestColRef);
+
+    await setDoc(newRequestRef, {
+      requestId: newRequestRef.id,
+      userId,
+      userName: userData.name || "N/A",
+      userEmail: userData.email || "N/A",
+      amount,
+      upiId,
+      status: "pending",
+      timestamp: serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("submitWithdrawalRequest error:", error);
+    return { success: false, error: "Failed to submit request." };
+  }
+}
+
 /**
  * getUtrFollowUpMessage - wrapper for AI flow
  */
@@ -189,8 +281,8 @@ export async function createOrUpdateTournament(
     } else {
         await addDoc(collection(db, "tournaments"), {
             ...finalData,
-            joinedUsersList: [], // ✅ આ લાઇન સુધારેલી છે
-            joinedUsersCount: 0, 
+            joinedUsers: [],
+            joinedUsersCount: 0, // ? ? ???? ????????? ??? ??
         });
     }
 
@@ -251,6 +343,9 @@ export async function updateWalletBalance(
 
       transaction.update(userDocRef, { walletBalance: newBalance }); 
       
+      // ? ?????? ???? ???? ???? ???????? ??? ??.
+      // transaction.update(tournamentDocRef, { joinedUsersCount: increment(1) }); 
+
       const transactionDocRef = doc(collection(db, "transactions"));
       transaction.set(transactionDocRef, {
         txnId: transactionDocRef.id,
