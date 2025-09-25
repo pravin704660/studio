@@ -6,7 +6,7 @@ import type { Tournament, WinnerPrize } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { joinTournament, getTournamentEntries } from "@/app/actions"; // ✅ getTournamentEntries is imported
+import { joinTournament, getTournamentEntries } from "@/app/actions";
 import { useAuth } from "@/hooks/use-auth";
 import { Spinner } from "./ui/spinner";
 import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users, Clock } from "lucide-react";
@@ -24,7 +24,6 @@ import { Timestamp } from "firebase/firestore";
 
 interface TournamentCardProps {
     tournament: Tournament;
-    showCredentials?: boolean;
 }
 
 const prizeIcons: { [key: string]: string } = {
@@ -44,22 +43,33 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
-  
-  // ✅ New state to track if the current user has joined this specific tournament
   const [hasJoined, setHasJoined] = useState(false);
-
-  // ✅ New state to track the timer
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+
+  // This useEffect checks the user's join status on component load
+  useEffect(() => {
+    const checkJoinStatus = async () => {
+      // ✅ Check if both user and tournament data are available before running the check
+      if (user && tournament) {
+        try {
+          const result = await getTournamentEntries(tournament.id, user.uid);
+          setHasJoined(result.isJoined);
+        } catch (error) {
+          console.error("Failed to check join status:", error);
+          setHasJoined(false); // Default to false on error
+        }
+      } else {
+        setHasJoined(false); // Default to false if no user or tournament data
+      }
+    };
+    checkJoinStatus();
+  }, [user, tournament]); // ✅ Dependencies are crucial: Re-run when user or tournament changes
 
   useEffect(() => {
     let countdownInterval: NodeJS.Timeout | null = null;
     const now = new Date().getTime();
-
-    // ✅ Calculate the end time from the fixed database timestamp
     const liveStartTime = (tournament.liveStartTime instanceof Timestamp) ? tournament.liveStartTime.toDate().getTime() : now;
     const endTime = liveStartTime + 5 * 60 * 1000;
-    
-    // ✅ This logic will be consistent across all page visits
     const initialRemaining = Math.max(0, Math.floor((endTime - now) / 1000));
     setTimeRemaining(initialRemaining);
 
@@ -81,17 +91,6 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
       if (countdownInterval) clearInterval(countdownInterval);
     };
   }, [tournament.status, tournament.liveStartTime]);
-
-  // ✅ New useEffect to check the user's join status
-  useEffect(() => {
-    const checkJoinStatus = async () => {
-      if (user && tournament) {
-        const result = await getTournamentEntries(tournament.id, user.uid);
-        setHasJoined(result.isJoined);
-      }
-    };
-    checkJoinStatus();
-  }, [user, tournament]);
 
   const handleJoin = async () => {
     if (!user) {
@@ -295,7 +294,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
             </DialogContent>
         </Dialog>
         
-        {/* ✅ This is the corrected button logic */}
+        {/* ✅ This is the corrected button logic with added checks */}
         {hasJoined ? (
             <Button className="w-full text-lg font-bold bg-green-500" disabled>
                 Joined
