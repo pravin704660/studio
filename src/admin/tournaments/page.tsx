@@ -3,62 +3,80 @@
 import { useEffect, useState } from "react";
 import {
   collection,
-  getDocs,
   query,
-  where,
-  Timestamp,
-  orderBy,
-  limit,
-  startAfter,
-  QueryDocumentSnapshot,
-  DocumentData,
+  onSnapshot,
   doc,
-  getDoc
+  deleteDoc,
+  Timestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import type { Tournament, TournamentFormData, WinnerPrize } from "@/lib/types";
-import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "next/navigation";
-import { Spinner } from "@/components/ui/spinner";
-import Link from "next/link";
-import { ArrowLeft, PlusCircle, Trash2, Pencil } from "lucide-react";
+import { firestore } from "@/lib/firebase";
+import {
+  createOrUpdateTournament,
+  deleteTournament,
+} from "@/app/actions";
+import { useToast } from "@/hooks/use-toast";
 import {
   Table,
-  TableHeader,
-  TableRow,
-  TableHead,
   TableBody,
   TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { createOrUpdateTournament, deleteTournament } from "@/app/actions";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  MinusCircle,
+  Pencil,
+  PlusCircle,
+  Trash2,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import type { Tournament, WinnerPrize } from "@/lib/types";
 
-const PAGE_SIZE = 10;
+interface FormData {
+  title: string;
+  gameType: string;
+  date: string;
+  time: string;
+  entryFee: number;
+  slots: number;
+  prize: number;
+  rules: string;
+  status: string;
+  isMega: boolean;
+  roomId: string;
+  roomPassword: string;
+  imageUrl: string;
+  winnerPrizes: WinnerPrize[];
+}
 
-const initialFormData: Omit<TournamentFormData, "id"> = {
+const initialFormData: FormData = {
   title: "",
   gameType: "Solo",
   date: "",
@@ -66,7 +84,7 @@ const initialFormData: Omit<TournamentFormData, "id"> = {
   entryFee: 0,
   slots: 100,
   prize: 0,
-  rules: [],
+  rules: "",
   status: "draft",
   isMega: false,
   roomId: "",
@@ -81,121 +99,69 @@ const initialFormData: Omit<TournamentFormData, "id"> = {
 };
 
 export default function ManageTournamentsPage() {
-  const { user, userProfile, loading: authLoading } = useAuth();
-  const router = useRouter();
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingTournamentId, setEditingTournamentId] = useState<string | null>(
+    null
+  );
   const { toast } = useToast();
 
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [hasMore, setHasMore] = useState(true);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "number" ? Number(value) : value,
+    }));
+  };
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [formData, setFormData] = useState<TournamentFormData>(
-    initialFormData as TournamentFormData
-  );
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingTournamentId, setEditingTournamentId] = useState<string | null>(null);
+  const handlePrizeChange = (index: number, field: keyof WinnerPrize, value: string) => {
+    const newPrizes = [...formData.winnerPrizes];
+    newPrizes[index][field] = field === "prize" ? parseInt(value) || 0 : value;
+    setFormData((prev) => ({
+      ...prev,
+      winnerPrizes: newPrizes,
+    }));
+  };
 
-  // 🔹 For joined users dialog
-  const [isUsersDialogOpen, setIsUsersDialogOpen] = useState(false);
-  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
-  const [joinedUsers, setJoinedUsers] = useState<any[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-
-  useEffect(() => {
-    if (!authLoading && (!user || userProfile?.role !== "admin")) {
-      router.push("/");
-    }
-  }, [user, userProfile, authLoading, router]);
-
-  const fetchTournaments = async (initial = false) => {
-    if (initial) {
-      setLoading(true);
-      setTournaments([]);
-      setLastDoc(null);
-      setHasMore(true);
-    } else {
-      setLoadingMore(true);
-    }
-
-    try {
-      const tournamentsCollection = collection(db, "tournaments");
-      let q;
-      if (lastDoc && !initial) {
-        q = query(
-          tournamentsCollection,
-          orderBy("date", "desc"),
-          startAfter(lastDoc),
-          limit(PAGE_SIZE)
-        );
-      } else {
-        q = query(
-          tournamentsCollection,
-          orderBy("date", "desc"),
-          limit(PAGE_SIZE)
-        );
-      }
-
-      const tournamentsSnapshot = await getDocs(q);
-
-      const newTournaments = tournamentsSnapshot.docs.map(
-        (doc) => ({ ...doc.data(), id: doc.id } as Tournament)
-      );
-
-      const lastVisible = tournamentsSnapshot.docs[tournamentsSnapshot.docs.length - 1];
-      setLastDoc(lastVisible);
-
-      if (newTournaments.length < PAGE_SIZE) {
-        setHasMore(false);
-      }
-
-      setTournaments((prev) => (initial ? newTournaments : [...prev, ...newTournaments]));
-    } catch (error: any) {
-      console.error("Error fetching tournaments:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to fetch tournaments. ${error.message}`,
-      });
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
+  const addPrizeField = () => {
+    const ranks = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
+    if (formData.winnerPrizes.length < ranks.length) {
+      setFormData((prev) => ({
+        ...prev,
+        winnerPrizes: [
+          ...prev.winnerPrizes,
+          { rank: ranks[prev.winnerPrizes.length], prize: 0 },
+        ],
+      }));
     }
   };
 
-  const refreshTournaments = () => {
-    fetchTournaments(true);
+  const removePrizeField = (index: number) => {
+    setFormData((prev) => {
+      const newPrizes = prev.winnerPrizes.filter((_, i) => i !== index);
+      return { ...prev, winnerPrizes: newPrizes };
+    });
   };
 
-  useEffect(() => {
-    if (userProfile?.role === "admin") {
-      refreshTournaments();
-    }
-  }, [userProfile]);
-
-  const handleOpenNewDialog = () => {
-    setEditingTournamentId(null);
-    setFormData(initialFormData as TournamentFormData);
-    setIsDialogOpen(true);
-  };
-
- const handleOpenEditDialog = (tournament: Tournament) => {
+  const handleOpenEditDialog = (tournament: Tournament) => {
     setEditingTournamentId(tournament.id);
 
     // ✅ ખાતરી કરો કે તારીખ અને સમય યોગ્ય રીતે ફોર્મેટ થયેલ છે
-    const date =
-      tournament.date instanceof Timestamp
-        ? tournament.date.toDate()
-        : new Date(tournament.date);
-
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    const dateString = `${year}-${month}-${day}`;
-    const timeString = date.toTimeString().slice(0, 5); // HH:MM ફોર્મેટ
+    let date = null;
+    let timeString = "";
+    if (tournament.date instanceof Timestamp) {
+      date = tournament.date.toDate();
+      timeString = date.toTimeString().slice(0, 5);
+    } else if (tournament.date) {
+      date = new Date(tournament.date);
+      if (!isNaN(date.getTime())) {
+        timeString = date.toTimeString().slice(0, 5);
+      }
+    }
+    
+    const dateString = date ? date.toISOString().slice(0, 10) : "";
 
     setFormData({
       // ✅ દરેક ફીલ્ડ માટે ખાલી સ્ટ્રિંગ અથવા 0 ને ડિફોલ્ટ વેલ્યુ તરીકે સેટ કરો
@@ -212,8 +178,7 @@ export default function ManageTournamentsPage() {
       roomId: tournament.roomId || "",
       roomPassword: tournament.roomPassword || "",
       imageUrl: tournament.imageUrl || "",
-      winnerPrizes:
-        Array.isArray(tournament.winnerPrizes) && tournament.winnerPrizes.length > 0
+      winnerPrizes: Array.isArray(tournament.winnerPrizes) && tournament.winnerPrizes.length > 0
           ? tournament.winnerPrizes
           : [
               { rank: "1st", prize: 0 },
@@ -225,32 +190,15 @@ export default function ManageTournamentsPage() {
 
     setIsDialogOpen(true);
   };
-
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    if (name.startsWith("winnerPrizes")) {
-      const [_, index, key] = name.split(".");
-      const newPrizes = [...(formData.winnerPrizes || initialFormData.winnerPrizes)];
-      newPrizes[Number(index)][key as 'rank' | 'prize'] = key === 'prize' ? Number(value) : value;
-      setFormData((prev) => ({
-        ...prev,
-        winnerPrizes: newPrizes,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: type === "number" ? (value === "" ? 0 : Number(value)) : value,
-      }));
-    }
-  };
   
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formData.title || !formData.date || !formData.time) {
+
+    if (!formData.title || !formData.date || !formData.time || !formData.entryFee || !formData.slots) {
       toast({
         variant: "destructive",
-        title: "Missing Fields",
-        description: "Please fill out title, date and time.",
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
       });
       return;
     }
@@ -258,448 +206,312 @@ export default function ManageTournamentsPage() {
     setIsSubmitting(true);
 
     try {
-      const rulesArray = typeof formData.rules === 'string' 
-        ? formData.rules.split("\n").map(rule => rule.trim()).filter(rule => rule.length > 0)
-        : formData.rules;
-      
-      const tournamentDataForAction: TournamentFormData = {
-        ...formData,
-        rules: rulesArray,
-        isMega: formData.isMega,
-        type: formData.isMega ? "mega" : "regular",
-        winnerPrizes: formData.winnerPrizes?.filter(
-          (p) => p.rank && p.prize > 0
-        ),
-      };
+        const rulesArray = typeof formData.rules === 'string' 
+          ? formData.rules.split("\n").map(rule => rule.trim()).filter(rule => rule.length > 0)
+          : formData.rules;
+        
+        const tournamentDataForAction = {
+          ...formData,
+          rules: rulesArray,
+          isMega: formData.isMega,
+          type: formData.isMega ? "mega" : "regular",
+          winnerPrizes: formData.winnerPrizes?.filter(
+            (p) => p.rank && p.prize > 0
+          ),
+        };
 
-      const result = editingTournamentId
-        ? await createOrUpdateTournament({
-            ...tournamentDataForAction,
-            id: editingTournamentId,
-          })
-        : await createOrUpdateTournament(tournamentDataForAction);
-
-      if (result.success) {
-        toast({ title: "Success", description: "Tournament saved successfully." });
-        setIsDialogOpen(false);
-        refreshTournaments();
-      } else {
-        throw new Error(result.error || "Failed to save tournament.");
-      }
-    } catch (error: any) {
-      console.error("Error saving tournament:", error);
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (tournamentId: string) => {
-    setIsDeleting(true);
-    const result = await deleteTournament(tournamentId);
-    if (result.success) {
-      toast({ title: "Success", description: "Tournament deleted successfully." });
-      refreshTournaments();
-    } else {
-      toast({ variant: "destructive", title: "Error", description: result.error });
-    }
-    setIsDeleting(false);
-  };
-
-  // 🔹 Fetch joined users
-  const fetchJoinedUsers = async (tournamentId: string) => {
-    setLoadingUsers(true);
-    try {
-      const entriesCollection = collection(db, "entries");
-      const q = query(entriesCollection, where("tournamentId", "==", tournamentId));
-      const entriesSnapshot = await getDocs(q);
-      const entries = entriesSnapshot.docs.map(doc => doc.data());
-      
-      const userIds = entries.map(entry => entry.userId);
-      const uniqueUserIds = [...new Set(userIds)];
-      
-      const userDetails = [];
-      for(const userId of uniqueUserIds) {
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await getDoc(userDocRef);
-        if(userDoc.exists()) {
-          const userData = userDoc.data();
-          userDetails.push({ id: userId, username: userData.name, email: userData.email });
+        const result = editingTournamentId
+          ? await createOrUpdateTournament({
+              ...tournamentDataForAction,
+              id: editingTournamentId,
+            })
+          : await createOrUpdateTournament(tournamentDataForAction);
+        
+        if (result && result.success) {
+          toast({ title: "Success", description: "Tournament saved successfully." });
+          setIsDialogOpen(false);
+        } else {
+          throw new Error(result?.error || "Failed to save tournament.");
         }
-      }
-      
-      setJoinedUsers(userDetails);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch joined users."
-      });
+    } catch (error: any) {
+        console.error("Error saving tournament:", error);
+        toast({
+            variant: "destructive",
+            title: "Error creating tournament",
+            description: error.message,
+        });
     } finally {
-      setLoadingUsers(false);
+        setIsSubmitting(false);
+    }
+};
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this tournament?")) {
+      try {
+        await deleteDoc(doc(firestore, "tournaments", id));
+        toast({ title: "Success", description: "Tournament deleted successfully." });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not delete tournament.",
+        });
+      }
     }
   };
 
-  const getDisplayDate = (date: any) => {
-    if (!date) return "N/A";
-    if (date instanceof Timestamp) {
-      return date.toDate().toLocaleDateString();
-    }
-    if (date instanceof Date) {
-      return date.toLocaleDateString();
-    }
-    const parsedDate = new Date(date);
-    if (!isNaN(parsedDate.getTime())) {
-      return parsedDate.toLocaleDateString();
-    }
-    return "Invalid Date";
-  };
+  useEffect(() => {
+    const q = query(collection(firestore, "tournaments"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const tournamentsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Tournament[];
+      setTournaments(tournamentsData);
+    });
 
-  if (authLoading || userProfile?.role !== "admin") {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+    return () => unsubscribe();
+  }, []);
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingTournamentId(null);
+    setFormData(initialFormData);
+  };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <Link href="/admin" className="text-sm font-medium text-primary hover:underline">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <h1 className="text-2xl font-bold">Manage Tournaments</h1>
+    <main className="container mx-auto p-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Manage Tournaments</CardTitle>
+            <CardDescription>
+              Create, edit, and delete tournaments.
+            </CardDescription>
           </div>
-          <Button onClick={handleOpenNewDialog}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Tournament
-          </Button>
-        </div>
-      </header>
-      <main className="flex-1 p-4 md:p-8">
-        <div className="container mx-auto">
-          {loading ? (
-            <div className="flex justify-center">
-              <Spinner size="lg" />
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Entry Fee</TableHead>
-                    <TableHead>Prize</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tournaments.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell className="font-medium">{t.title}</TableCell>
-                      <TableCell>{getDisplayDate(t.date)}</TableCell>
-                      <TableCell>₹{t.entryFee}</TableCell>
-                      <TableCell>₹{t.prize}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={t.status === "published" ? "default" : "secondary"}
-                        >
-                          {t.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleOpenEditDialog(t)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedTournamentId(t.id);
-                            fetchJoinedUsers(t.id);
-                            setIsUsersDialogOpen(true);
-                          }}
-                        >
-                          View Users
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              disabled={isDeleting}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the
-                                tournament and remove all related data.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(t.id)}>
-                                {isDeleting ? <Spinner /> : "Delete"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {hasMore && (
-                <div className="mt-6 flex justify-center">
-                  <Button onClick={() => fetchTournaments()} disabled={loadingMore}>
-                    {loadingMore ? <Spinner /> : "Load More"}
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </main>
-      
-      {/* 🔹 Tournament Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingTournamentId ? "Edit Tournament" : "New Tournament"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleFormSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="title">Title</Label>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleCloseDialog}>
+                {editingTournamentId ? "Edit Tournament" : "New Tournament"}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] overflow-y-auto max-h-[90vh]">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingTournamentId ? "Edit Tournament" : "New Tournament"}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleFormSubmit} className="space-y-4">
                 <Input
-                  id="title"
+                  label="Title"
                   name="title"
                   value={formData.title}
-                  onChange={handleFormChange}
+                  onChange={handleInputChange}
                   required
                 />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="gameType">Game Type</Label>
-                <select
-                  id="gameType"
+                <Select
                   name="gameType"
                   value={formData.gameType}
-                  onChange={handleFormChange}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, gameType: value }))}
                 >
-                  <option value="Solo">Solo</option>
-                  <option value="Duo">Duo</option>
-                  <option value="Squad">Squad</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="date">Date</Label>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Game Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="Solo">Solo</SelectItem>
+                      <SelectItem value="Duo">Duo</SelectItem>
+                      <SelectItem value="Squad">Squad</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="grid grid-cols-2 gap-4">
                   <Input
-                    id="date"
-                    name="date"
+                    label="Date"
                     type="date"
+                    name="date"
                     value={formData.date}
-                    onChange={handleFormChange}
+                    onChange={handleInputChange}
                     required
                   />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="time">Time</Label>
                   <Input
-                    id="time"
-                    name="time"
+                    label="Time"
                     type="time"
+                    name="time"
                     value={formData.time}
-                    onChange={handleFormChange}
+                    onChange={handleInputChange}
                     required
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="entryFee">Entry Fee</Label>
+                <div className="grid grid-cols-2 gap-4">
                   <Input
-                    id="entryFee"
+                    label="Entry Fee"
+                    type="number"
                     name="entryFee"
-                    type="number"
                     value={formData.entryFee}
-                    onChange={handleFormChange}
+                    onChange={handleInputChange}
                     required
                   />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="slots">Slots</Label>
                   <Input
-                    id="slots"
+                    label="Slots"
+                    type="number"
                     name="slots"
-                    type="number"
                     value={formData.slots}
-                    onChange={handleFormChange}
+                    onChange={handleInputChange}
                     required
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="grid gap-2">
-                  <Label htmlFor="prize">Prize Pool</Label>
-                  <Input
-                    id="prize"
-                    name="prize"
-                    type="number"
-                    value={formData.prize}
-                    onChange={handleFormChange}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="imageUrl">Image URL</Label>
-                    <Input
-                      id="imageUrl"
-                      name="imageUrl"
-                      value={formData.imageUrl}
-                      onChange={handleFormChange}
-                    />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="rules">Rules (one per line)</Label>
-                <Textarea
-                  id="rules"
-                  name="rules"
-                  value={formData.rules}
-                  onChange={handleFormChange}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="roomId">Room ID</Label>
                 <Input
-                  id="roomId"
+                  label="Prize Pool"
+                  type="number"
+                  name="prize"
+                  value={formData.prize}
+                  onChange={handleInputChange}
+                  required
+                />
+                <Input
+                  label="Room ID"
                   name="roomId"
                   value={formData.roomId}
-                  onChange={handleFormChange}
+                  onChange={handleInputChange}
                 />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="roomPassword">Password</Label>
                 <Input
-                  id="roomPassword"
+                  label="Room Password"
                   name="roomPassword"
                   value={formData.roomPassword}
-                  onChange={handleFormChange}
+                  onChange={handleInputChange}
                 />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
-                <select
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleFormChange}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                  <option value="live">Live</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-              <div className="grid gap-2">
-                  <Label htmlFor="isMega">Is Mega Tournament?</Label>
-                  <input
-                    type="checkbox"
+                <div className="flex items-center space-x-2">
+                  <Switch
                     id="isMega"
-                    name="isMega"
                     checked={formData.isMega}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isMega: e.target.checked }))}
-                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isMega: checked }))}
                   />
+                  <Label htmlFor="isMega">Mega Tournament</Label>
                 </div>
-            </div>
-            {/* Winner Prizes Section */}
-            <div>
-              <h3 className="text-lg font-semibold mt-4">Prize Distribution</h3>
-              <div className="grid gap-2">
-                {formData.winnerPrizes?.map((prize, index) => (
-                  <div key={index} className="flex gap-2 items-end">
-                    <div className="grid gap-2 w-1/3">
-                      <Label htmlFor={`winnerPrizes.${index}.rank`}>Rank</Label>
+                <div className="flex items-center space-x-2">
+                  <Label>Status</Label>
+                  <Select
+                    name="status"
+                    value={formData.status}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="live">Live</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Winner Prizes</Label>
+                  {formData.winnerPrizes.map((prize, index) => (
+                    <div key={index} className="flex items-center gap-2 mt-2">
                       <Input
-                        id={`winnerPrizes.${index}.rank`}
-                        name={`winnerPrizes.${index}.rank`}
+                        name={`rank-${index}`}
                         value={prize.rank}
-                        onChange={handleFormChange}
+                        onChange={(e) => handlePrizeChange(index, "rank", e.target.value)}
+                        placeholder="Rank (e.g., 1st)"
                       />
-                    </div>
-                    <div className="grid gap-2 w-2/3">
-                      <Label htmlFor={`winnerPrizes.${index}.prize`}>Prize Amount</Label>
                       <Input
-                        id={`winnerPrizes.${index}.prize`}
-                        name={`winnerPrizes.${index}.prize`}
+                        name={`prize-${index}`}
                         type="number"
                         value={prize.prize}
-                        onChange={handleFormChange}
+                        onChange={(e) => handlePrizeChange(index, "prize", e.target.value)}
+                        placeholder="Prize Amount"
                       />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removePrizeField(index)}
+                      >
+                        <MinusCircle className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <Spinner /> : "Save Tournament"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* 🔹 Joined Users Dialog */}
-      <Dialog open={isUsersDialogOpen} onOpenChange={setIsUsersDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              Joined Users (
-              {joinedUsers.length}/
-              {tournaments.find(x => x.id === selectedTournamentId)?.slots || 0} slots)
-            </DialogTitle>
-          </DialogHeader>
-          {loadingUsers ? (
-            <Spinner size="lg" />
-          ) : (
-            <div className="max-h-80 overflow-y-auto space-y-2">
-              {joinedUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No users joined yet.</p>
-              ) : (
-                joinedUsers.map((user, idx) => (
-                  <div key={user.id} className="flex justify-between border p-2 rounded">
-                    <span>{idx + 1}. {user.username || user.id}</span>
-                    <span className="text-xs text-muted-foreground">{user.email || ""}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 w-full"
+                    onClick={addPrizeField}
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Prize
+                  </Button>
+                </div>
+                <Input
+                  label="Image URL"
+                  name="imageUrl"
+                  value={formData.imageUrl}
+                  onChange={handleInputChange}
+                  placeholder="Paste image URL here"
+                />
+                <Textarea
+                  label="Rules (one per line)"
+                  name="rules"
+                  value={formData.rules}
+                  onChange={handleInputChange}
+                  rows={5}
+                />
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? <Spinner /> : editingTournamentId ? "Update Tournament" : "Create Tournament"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Entry Fee</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tournaments.map((tournament) => (
+                <TableRow key={tournament.id}>
+                  <TableCell className="font-medium">{tournament.title}</TableCell>
+                  <TableCell>{tournament.isMega ? "Mega" : "Regular"}</TableCell>
+                  <TableCell>
+                    {tournament.date instanceof Timestamp
+                      ? tournament.date.toDate().toLocaleDateString()
+                      : "N/A"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={tournament.status === "live" ? "success" : "default"}>
+                      {tournament.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>₹{tournament.entryFee}</TableCell>
+                  <TableCell className="space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenEditDialog(tournament)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(tournament.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </main>
   );
 }
