@@ -223,9 +223,13 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
   }
 }
 
+import { doc, setDoc, addDoc, collection, Timestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase/client"; // ✅ તમારી Firebase import લાઇન અહીં ઉમેરો
+import type { Tournament, TournamentFormData } from "@/lib/types";
+
 /**
  * createOrUpdateTournament
- * Accepts FormData (file upload optional) and saves to firestore.
+ * Accepts FormData and saves or updates to Firestore.
  */
 export async function createOrUpdateTournament(
   formData: FormData
@@ -245,8 +249,7 @@ export async function createOrUpdateTournament(
     const [hour, minute] = tournamentData.time.split(':').map(Number);
     
     const dateIST = new Date(year, month - 1, day, hour, minute);
-    const dateUTC = new Date(dateIST.getTime() - (330 * 60 * 1000));
-    const firestoreDate = Timestamp.fromDate(dateUTC);
+    const firestoreDate = Timestamp.fromDate(dateIST);
 
     const finalImageUrl = tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
       ? tournamentData.imageUrl
@@ -281,18 +284,22 @@ export async function createOrUpdateTournament(
         await addDoc(collection(db, "tournaments"), {
             ...finalData,
             joinedUsers: [],
-            joinedUsersCount: 0, // ✅ આ લાઇન ઉમેરી છે
+            joinedUsersCount: 0,
         });
     }
 
+    // ✅ આ લાઇન ઉમેરો
     return { success: true };
 
   } catch (error: any) {
     console.error("createOrUpdateTournament error:", error);
+    // ✅ આ લાઇન ઉમેરો
     return { success: false, error: error?.message || "Failed to save tournament." };
   }
 }
 
+// ✅ ખાતરી કરો કે તમારી પાસે આ `import` લાઇન છે:
+// import { db } from "@/lib/firebase/client";
 /**
  * deleteTournament
  */
