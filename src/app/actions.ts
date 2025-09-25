@@ -326,6 +326,337 @@ export async function updateWalletBalance(
 
       const userProfile = userDoc.data() as UserProfile;
       let newBalance: number;
+"use server";
+
+import {
+  doc,
+  setDoc,
+  addDoc,
+  collection,
+  Timestamp,
+  deleteDoc,
+  runTransaction,
+  getDoc,
+  updateDoc,
+  query,
+  where,
+  getDocs,
+  writeBatch,
+  increment, // ✅ આ લાઇન હવે ઉમેરવામાં આવી છે
+  serverTimestamp,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
+import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
+import type {
+  Tournament,
+  UserProfile,
+  TournamentFormData,
+  Notification,
+  PlayerResult,
+  AppConfig,
+} from "./lib/types";
+import { v4 as uuidv4 } from "uuid";
+
+/**
+ * joinTournament
+ */
+export async function joinTournament(
+  tournamentId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const entriesRef = collection(db, "entries");
+    const q = query(
+      entriesRef,
+      where("userId", "==", userId),
+      where("tournamentId", "==", tournamentId)
+    );
+    const existingEntrySnapshot = await getDocs(q);
+    if (!existingEntrySnapshot.empty) {
+      return { success: false, error: "You have already joined this tournament." };
+    }
+
+    const userDocRef = doc(db, "users", userId);
+    const tournamentDocRef = doc(db, "tournaments", tournamentId);
+
+    const [userDoc, tournamentDoc] = await Promise.all([getDoc(userDocRef), getDoc(tournamentDocRef)]);
+
+    if (!userDoc.exists()) throw new Error("User not found.");
+    if (!tournamentDoc.exists()) throw new Error("Tournament not found.");
+
+    const userProfileData = userDoc.data() as UserProfile;
+    const tournamentData = { ...tournamentDoc.data(), id: tournamentDoc.id } as Tournament;
+
+    await runTransaction(db, async (transaction) => {
+      const freshUserDoc = await transaction.get(userDocRef);
+      const freshTournamentDoc = await transaction.get(tournamentDocRef);
+
+      if (!freshUserDoc.exists()) throw new Error("User not found.");
+      if (!freshTournamentDoc.exists()) throw new Error("Tournament not found.");
+
+      const userProfile = freshUserDoc.data() as UserProfile;
+      const tournament = freshTournamentDoc.data() as Tournament;
+
+      if (userProfile.walletBalance < tournament.entryFee) {
+        throw new Error("Insufficient wallet balance.");
+      }
+
+      const newBalance = userProfile.walletBalance - tournament.entryFee;
+      transaction.update(userDocRef, { walletBalance: newBalance });
+      
+      // ✅ આ કોડ હવે યોગ્ય જગ્યાએ છે
+      transaction.update(tournamentDocRef, { 
+          joinedUsersCount: increment(1) 
+      });
+
+      const entryDocRef = doc(collection(db, "entries"));
+      transaction.set(entryDocRef, {
+        entryId: entryDocRef.id,
+        tournamentId,
+        userId,
+        status: "confirmed",
+        paidAmount: tournament.entryFee,
+        createdAt: serverTimestamp(),
+      });
+
+      const transactionDocRef = doc(collection(db, "transactions"));
+      transaction.set(transactionDocRef, {
+        txnId: transactionDocRef.id,
+        userId,
+        amount: tournament.entryFee,
+        type: "debit",
+        status: "success",
+        timestamp: serverTimestamp(),
+        description: `Entry for ${tournament.title}`,
+      });
+    });
+
+    // notify admins
+    const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
+    const adminsSnapshot = await getDocs(adminsQuery);
+
+    const title = "New Tournament Entry";
+    const message = `${userProfileData.name || "A user"} has joined the tournament: ${tournamentData.title}.`;
+
+    const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
+      const admin = adminDoc.data() as UserProfile;
+      // return sendNotification(admin.uid, title, message); // sendNotification is not defined in this file.
+    });
+
+    await Promise.all(notifPromises);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("joinTournament error:", error);
+    return { success: false, error: error?.message || "Failed to join tournament." };
+  }
+}
+
+/**
+ * submitWalletRequest
+ */
+export async function submitWalletRequest(
+  userId: string,
+  amount: number,
+  utr: string
+): Promise<{ success: boolean; error?: string }> {
+  if (amount <= 0 || !utr) {
+    return { success: false, error: "Invalid amount or UTR code." };
+  }
+  try {
+    const userDocRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+      return { success: false, error: "User not found." };
+    }
+    const userData = userDoc.data() as UserProfile;
+
+    const requestColRef = collection(db, "wallet_requests");
+    const newRequestRef = doc(requestColRef);
+
+    await setDoc(newRequestRef, {
+      requestId: newRequestRef.id,
+      userId,
+      userName: userData.name || "N/A",
+      userEmail: userData.email || "N/A",
+      amount,
+      utr,
+      status: "pending",
+      timestamp: serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("submitWalletRequest error:", error);
+    return { success: false, error: "Failed to submit request." };
+  }
+}
+
+/**
+ * submitWithdrawalRequest
+ */
+export async function submitWithdrawalRequest(
+  userId: string,
+  amount: number,
+  upiId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (amount <= 0 || !upiId) {
+    return { success: false, error: "Invalid amount or UPI ID." };
+  }
+
+  try {
+    const userDocRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+      return { success: false, error: "User not found." };
+    }
+    const userData = userDoc.data() as UserProfile;
+
+    if (userData.walletBalance < amount) {
+      return { success: false, error: "Insufficient wallet balance." };
+    }
+
+    const requestColRef = collection(db, "withdrawal_requests");
+    const newRequestRef = doc(requestColRef);
+
+    await setDoc(newRequestRef, {
+      requestId: newRequestRef.id,
+      userId,
+      userName: userData.name || "N/A",
+      userEmail: userData.email || "N/A",
+      amount,
+      upiId,
+      status: "pending",
+      timestamp: serverTimestamp(),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("submitWithdrawalRequest error:", error);
+    return { success: false, error: "Failed to submit request." };
+  }
+}
+
+/**
+ * getUtrFollowUpMessage - wrapper for AI flow
+ */
+export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<string | null> {
+  try {
+    const result = await utrFollowUp(input);
+    return result.followUpMessage;
+  } catch (error) {
+    console.error("getUtrFollowUpMessage error:", error);
+    return "We've noticed your payment request is still pending. Please contact support for assistance.";
+  }
+}
+
+/**
+ * createOrUpdateTournament
+ */
+export async function createOrUpdateTournament(
+  formData: FormData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tournamentDataString = formData.get("tournamentData") as string;
+    if (!tournamentDataString) {
+      throw new Error("Tournament data is missing.");
+    }
+    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
+
+    if (!tournamentData.date || !tournamentData.time) {
+      throw new Error("Date and time are required.");
+    }
+
+    const [year, month, day] = tournamentData.date.split("-").map(Number);
+    const [hour, minute] = tournamentData.time.split(":").map(Number);
+    
+    // ✅ અહીં IST સમયને સીધો Timestamp માં કન્વર્ટ કરવામાં આવે છે
+    const dateIST = new Date(year, month - 1, day, hour, minute);
+    const firestoreDate = Timestamp.fromDate(dateIST);
+
+    const finalImageUrl =
+      tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
+        ? tournamentData.imageUrl
+        : tournamentData.isMega
+        ? "/tournaments/MegaTournaments.jpg"
+        : "/tournaments/RegularTournaments.jpg";
+
+    const finalData: Omit<Tournament, "id" | "time"> = {
+      title: tournamentData.title || "",
+      gameType: tournamentData.gameType || "Solo",
+      date: firestoreDate,
+      entryFee: tournamentData.entryFee || 0,
+      slots: tournamentData.slots || 100,
+      prize: tournamentData.prize || 0,
+      rules: Array.isArray(tournamentData.rules)
+        ? tournamentData.rules
+        : String(tournamentData.rules || "")
+            .split("\n")
+            .filter((r) => r.trim() !== ""),
+      status: tournamentData.status || "draft",
+      isMega: tournamentData.isMega || false,
+      imageUrl: finalImageUrl,
+      roomId: tournamentData.roomId || "",
+      roomPassword: tournamentData.roomPassword || "",
+      winnerPrizes: tournamentData.winnerPrizes || [],
+    };
+    
+    if (tournamentData.id) {
+        const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
+        await setDoc(tournamentDocRef, finalData, { merge: true });
+    } else {
+        await addDoc(collection(db, "tournaments"), {
+            ...finalData,
+            joinedUsers: [],
+            joinedUsersCount: 0, // ✅ આ લાઇન ઉમેરવામાં આવી છે
+        });
+    }
+
+    return { success: true };
+    
+  } catch (error: any) {
+    console.error("createOrUpdateTournament error:", error);
+    return { success: false, error: error?.message || "Failed to save tournament." };
+  }
+}
+
+/**
+ * deleteTournament
+ */
+export async function deleteTournament(tournamentId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tournamentDocRef = doc(db, "tournaments", tournamentId);
+    await deleteDoc(tournamentDocRef);
+    return { success: true };
+  } catch (error: any) {
+    console.error("deleteTournament error:", error);
+    return { success: false, error: "Failed to delete tournament." };
+  }
+}
+
+/**
+ * updateWalletBalance
+ */
+export async function updateWalletBalance(
+  userId: string,
+  amount: number,
+  type: "credit" | "debit"
+): Promise<{ success: boolean; error?: string }> {
+  if (amount <= 0) {
+    return { success: false, error: "Amount must be positive." };
+  }
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const userDocRef = doc(db, "users", userId);
+      const userDoc = await transaction.get(userDocRef);
+
+      if (!userDoc.exists()) {
+        throw new Error("User not found.");
+      }
+
+      const userProfile = userDoc.data() as UserProfile;
+      let newBalance: number;
 
       if (type === "credit") {
         newBalance = userProfile.walletBalance + amount;
@@ -337,9 +668,9 @@ export async function updateWalletBalance(
       }
 
       transaction.update(userDocRef, { walletBalance: newBalance }); 
-      transaction.update(tournamentDocRef, { 
-    joinedUsersCount: increment(1) 
-});
+      
+      // ✅ અહીંથી ખોટી લાઇન કાઢી નાખવામાં આવી છે.
+      // transaction.update(tournamentDocRef, { joinedUsersCount: increment(1) }); 
 
       const transactionDocRef = doc(collection(db, "transactions"));
       transaction.set(transactionDocRef, {
@@ -359,6 +690,7 @@ export async function updateWalletBalance(
     return { success: false, error: error?.message || "Failed to update balance." };
   }
 }
+
 
 /**
  * sendNotification
