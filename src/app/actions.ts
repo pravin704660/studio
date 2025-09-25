@@ -17,7 +17,8 @@ import {
   where,
   getDocs,
   writeBatch,
-  increment, // ✅ આ લાઇન ઉમેરી છે
+  increment,
+  // આ બધી વસ્તુઓ એક જ લાઇનમાં Import કરી છે જેથી ભૂલ ન આવે.
 } from "firebase/firestore";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
 import type {
@@ -77,7 +78,6 @@ export async function joinTournament(
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
-      // ✅ આ લાઇન ઉમેરી છે
       transaction.update(tournamentDocRef, { 
           joinedUsersCount: increment(1) 
       });
@@ -223,10 +223,6 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
   }
 }
 
-import { doc, setDoc, addDoc, collection, Timestamp, getDocs, query, where, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase/client"; // ✅ તમારી Firebase import લાઇન અહીં ઉમેરો
-import type { Tournament, TournamentFormData } from "@/lib/types";
-
 /**
  * createOrUpdateTournament
  * Accepts FormData and saves or updates to Firestore.
@@ -245,17 +241,18 @@ export async function createOrUpdateTournament(
       throw new Error("Date and time are required.");
     }
 
-    const [year, month, day] = tournamentData.date.split('-').map(Number);
-    const [hour, minute] = tournamentData.time.split(':').map(Number);
-    
+    const [year, month, day] = tournamentData.date.split("-").map(Number);
+    const [hour, minute] = tournamentData.time.split(":").map(Number);
+
     const dateIST = new Date(year, month - 1, day, hour, minute);
     const firestoreDate = Timestamp.fromDate(dateIST);
 
-    const finalImageUrl = tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
-      ? tournamentData.imageUrl
-      : tournamentData.isMega
-      ? "/tournaments/MegaTournaments.jpg"
-      : "/tournaments/RegularTournaments.jpg";
+    const finalImageUrl =
+      tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
+        ? tournamentData.imageUrl
+        : tournamentData.isMega
+        ? "/tournaments/MegaTournaments.jpg"
+        : "/tournaments/RegularTournaments.jpg";
 
     const finalData: Omit<Tournament, "id" | "time"> = {
       title: tournamentData.title || "",
@@ -276,23 +273,25 @@ export async function createOrUpdateTournament(
       roomPassword: tournamentData.roomPassword || "",
       winnerPrizes: tournamentData.winnerPrizes || [],
     };
-    
+
     if (tournamentData.id) {
-        const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
-        await setDoc(tournamentDocRef, finalData, { merge: true });
+      const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
+      await setDoc(tournamentDocRef, finalData, { merge: true });
     } else {
-        await addDoc(collection(db, "tournaments"), {
-            ...finalData,
-            joinedUsers: [],
-            joinedUsersCount: 0,
-        });
+      await addDoc(collection(db, "tournaments"), {
+        ...finalData,
+        joinedUsers: [],
+        joinedUsersCount: 0,
+      });
     }
 
     return { success: true };
-
   } catch (error: any) {
     console.error("createOrUpdateTournament error:", error);
-    return { success: false, error: error?.message || "Failed to save tournament." };
+    return {
+      success: false,
+      error: error?.message || "Failed to save tournament.",
+    };
   }
 }
 
@@ -300,7 +299,9 @@ export async function createOrUpdateTournament(
  * deleteTournament
  * Deletes a tournament from Firestore by its ID.
  */
-export async function deleteTournament(tournamentId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteTournament(
+  tournamentId: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     const tournamentDocRef = doc(db, "tournaments", tournamentId);
     await deleteDoc(tournamentDocRef);
