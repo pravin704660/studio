@@ -46,24 +46,23 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
   const [hasJoined, setHasJoined] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
-  // This useEffect checks the user's join status on component load
+  // ✅ આ useEffect પેજ લોડ થતાની સાથે જ યુઝરનું "Joined" સ્ટેટસ તપાસશે
   useEffect(() => {
     const checkJoinStatus = async () => {
-      // ✅ Check if both user and tournament data are available before running the check
       if (user && tournament) {
         try {
           const result = await getTournamentEntries(tournament.id, user.uid);
           setHasJoined(result.isJoined);
         } catch (error) {
           console.error("Failed to check join status:", error);
-          setHasJoined(false); // Default to false on error
+          setHasJoined(false);
         }
       } else {
-        setHasJoined(false); // Default to false if no user or tournament data
+        setHasJoined(false);
       }
     };
     checkJoinStatus();
-  }, [user, tournament]); // ✅ Dependencies are crucial: Re-run when user or tournament changes
+  }, [user, tournament]);
 
   useEffect(() => {
     let countdownInterval: NodeJS.Timeout | null = null;
@@ -110,7 +109,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
           title: "Successfully Joined!",
           description: `You have joined the ${tournament.title} tournament.`,
         });
-        setHasJoined(true); // ✅ Update the state on successful join
+        setHasJoined(true);
       } else {
         toast({
           variant: "destructive",
@@ -294,7 +293,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
             </DialogContent>
         </Dialog>
         
-        {/* ✅ This is the corrected button logic with added checks */}
+        {/* ✅ આ સુધારેલું બટન લોજિક છે */}
         {hasJoined ? (
             <Button className="w-full text-lg font-bold bg-green-500" disabled>
                 Joined
