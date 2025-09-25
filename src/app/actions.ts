@@ -237,15 +237,11 @@ export async function createOrUpdateTournament(
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
 
     if (!tournamentData.date || !tournamentData.time) {
-      throw new Error("Date and time are required.");
-    }
+  throw new Error("Date and time are required.");
+}
 
-    const [year, month, day] = tournamentData.date.split("-").map(Number);
-    const [hour, minute] = tournamentData.time.split(":").map(Number);
-    
-    // ✅ અહીં IST સમયને સીધો Timestamp માં કન્વર્ટ કરવામાં આવે છે
-    const dateIST = new Date(year, month - 1, day, hour, minute);
-    const firestoreDate = Timestamp.fromDate(dateIST);
+    const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
+    const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
 
     const finalImageUrl =
       tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
