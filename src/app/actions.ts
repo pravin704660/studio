@@ -336,7 +336,10 @@ export async function updateWalletBalance(
         newBalance = userProfile.walletBalance - amount;
       }
 
-      transaction.update(userDocRef, { walletBalance: newBalance });
+      transaction.update(userDocRef, { walletBalance: newBalance }); 
+      transaction.update(tournamentDocRef, { 
+    joinedUsersCount: increment(1) 
+});
 
       const transactionDocRef = doc(collection(db, "transactions"));
       transaction.set(transactionDocRef, {
