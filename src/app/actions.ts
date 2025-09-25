@@ -1,4 +1,4 @@
-  "use server";
+"use server";
 
 import {
   doc,
@@ -77,7 +77,7 @@ export async function joinTournament(
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
-      // ✅ આ સૌથી મહત્વનો સુધારો છે: joinedAt ફીલ્ડમાં serverTimestamp() નો ઉપયોગ
+      // ✅ અહીં સુધારો છે: joinedAt ફીલ્ડમાં serverTimestamp() નો ઉપયોગ
       transaction.update(tournamentDocRef, { 
           joinedUsersCount: increment(1),
           joinedUsersList: arrayUnion({
