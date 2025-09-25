@@ -15,7 +15,7 @@ import {
   where,
   getDocs,
   writeBatch,
-  increment, // ✅ આ લાઇન હવે ઉમેરવામાં આવી છે
+  increment,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -73,11 +73,10 @@ export async function joinTournament(
       if (userProfile.walletBalance < tournament.entryFee) {
         throw new Error("Insufficient wallet balance.");
       }
-
+      
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
-      // ✅ આ કોડ હવે યોગ્ય જગ્યાએ છે
       transaction.update(tournamentDocRef, { 
           joinedUsersCount: increment(1) 
       });
@@ -113,7 +112,7 @@ export async function joinTournament(
 
     const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
       const admin = adminDoc.data() as UserProfile;
-      // return sendNotification(admin.uid, title, message); // sendNotification is not defined in this file.
+      // return sendNotification(admin.uid, title, message);
     });
 
     await Promise.all(notifPromises);
