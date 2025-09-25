@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -23,7 +22,7 @@ export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [pubgId, setPubgId] = useState("");
+  const [pubgUsername, setPubgUsername] = useState(""); // ✅ અહીં pubgId ને બદલીને pubgUsername કરવામાં આવ્યું છે
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -46,7 +45,7 @@ export default function AuthForm() {
             photoUrl: user.photoURL,
             walletBalance: 0,
             role: 'user',
-            pubgId: pubgId,
+            pubgUsername: pubgUsername, // ✅ અહીં pubgId ને બદલીને pubgUsername કરવામાં આવ્યું છે
         });
       }
     } catch (error: any) {
@@ -77,7 +76,7 @@ export default function AuthForm() {
                 photoUrl: user.photoURL,
                 walletBalance: 0,
                 role: 'user',
-                pubgId: '',
+                pubgUsername: '', // ✅ અહીં pubgId ને બદલીને pubgUsername કરવામાં આવ્યું છે
             });
         }
     } catch (error: any) {
@@ -146,14 +145,14 @@ export default function AuthForm() {
             </div>
             {!isLogin && (
                 <div className="space-y-2">
-                    <Label htmlFor="pubgId">PUBG ID</Label>
+                    <Label htmlFor="pubgUsername">PUBG Username</Label> {/* ✅ અહીં pubgId ને બદલીને pubgUsername કરવામાં આવ્યું છે */}
                     <Input 
-                        id="pubgId" 
+                        id="pubgUsername" // ✅ અહીં pubgId ને બદલીને pubgUsername કરવામાં આવ્યું છે
                         type="text" 
-                        placeholder="Your PUBG ID"
+                        placeholder="Your PUBG Username" // ✅ અહીં પણ ટેક્સ્ટ બદલવામાં આવ્યો છે
                         required 
-                        value={pubgId}
-                        onChange={(e) => setPubgId(e.target.value)}
+                        value={pubgUsername}
+                        onChange={(e) => setPubgUsername(e.target.value)}
                     />
                 </div>
             )}
