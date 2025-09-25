@@ -237,11 +237,16 @@ export async function createOrUpdateTournament(
     const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
 
     if (!tournamentData.date || !tournamentData.time) {
-  throw new Error("Date and time are required.");
-}
+      throw new Error("Date and time are required.");
+    }
 
-    const dateTimeString = `${tournamentData.date}T${tournamentData.time}`;
-    const firestoreDate = Timestamp.fromDate(new Date(dateTimeString));
+    const [year, month, day] = tournamentData.date.split('-').map(Number);
+    const [hour, minute] = tournamentData.time.split(':').map(Number);
+    
+    const dateIST = new Date(year, month - 1, day, hour, minute);
+    const dateUTC = new Date(dateIST.getTime() - (330 * 60 * 1000));
+    const firestoreDate = Timestamp.fromDate(dateUTC);
+
 
     const finalImageUrl =
       tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
