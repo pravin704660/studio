@@ -223,7 +223,7 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
   }
 }
 
-import { doc, setDoc, addDoc, collection, Timestamp } from "firebase/firestore";
+import { doc, setDoc, addDoc, collection, Timestamp, getDocs, query, where, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase/client"; // ✅ તમારી Firebase import લાઇન અહીં ઉમેરો
 import type { Tournament, TournamentFormData } from "@/lib/types";
 
@@ -288,20 +288,17 @@ export async function createOrUpdateTournament(
         });
     }
 
-    // ✅ આ લાઇન ઉમેરો
     return { success: true };
 
   } catch (error: any) {
     console.error("createOrUpdateTournament error:", error);
-    // ✅ આ લાઇન ઉમેરો
     return { success: false, error: error?.message || "Failed to save tournament." };
   }
 }
 
-// ✅ ખાતરી કરો કે તમારી પાસે આ `import` લાઇન છે:
-// import { db } from "@/lib/firebase/client";
 /**
  * deleteTournament
+ * Deletes a tournament from Firestore by its ID.
  */
 export async function deleteTournament(tournamentId: string): Promise<{ success: boolean; error?: string }> {
   try {
@@ -313,7 +310,6 @@ export async function deleteTournament(tournamentId: string): Promise<{ success:
     return { success: false, error: "Failed to delete tournament." };
   }
 }
-
 /**
  * updateWalletBalance
  */
