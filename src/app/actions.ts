@@ -1,3 +1,4 @@
+   
 "use server";
 
 import {
@@ -16,8 +17,6 @@ import {
   writeBatch,
   increment,
   serverTimestamp,
-  // ✅ arrayUnion ફરજિયાતપણે અહીં import કરવું પડશે
-  arrayUnion, 
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
@@ -31,12 +30,8 @@ import type {
 } from "./lib/types";
 import { v4 as uuidv4 } from "uuid";
 
-// ===================================================
-//              USER / JOIN ACTIONS
-// ===================================================
-
 /**
- * joinTournament - યુઝરને ટુર્નામેન્ટમાં જોઈન કરવા માટેનો ફંક્શન
+ * joinTournament
  */
 export async function joinTournament(
   tournamentId: string,
@@ -82,14 +77,8 @@ export async function joinTournament(
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
-      // ✅ FIX: joinedUsersList માં યુઝરને arrayUnion થી ઉમેરો
       transaction.update(tournamentDocRef, { 
-          joinedUsersCount: increment(1),
-          joinedUsersList: arrayUnion({ // <-- આનાથી યુઝરની એન્ટ્રી ટુર્નામેન્ટ લિસ્ટમાં થશે
-              userId: userDoc.id,
-              userName: userProfile.name || "Unknown User",
-              joinedAt: serverTimestamp(),
-          }),
+          joinedUsersCount: increment(1) 
       });
 
       const entryDocRef = doc(collection(db, "entries"));
@@ -114,9 +103,29 @@ export async function joinTournament(
       });
     });
 
-    // એડમિન નોટિફિકેશન લોજિકને સરળ બનાવવામાં આવ્યું છે,
-    // પરંતુ જ્યાં સુધી તમે ખાતરી ન કરો કે તે કામ કરી રહ્યું છે, ત્યાં સુધી તેને દૂર કરવું સલાહભર્યું છે.
-    // હાલમાં, તેને દૂર કરવામાં આવ્યું છે કારણ કે તે ટ્રાન્ઝેક્શનનો ભાગ નહોતું.
+    // ? ? ??? ??? ?? ?? ??????? ??????? ????
+    const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
+    const adminsSnapshot = await getDocs(adminsQuery);
+    
+    if (!adminsSnapshot.empty) {
+        const title = "New Tournament Entry";
+        const message = `${userProfileData.name || "A user"} has joined the tournament: ${tournamentData.title}.`;
+        
+        const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
+            const admin = adminDoc.data() as UserProfile;
+            const notifRef = doc(collection(db, "users", admin.uid, "notifications"));
+            return setDoc(notifRef, {
+                id: notifRef.id,
+                userId: admin.uid,
+                title,
+                message,
+                read: false,
+                timestamp: serverTimestamp(),
+            });
+        });
+
+        await Promise.all(notifPromises);
+    }
     
     return { success: true };
   } catch (error: any) {
@@ -124,127 +133,6 @@ export async function joinTournament(
     return { success: false, error: error?.message || "Failed to join tournament." };
   }
 }
-
-/**
- * getTournamentJoinStatus - UI માં 'Join' ને બદલે 'Joined' બતાવવા માટે આ ફંક્શન વાપરો
- */
-export async function getTournamentJoinStatus(
-    tournamentId: string,
-    userId: string
-): Promise<{ isJoined: boolean }> {
-  try {
-    const entriesRef = collection(db, "entries");
-    const q = query(
-      entriesRef,
-      where("userId", "==", userId),
-      where("tournamentId", "==", tournamentId)
-    );
-    const existingEntrySnapshot = await getDocs(q);
-    
-    // જો entries કલેક્શનમાં યુઝરની એન્ટ્રી મળી જાય, તો તે joined છે.
-    return { isJoined: !existingEntrySnapshot.empty };
-  } catch (error) {
-    console.error("Error checking tournament join status:", error);
-    return { isJoined: false };
-  }
-}
-
-// ===================================================
-//              ADMIN / TOURNAMENT ACTIONS
-// ===================================================
-
-/**
- * createOrUpdateTournament - ટૂર્નામેન્ટ બનાવવામાં કે અપડેટ કરવામાં આવતી સમસ્યા અહીં ઠીક કરાઈ છે.
- */
-export async function createOrUpdateTournament(
-  formData: FormData
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const tournamentDataString = formData.get("tournamentData") as string;
-    if (!tournamentDataString) {
-      throw new Error("Tournament data is missing.");
-    }
-    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
-
-    if (!tournamentData.date || !tournamentData.time) {
-      throw new Error("Date and time are required.");
-    }
-
-    const [year, month, day] = tournamentData.date.split('-').map(Number);
-    const [hour, minute] = tournamentData.time.split(':').map(Number);
-    
-    const dateIST = new Date(year, month - 1, day, hour, minute);
-    const dateUTC = new Date(dateIST.getTime() - (330 * 60 * 1000));
-    const firestoreDate = Timestamp.fromDate(dateUTC);
-
-
-    const finalImageUrl =
-      tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
-        ? tournamentData.imageUrl
-        : tournamentData.isMega
-        ? "/tournaments/MegaTournaments.jpg"
-        : "/tournaments/RegularTournaments.jpg";
-
-    const finalData: Omit<Tournament, "id" | "time"> = {
-      title: tournamentData.title || "",
-      gameType: tournamentData.gameType || "Solo",
-      date: firestoreDate,
-      entryFee: tournamentData.entryFee || 0,
-      slots: tournamentData.slots || 100,
-      prize: tournamentData.prize || 0,
-      rules: Array.isArray(tournamentData.rules)
-        ? tournamentData.rules
-        : String(tournamentData.rules || "")
-            .split("\n")
-            .filter((r) => r.trim() !== ""),
-      status: tournamentData.status || "draft",
-      isMega: tournamentData.isMega || false,
-      imageUrl: finalImageUrl,
-      roomId: tournamentData.roomId || "",
-      roomPassword: tournamentData.roomPassword || "",
-      winnerPrizes: tournamentData.winnerPrizes || [],
-    };
-    
-    if (tournamentData.id) {
-        const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
-        await setDoc(tournamentDocRef, finalData, { merge: true });
-    } else {
-        await addDoc(collection(db, "tournaments"), {
-            ...finalData,
-            joinedUsersList: [], // ✅ FIX: joinTournament સાથે મેચ કરવા માટે નામ સુધાર્યું
-            joinedUsersCount: 0, 
-        });
-    }
-
-    return { success: true };
-    
-  } catch (error: any) {
-    console.error("createOrUpdateTournament error:", error);
-    return { success: false, error: error?.message || "Failed to save tournament." };
-  }
-}
-
-/**
- * deleteTournament
- */
-export async function deleteTournament(tournamentId: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const tournamentDocRef = doc(db, "tournaments", tournamentId);
-    await deleteDoc(tournamentDocRef);
-    return { success: true };
-  } catch (error: any) {
-    console.error("deleteTournament error:", error);
-    return { success: false, error: "Failed to delete tournament." };
-  }
-}
-
-// ... (અન્ય તમામ ફંક્શન્સ જેમ કે updateWalletBalance, sendNotification, વગેરે અહીં નીચે એ જ રીતે ચાલુ રહેશે) ...
-
-// **ધ્યાન આપો:** બાકીના બધા ફંક્શન્સ જે તમે આપ્યા છે (જેમ કે submitWalletRequest, declareResult, વગેરે) તે ઉપરના નવા કોડમાં એ જ રીતે નીચે ઉમેરી દેવાના છે. મેં અહીં માત્ર મુખ્ય ભૂલવાળા ફંક્શન્સ (joinTournament અને createOrUpdateTournament) ને સુધાર્યા છે.
-
-// ===================================================
-//          WALLETS / NOTIFICATIONS / UTILS
-// ===================================================
 
 /**
  * submitWalletRequest
@@ -345,6 +233,91 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 }
 
 /**
+ * createOrUpdateTournament
+ */
+export async function createOrUpdateTournament(
+  formData: FormData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tournamentDataString = formData.get("tournamentData") as string;
+    if (!tournamentDataString) {
+      throw new Error("Tournament data is missing.");
+    }
+    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
+
+    if (!tournamentData.date || !tournamentData.time) {
+      throw new Error("Date and time are required.");
+    }
+
+    const [year, month, day] = tournamentData.date.split('-').map(Number);
+    const [hour, minute] = tournamentData.time.split(':').map(Number);
+    
+    const dateIST = new Date(year, month - 1, day, hour, minute);
+    const dateUTC = new Date(dateIST.getTime() - (330 * 60 * 1000));
+    const firestoreDate = Timestamp.fromDate(dateUTC);
+
+
+    const finalImageUrl =
+      tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
+        ? tournamentData.imageUrl
+        : tournamentData.isMega
+        ? "/tournaments/MegaTournaments.jpg"
+        : "/tournaments/RegularTournaments.jpg";
+
+    const finalData: Omit<Tournament, "id" | "time"> = {
+      title: tournamentData.title || "",
+      gameType: tournamentData.gameType || "Solo",
+      date: firestoreDate,
+      entryFee: tournamentData.entryFee || 0,
+      slots: tournamentData.slots || 100,
+      prize: tournamentData.prize || 0,
+      rules: Array.isArray(tournamentData.rules)
+        ? tournamentData.rules
+        : String(tournamentData.rules || "")
+            .split("\n")
+            .filter((r) => r.trim() !== ""),
+      status: tournamentData.status || "draft",
+      isMega: tournamentData.isMega || false,
+      imageUrl: finalImageUrl,
+      roomId: tournamentData.roomId || "",
+      roomPassword: tournamentData.roomPassword || "",
+      winnerPrizes: tournamentData.winnerPrizes || [],
+    };
+    
+    if (tournamentData.id) {
+        const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
+        await setDoc(tournamentDocRef, finalData, { merge: true });
+    } else {
+        await addDoc(collection(db, "tournaments"), {
+            ...finalData,
+            joinedUsers: [],
+            joinedUsersCount: 0, // ? ? ???? ????????? ??? ??
+        });
+    }
+
+    return { success: true };
+    
+  } catch (error: any) {
+    console.error("createOrUpdateTournament error:", error);
+    return { success: false, error: error?.message || "Failed to save tournament." };
+  }
+}
+
+/**
+ * deleteTournament
+ */
+export async function deleteTournament(tournamentId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tournamentDocRef = doc(db, "tournaments", tournamentId);
+    await deleteDoc(tournamentDocRef);
+    return { success: true };
+  } catch (error: any) {
+    console.error("deleteTournament error:", error);
+    return { success: false, error: "Failed to delete tournament." };
+  }
+}
+
+/**
  * updateWalletBalance
  */
 export async function updateWalletBalance(
@@ -379,6 +352,9 @@ export async function updateWalletBalance(
 
       transaction.update(userDocRef, { walletBalance: newBalance }); 
       
+      // ? ?????? ???? ???? ???? ???????? ??? ??.
+      // transaction.update(tournamentDocRef, { joinedUsersCount: increment(1) }); 
+
       const transactionDocRef = doc(collection(db, "transactions"));
       transaction.set(transactionDocRef, {
         txnId: transactionDocRef.id,
@@ -397,6 +373,7 @@ export async function updateWalletBalance(
     return { success: false, error: error?.message || "Failed to update balance." };
   }
 }
+
 
 /**
  * sendNotification
