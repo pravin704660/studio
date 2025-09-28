@@ -17,7 +17,6 @@ import {
   writeBatch,
   increment,
   serverTimestamp,
-  arrayUnion, // ✅ arrayUnion નો ઉપયોગ કરવા માટે import કરો
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
@@ -79,12 +78,7 @@ export async function joinTournament(
       transaction.update(userDocRef, { walletBalance: newBalance });
       
       transaction.update(tournamentDocRef, { 
-          joinedUsersCount: increment(1),
-          joinedUsersList: arrayUnion({ // ✅ અહીં યુઝરની વિગતો ઉમેરવામાં આવે છે
-              userId: userDoc.id,
-              userName: userProfile.name || "Unknown User",
-              joinedAt: serverTimestamp(),
-          }),
+          joinedUsersCount: increment(1) 
       });
 
       const entryDocRef = doc(collection(db, "entries"));
@@ -109,9 +103,29 @@ export async function joinTournament(
       });
     });
 
-    // ✅ હવે એડમિનને નોટિફિકેશન મોકલવાની જરૂર નથી
-    // આ કોડ દૂર કરવામાં આવ્યો છે
-    // કારણ કે માહિતી સીધી ટુર્નામેન્ટ ડોક્યુમેન્ટમાં સેવ થાય છે
+    // ✅ આ નવો કોડ છે જે એડમિનને નોટિફાય કરશે
+    const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
+    const adminsSnapshot = await getDocs(adminsQuery);
+    
+    if (!adminsSnapshot.empty) {
+        const title = "New Tournament Entry";
+        const message = `${userProfileData.name || "A user"} has joined the tournament: ${tournamentData.title}.`;
+        
+        const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
+            const admin = adminDoc.data() as UserProfile;
+            const notifRef = doc(collection(db, "users", admin.uid, "notifications"));
+            return setDoc(notifRef, {
+                id: notifRef.id,
+                userId: admin.uid,
+                title,
+                message,
+                read: false,
+                timestamp: serverTimestamp(),
+            });
+        });
+
+        await Promise.all(notifPromises);
+    }
     
     return { success: true };
   } catch (error: any) {
@@ -119,31 +133,6 @@ export async function joinTournament(
     return { success: false, error: error?.message || "Failed to join tournament." };
   }
 }
-
-// ✅ આ ફંક્શન હજુ પણ જરૂરી છે, તેને ફાઇલમાં રાખજો.
-export async function getTournamentEntries(
-    tournamentId: string,
-    userId: string
-): Promise<{ isJoined: boolean }> {
-  try {
-    const entriesRef = collection(db, "entries");
-    const q = query(
-      entriesRef,
-      where("userId", "==", userId),
-      where("tournamentId", "==", tournamentId)
-    );
-    const existingEntrySnapshot = await getDocs(q);
-    
-    return { isJoined: !existingEntrySnapshot.empty };
-  } catch (error) {
-    console.error("Error checking tournament entry:", error);
-    return { isJoined: false };
-  }
-}
-    await Promise.all(notifPromises);
-
-   
-    
 
 /**
  * submitWalletRequest
