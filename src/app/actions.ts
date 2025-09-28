@@ -143,9 +143,7 @@ export async function getTournamentEntries(
     await Promise.all(notifPromises);
 
    
-    return { success: false, error: error?.message || "Failed to join tournament." };
-  }
-}
+    
 
 /**
  * submitWalletRequest
