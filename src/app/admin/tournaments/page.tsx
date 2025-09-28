@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -128,42 +129,57 @@ export default function ManageTournamentsPage() {
       refreshTournaments();
     }
   }, [userProfile]);
-
+  
   const handleOpenNewDialog = () => {
     setEditingTournamentId(null);
     setFormData(initialFormData as TournamentFormData & { date: string });
     setImageFile(null);
     setIsDialogOpen(true);
   };
-
+  
   const handleOpenEditDialog = (tournament: Tournament) => {
     setEditingTournamentId(tournament.id);
-    const handleOpenEditDialog = (tournament: Tournament) => {
-  setEditingTournamentId(tournament.id);
 
-  // Firestore Timestamp → JS Date
-  const date =
-    tournament.date instanceof Timestamp
-      ? tournament.date.toDate()
-      : new Date(tournament.date);
+    const date =
+      tournament.date instanceof Timestamp
+        ? tournament.date.toDate()
+        : new Date(tournament.date);
 
-  // ✅ Proper strings banavo
-  const dateString = date.toISOString().split("T")[0]; // yyyy-mm-dd
-  const timeString = date.toTimeString().slice(0, 5);  // HH:MM
+    if (isNaN(date.getTime())) {
+      console.error("Invalid date object for tournament:", tournament.title);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not parse the tournament date. Please update it manually.",
+      });
+      setFormData({
+        ...tournament,
+        date: "",
+        time: "",
+        rules: Array.isArray(tournament.rules) ? tournament.rules.join("\n") : tournament.rules,
+        winnerPrizes: tournament.winnerPrizes && tournament.winnerPrizes.length > 0
+          ? tournament.winnerPrizes
+          : initialFormData.winnerPrizes,
+      });
+      setIsDialogOpen(true);
+      return;
+    }
 
-  setFormData({
-    ...tournament,
-    date: dateString,       // 👈 હવે khali નહિ રહે
-    time: timeString,       // 👈 time field prefill થશે
-    rules: Array.isArray(tournament.rules)
-      ? tournament.rules.join("\n")
-      : tournament.rules,
-    winnerPrizes:
-      tournament.winnerPrizes && tournament.winnerPrizes.length > 0
-        ? tournament.winnerPrizes
-        : initialFormData.winnerPrizes,
-  });
-};
+    const dateString = date.toISOString().split("T")[0];
+    const timeString = date.toTimeString().slice(0, 5);
+    
+    setFormData({
+      ...tournament,
+      date: dateString,
+      time: timeString,
+      rules: Array.isArray(tournament.rules)
+        ? tournament.rules.join("\n")
+        : tournament.rules,
+      winnerPrizes:
+        tournament.winnerPrizes && tournament.winnerPrizes.length > 0
+          ? tournament.winnerPrizes
+          : initialFormData.winnerPrizes,
+    });
     setImageFile(null);
     setIsDialogOpen(true);
   };
