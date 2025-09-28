@@ -15,8 +15,9 @@ import {
   where,
   getDocs,
   writeBatch,
-  increment, // ? ? ???? ??? ????????? ??? ??
+  increment,
   serverTimestamp,
+  arrayUnion, // ✅ arrayUnion નો ઉપયોગ કરવા માટે import કરો
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
@@ -73,13 +74,17 @@ export async function joinTournament(
       if (userProfile.walletBalance < tournament.entryFee) {
         throw new Error("Insufficient wallet balance.");
       }
-
+      
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
-      // ? ? ??? ??? ????? ?????? ??
       transaction.update(tournamentDocRef, { 
-          joinedUsersCount: increment(1) 
+          joinedUsersCount: increment(1),
+          joinedUsersList: arrayUnion({ // ✅ અહીં યુઝરની વિગતો ઉમેરવામાં આવે છે
+              userId: userDoc.id,
+              userName: userProfile.name || "Unknown User",
+              joinedAt: serverTimestamp(),
+          }),
       });
 
       const entryDocRef = doc(collection(db, "entries"));
@@ -104,18 +109,37 @@ export async function joinTournament(
       });
     });
 
-    // notify admins
-    const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
-    const adminsSnapshot = await getDocs(adminsQuery);
+    // ✅ હવે એડમિનને નોટિફિકેશન મોકલવાની જરૂર નથી
+    // આ કોડ દૂર કરવામાં આવ્યો છે
+    // કારણ કે માહિતી સીધી ટુર્નામેન્ટ ડોક્યુમેન્ટમાં સેવ થાય છે
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("joinTournament error:", error);
+    return { success: false, error: error?.message || "Failed to join tournament." };
+  }
+}
 
-    const title = "New Tournament Entry";
-    const message = `${userProfileData.name || "A user"} has joined the tournament: ${tournamentData.title}.`;
-
-    const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
-      const admin = adminDoc.data() as UserProfile;
-      // return sendNotification(admin.uid, title, message); // sendNotification is not defined in this file.
-    });
-
+// ✅ આ ફંક્શન હજુ પણ જરૂરી છે, તેને ફાઇલમાં રાખજો.
+export async function getTournamentEntries(
+    tournamentId: string,
+    userId: string
+): Promise<{ isJoined: boolean }> {
+  try {
+    const entriesRef = collection(db, "entries");
+    const q = query(
+      entriesRef,
+      where("userId", "==", userId),
+      where("tournamentId", "==", tournamentId)
+    );
+    const existingEntrySnapshot = await getDocs(q);
+    
+    return { isJoined: !existingEntrySnapshot.empty };
+  } catch (error) {
+    console.error("Error checking tournament entry:", error);
+    return { isJoined: false };
+  }
+}
     await Promise.all(notifPromises);
 
     return { success: true };
