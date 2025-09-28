@@ -1,4 +1,4 @@
-   
+
 "use server";
 
 import {
@@ -17,6 +17,7 @@ import {
   writeBatch,
   increment,
   serverTimestamp,
+  arrayUnion, 
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { utrFollowUp, type UTRFollowUpInput } from "@/ai/flows/utr-follow-up";
@@ -30,14 +31,187 @@ import type {
 } from "./lib/types";
 import { v4 as uuidv4 } from "uuid";
 
+// ===================================================
+//              ADMIN / TOURNAMENT ACTIONS
+// ===================================================
+
 /**
- * joinTournament
+ * createOrUpdateTournament - ટૂર્નામેન્ટ બનાવવામાં કે અપડેટ કરવામાં આવતી સમસ્યા અહીં ઠીક કરાઈ છે.
+ */
+export async function createOrUpdateTournament(
+  formData: FormData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tournamentDataString = formData.get("tournamentData") as string;
+    if (!tournamentDataString) {
+      throw new Error("Tournament data is missing.");
+    }
+    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
+
+    if (!tournamentData.date || !tournamentData.time) {
+      throw new Error("Date and time are required.");
+    }
+
+    const [year, month, day] = tournamentData.date.split('-').map(Number);
+    const [hour, minute] = tournamentData.time.split(':').map(Number);
+    
+    // ભારતીય સમય (IST) ને UTC માં કન્વર્ટ કરવું
+    const dateIST = new Date(year, month - 1, day, hour, minute);
+    // IST is UTC+5:30. Subtracting 330 minutes to get UTC.
+    const dateUTC = new Date(dateIST.getTime() - (330 * 60 * 1000)); 
+    const firestoreDate = Timestamp.fromDate(dateUTC);
+
+    // અહીં ઇમેજ અપલોડ મેનેજમેન્ટ લોજિક ખૂટે છે.
+    // હાલમાં, અમે માત્ર ડિફોલ્ટ URL નો ઉપયોગ કરીશું.
+    const finalImageUrl =
+      tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
+        ? tournamentData.imageUrl
+        : tournamentData.isMega
+        ? "/tournaments/MegaTournaments.jpg"
+        : "/tournaments/RegularTournaments.jpg";
+
+    const finalData: Omit<Tournament, "id" | "time"> = {
+      title: tournamentData.title || "",
+      gameType: tournamentData.gameType || "Solo",
+      date: firestoreDate,
+      entryFee: tournamentData.entryFee || 0,
+      slots: tournamentData.slots || 100,
+      prize: tournamentData.prize || 0,
+      rules: Array.isArray(tournamentData.rules)
+        ? tournamentData.rules
+        : String(tournamentData.rules || "")
+            .split("\n")
+            .filter((r) => r.trim() !== ""),
+      status: tournamentData.status || "draft",
+      isMega: tournamentData.isMega || false,
+      imageUrl: finalImageUrl,
+      roomId: tournamentData.roomId || "",
+      roomPassword: tournamentData.roomPassword || "",
+      winnerPrizes: tournamentData.winnerPrizes || [],
+    };
+    
+    if (tournamentData.id) {
+        // અપડેટ કરો
+        const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
+        await setDoc(tournamentDocRef, finalData, { merge: true });
+    } else {
+        // નવું બનાવો
+        await addDoc(collection(db, "tournaments"), {
+            ...finalData,
+            joinedUsersList: [], // ✅ Fix: joinTournament સાથે મેચ કરવા માટે નામ સુધાર્યું
+            joinedUsersCount: 0, 
+        });
+    }
+
+    return { success: true };
+    
+  } catch (error: any) {
+    console.error("createOrUpdateTournament error:", error);
+    return { success: false, error: error?.message || "Failed to save tournament." };
+  }
+}
+
+/**
+ * deleteTournament
+ */
+export async function deleteTournament(tournamentId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const tournamentDocRef = doc(db, "tournaments", tournamentId);
+    await deleteDoc(tournamentDocRef);
+    return { success: true };
+  } catch (error: any) {
+    console.error("deleteTournament error:", error);
+    return { success: false, error: "Failed to delete tournament." };
+  }
+}
+
+/**
+ * declareResult
+ */
+export async function declareResult(
+  tournamentId: string,
+  tournamentTitle: string,
+  isMega: boolean,
+  results: PlayerResult[]
+): Promise<{ success: boolean; error?: string }> {
+  if (!tournamentId || results.length === 0) {
+    return { success: false, error: "Missing tournament ID or results." };
+  }
+
+  try {
+    const batch = writeBatch(db);
+    const resultDocRef = doc(db, "results", tournamentId);
+
+    const sortedResults = results
+      .sort((a, b) => b.points - a.points)
+      .map((r, index) => ({ ...r, rank: index + 1 }));
+
+    batch.set(resultDocRef, {
+      tournamentId,
+      tournamentTitle,
+      isMega,
+      results: sortedResults,
+      declaredAt: serverTimestamp(),
+    });
+
+    for (const result of sortedResults) {
+      const title = `Result Declared: ${tournamentTitle}`;
+      let message = `Congratulations! You secured rank #${result.rank} with ${result.points} points.`;
+
+      if (result.prize && result.prize > 0) {
+        message += ` You've won ?${result.prize}!`;
+        const userDocRef = doc(db, "users", result.userId);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const userProfile = userDoc.data() as UserProfile;
+          const newBalance = (userProfile.walletBalance || 0) + result.prize;
+          batch.update(userDocRef, { walletBalance: newBalance });
+
+          const transactionDocRef = doc(collection(db, "transactions"));
+          batch.set(transactionDocRef, {
+            txnId: transactionDocRef.id,
+            userId: result.userId,
+            amount: result.prize,
+            type: "credit",
+            status: "success",
+            timestamp: serverTimestamp(),
+            description: `Prize money for ${tournamentTitle}`,
+          });
+        }
+      }
+
+      const notificationDocRef = doc(collection(db, "notifications"));
+      batch.set(notificationDocRef, {
+        userId: result.userId,
+        title,
+        message,
+        timestamp: serverTimestamp(),
+        isRead: false,
+      });
+    }
+
+    await batch.commit();
+    return { success: true };
+  } catch (error: any) {
+    console.error("declareResult error:", error);
+    return { success: false, error: "Failed to declare result." };
+  }
+}
+
+
+// ===================================================
+//              USER / JOIN ACTIONS
+// ===================================================
+
+/**
+ * joinTournament - યુઝરને ટુર્નામેન્ટમાં જોઈન કરવા માટેનો કોડ
  */
 export async function joinTournament(
   tournamentId: string,
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // 1. ચેક કરો કે યુઝર પહેલેથી જોડાયેલ છે કે નહીં
     const entriesRef = collection(db, "entries");
     const q = query(
       entriesRef,
@@ -75,12 +249,21 @@ export async function joinTournament(
       }
       
       const newBalance = userProfile.walletBalance - tournament.entryFee;
+      
+      // 2. યુઝરના બેલેન્સમાંથી એન્ટ્રી ફી કાપો
       transaction.update(userDocRef, { walletBalance: newBalance });
       
+      // 3. ટુર્નામેન્ટ ડોક્યુમેન્ટમાં યુઝરની એન્ટ્રી ઉમેરો
       transaction.update(tournamentDocRef, { 
-          joinedUsersCount: increment(1) 
+          joinedUsersCount: increment(1),
+          joinedUsersList: arrayUnion({ 
+              userId: userDoc.id,
+              userName: userProfile.name || "Unknown User",
+              joinedAt: serverTimestamp(),
+          }),
       });
 
+      // 4. entries કલેક્શનમાં એન્ટ્રી રેકોર્ડ કરો (જોઇન્ડ સ્ટેટ માટે આ જરૂરી છે)
       const entryDocRef = doc(collection(db, "entries"));
       transaction.set(entryDocRef, {
         entryId: entryDocRef.id,
@@ -91,6 +274,7 @@ export async function joinTournament(
         createdAt: serverTimestamp(),
       });
 
+      // 5. transactions કલેક્શનમાં ડેબિટ રેકોર્ડ કરો
       const transactionDocRef = doc(collection(db, "transactions"));
       transaction.set(transactionDocRef, {
         txnId: transactionDocRef.id,
@@ -102,30 +286,6 @@ export async function joinTournament(
         description: `Entry for ${tournament.title}`,
       });
     });
-
-    // ✅ આ નવો કોડ છે જે એડમિનને નોટિફાય કરશે
-    const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
-    const adminsSnapshot = await getDocs(adminsQuery);
-    
-    if (!adminsSnapshot.empty) {
-        const title = "New Tournament Entry";
-        const message = `${userProfileData.name || "A user"} has joined the tournament: ${tournamentData.title}.`;
-        
-        const notifPromises = adminsSnapshot.docs.map((adminDoc) => {
-            const admin = adminDoc.data() as UserProfile;
-            const notifRef = doc(collection(db, "users", admin.uid, "notifications"));
-            return setDoc(notifRef, {
-                id: notifRef.id,
-                userId: admin.uid,
-                title,
-                message,
-                read: false,
-                timestamp: serverTimestamp(),
-            });
-        });
-
-        await Promise.all(notifPromises);
-    }
     
     return { success: true };
   } catch (error: any) {
@@ -134,90 +294,34 @@ export async function joinTournament(
   }
 }
 
+
 /**
- * submitWalletRequest
+ * getTournamentJoinStatus - યુઝર UI માં 'Join' ને બદલે 'Joined' બતાવવા માટે આ ફંક્શન વાપરો
  */
-export async function submitWalletRequest(
-  userId: string,
-  amount: number,
-  utr: string
-): Promise<{ success: boolean; error?: string }> {
-  if (amount <= 0 || !utr) {
-    return { success: false, error: "Invalid amount or UTR code." };
-  }
+export async function getTournamentJoinStatus(
+    tournamentId: string,
+    userId: string
+): Promise<{ isJoined: boolean }> {
   try {
-    const userDocRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
-      return { success: false, error: "User not found." };
-    }
-    const userData = userDoc.data() as UserProfile;
-
-    const requestColRef = collection(db, "wallet_requests");
-    const newRequestRef = doc(requestColRef);
-
-    await setDoc(newRequestRef, {
-      requestId: newRequestRef.id,
-      userId,
-      userName: userData.name || "N/A",
-      userEmail: userData.email || "N/A",
-      amount,
-      utr,
-      status: "pending",
-      timestamp: serverTimestamp(),
-    });
-
-    return { success: true };
-  } catch (error: any) {
-    console.error("submitWalletRequest error:", error);
-    return { success: false, error: "Failed to submit request." };
+    const entriesRef = collection(db, "entries");
+    const q = query(
+      entriesRef,
+      where("userId", "==", userId),
+      where("tournamentId", "==", tournamentId)
+    );
+    const existingEntrySnapshot = await getDocs(q);
+    
+    // જો entries કલેક્શનમાં યુઝરની એન્ટ્રી મળી જાય, તો તે joined છે.
+    return { isJoined: !existingEntrySnapshot.empty };
+  } catch (error) {
+    console.error("Error checking tournament join status:", error);
+    return { isJoined: false };
   }
 }
 
-/**
- * submitWithdrawalRequest
- */
-export async function submitWithdrawalRequest(
-  userId: string,
-  amount: number,
-  upiId: string
-): Promise<{ success: boolean; error?: string }> {
-  if (amount <= 0 || !upiId) {
-    return { success: false, error: "Invalid amount or UPI ID." };
-  }
-
-  try {
-    const userDocRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
-      return { success: false, error: "User not found." };
-    }
-    const userData = userDoc.data() as UserProfile;
-
-    if (userData.walletBalance < amount) {
-      return { success: false, error: "Insufficient wallet balance." };
-    }
-
-    const requestColRef = collection(db, "withdrawal_requests");
-    const newRequestRef = doc(requestColRef);
-
-    await setDoc(newRequestRef, {
-      requestId: newRequestRef.id,
-      userId,
-      userName: userData.name || "N/A",
-      userEmail: userData.email || "N/A",
-      amount,
-      upiId,
-      status: "pending",
-      timestamp: serverTimestamp(),
-    });
-
-    return { success: true };
-  } catch (error: any) {
-    console.error("submitWithdrawalRequest error:", error);
-    return { success: false, error: "Failed to submit request." };
-  }
-}
+// ===================================================
+//              WALLETS / NOTIFICATIONS / UTILS
+// ===================================================
 
 /**
  * getUtrFollowUpMessage - wrapper for AI flow
@@ -229,91 +333,6 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
   } catch (error) {
     console.error("getUtrFollowUpMessage error:", error);
     return "We've noticed your payment request is still pending. Please contact support for assistance.";
-  }
-}
-
-/**
- * createOrUpdateTournament
- */
-export async function createOrUpdateTournament(
-  formData: FormData
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const tournamentDataString = formData.get("tournamentData") as string;
-    if (!tournamentDataString) {
-      throw new Error("Tournament data is missing.");
-    }
-    const tournamentData: TournamentFormData = JSON.parse(tournamentDataString);
-
-    if (!tournamentData.date || !tournamentData.time) {
-      throw new Error("Date and time are required.");
-    }
-
-    const [year, month, day] = tournamentData.date.split('-').map(Number);
-    const [hour, minute] = tournamentData.time.split(':').map(Number);
-    
-    const dateIST = new Date(year, month - 1, day, hour, minute);
-    const dateUTC = new Date(dateIST.getTime() - (330 * 60 * 1000));
-    const firestoreDate = Timestamp.fromDate(dateUTC);
-
-
-    const finalImageUrl =
-      tournamentData.imageUrl && tournamentData.imageUrl.trim() !== ""
-        ? tournamentData.imageUrl
-        : tournamentData.isMega
-        ? "/tournaments/MegaTournaments.jpg"
-        : "/tournaments/RegularTournaments.jpg";
-
-    const finalData: Omit<Tournament, "id" | "time"> = {
-      title: tournamentData.title || "",
-      gameType: tournamentData.gameType || "Solo",
-      date: firestoreDate,
-      entryFee: tournamentData.entryFee || 0,
-      slots: tournamentData.slots || 100,
-      prize: tournamentData.prize || 0,
-      rules: Array.isArray(tournamentData.rules)
-        ? tournamentData.rules
-        : String(tournamentData.rules || "")
-            .split("\n")
-            .filter((r) => r.trim() !== ""),
-      status: tournamentData.status || "draft",
-      isMega: tournamentData.isMega || false,
-      imageUrl: finalImageUrl,
-      roomId: tournamentData.roomId || "",
-      roomPassword: tournamentData.roomPassword || "",
-      winnerPrizes: tournamentData.winnerPrizes || [],
-    };
-    
-    if (tournamentData.id) {
-        const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
-        await setDoc(tournamentDocRef, finalData, { merge: true });
-    } else {
-        await addDoc(collection(db, "tournaments"), {
-            ...finalData,
-            joinedUsers: [],
-            joinedUsersCount: 0, // ? ? ???? ????????? ??? ??
-        });
-    }
-
-    return { success: true };
-    
-  } catch (error: any) {
-    console.error("createOrUpdateTournament error:", error);
-    return { success: false, error: error?.message || "Failed to save tournament." };
-  }
-}
-
-/**
- * deleteTournament
- */
-export async function deleteTournament(tournamentId: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const tournamentDocRef = doc(db, "tournaments", tournamentId);
-    await deleteDoc(tournamentDocRef);
-    return { success: true };
-  } catch (error: any) {
-    console.error("deleteTournament error:", error);
-    return { success: false, error: "Failed to delete tournament." };
   }
 }
 
@@ -352,9 +371,6 @@ export async function updateWalletBalance(
 
       transaction.update(userDocRef, { walletBalance: newBalance }); 
       
-      // ? ?????? ???? ???? ???? ???????? ??? ??.
-      // transaction.update(tournamentDocRef, { joinedUsersCount: increment(1) }); 
-
       const transactionDocRef = doc(collection(db, "transactions"));
       transaction.set(transactionDocRef, {
         txnId: transactionDocRef.id,
@@ -486,79 +502,6 @@ export async function deleteUserNotifications(userId: string): Promise<{ success
   } catch (error: any) {
     console.error("deleteUserNotifications error:", error);
     return { success: false, error: "Failed to clear notifications." };
-  }
-}
-
-/**
- * declareResult
- */
-export async function declareResult(
-  tournamentId: string,
-  tournamentTitle: string,
-  isMega: boolean,
-  results: PlayerResult[]
-): Promise<{ success: boolean; error?: string }> {
-  if (!tournamentId || results.length === 0) {
-    return { success: false, error: "Missing tournament ID or results." };
-  }
-
-  try {
-    const batch = writeBatch(db);
-    const resultDocRef = doc(db, "results", tournamentId);
-
-    const sortedResults = results
-      .sort((a, b) => b.points - a.points)
-      .map((r, index) => ({ ...r, rank: index + 1 }));
-
-    batch.set(resultDocRef, {
-      tournamentId,
-      tournamentTitle,
-      isMega,
-      results: sortedResults,
-      declaredAt: serverTimestamp(),
-    });
-
-    for (const result of sortedResults) {
-      const title = `Result Declared: ${tournamentTitle}`;
-      let message = `Congratulations! You secured rank #${result.rank} with ${result.points} points.`;
-
-      if (result.prize && result.prize > 0) {
-        message += ` You've won ?${result.prize}!`;
-        const userDocRef = doc(db, "users", result.userId);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const userProfile = userDoc.data() as UserProfile;
-          const newBalance = (userProfile.walletBalance || 0) + result.prize;
-          batch.update(userDocRef, { walletBalance: newBalance });
-
-          const transactionDocRef = doc(collection(db, "transactions"));
-          batch.set(transactionDocRef, {
-            txnId: transactionDocRef.id,
-            userId: result.userId,
-            amount: result.prize,
-            type: "credit",
-            status: "success",
-            timestamp: serverTimestamp(),
-            description: `Prize money for ${tournamentTitle}`,
-          });
-        }
-      }
-
-      const notificationDocRef = doc(collection(db, "notifications"));
-      batch.set(notificationDocRef, {
-        userId: result.userId,
-        title,
-        message,
-        timestamp: serverTimestamp(),
-        isRead: false,
-      });
-    }
-
-    await batch.commit();
-    return { success: true };
-  } catch (error: any) {
-    console.error("declareResult error:", error);
-    return { success: false, error: "Failed to declare result." };
   }
 }
 
