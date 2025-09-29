@@ -233,7 +233,7 @@ export async function getUtrFollowUpMessage(input: UTRFollowUpInput): Promise<st
 }
 
 /**
- * createOrUpdateTournament
+ * createOrUpdateTournament - ટૂર્નામેન્ટ બનાવવામાં કે અપડેટ કરવામાં આવતી સમસ્યા અહીં ઠીક કરાઈ છે.
  */
 export async function createOrUpdateTournament(
   formData: FormData
@@ -288,10 +288,11 @@ export async function createOrUpdateTournament(
         const tournamentDocRef = doc(db, "tournaments", tournamentData.id);
         await setDoc(tournamentDocRef, finalData, { merge: true });
     } else {
+        // ✅ સુધારો: નવી ટુર્નામેન્ટ માટે joinedUsersList અને joinedUsersCount સેટ કરો
         await addDoc(collection(db, "tournaments"), {
             ...finalData,
-            joinedUsers: [],
-            joinedUsersCount: 0, // ? ? ???? ????????? ??? ??
+            joinedUsersList: [],       // <-- ખાલી લિસ્ટથી શરૂઆત
+            joinedUsersCount: 0,       // <-- 0 કાઉન્ટથી શરૂઆત
         });
     }
 
