@@ -22,7 +22,7 @@ export default function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [pubgUsername, setPubgUsername] = useState(""); // ✅ અહીં pubgId ને બદલીને pubgUsername કરવામાં આવ્યું છે
+  const [pubgUsername, setPubgUsername] = useState(""); 
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -33,19 +33,23 @@ export default function AuthForm() {
     try {
       let userCredential;
       if (isLogin) {
+        // LOGIN LOGIC
         userCredential = await signInWithEmailAndPassword(auth, email, password);
       } else {
+        // SIGN UP LOGIC
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         const userDocRef = doc(db, 'users', user.uid);
+        
+        // ✅ અહીં મુખ્ય સુધારો: userProfile.name ને pubgUsername સાથે સેટ કરવામાં આવ્યો છે
         await setDoc(userDocRef, {
             uid: user.uid,
             email: user.email,
-            name: user.displayName || 'New User',
+            name: pubgUsername, // ⬅️ FIX: અહીં pubgUsername સેટ કરો
             photoUrl: user.photoURL,
             walletBalance: 0,
             role: 'user',
-            pubgUsername: pubgUsername, // ✅ અહીં pubgId ને બદલીને pubgUsername કરવામાં આવ્યું છે
+            pubgUsername: pubgUsername, 
         });
       }
     } catch (error: any) {
@@ -76,7 +80,7 @@ export default function AuthForm() {
                 photoUrl: user.photoURL,
                 walletBalance: 0,
                 role: 'user',
-                pubgUsername: '', // ✅ અહીં pubgId ને બદલીને pubgUsername કરવામાં આવ્યું છે
+                pubgUsername: '', 
             });
         }
     } catch (error: any) {
@@ -145,11 +149,11 @@ export default function AuthForm() {
             </div>
             {!isLogin && (
                 <div className="space-y-2">
-                    <Label htmlFor="pubgUsername">PUBG Username</Label> {/* ✅ અહીં pubgId ને બદલીને pubgUsername કરવામાં આવ્યું છે */}
+                    <Label htmlFor="pubgUsername">PUBG Username</Label> 
                     <Input 
-                        id="pubgUsername" // ✅ અહીં pubgId ને બદલીને pubgUsername કરવામાં આવ્યું છે
+                        id="pubgUsername" 
                         type="text" 
-                        placeholder="Your PUBG Username" // ✅ અહીં પણ ટેક્સ્ટ બદલવામાં આવ્યો છે
+                        placeholder="Your PUBG Username" 
                         required 
                         value={pubgUsername}
                         onChange={(e) => setPubgUsername(e.target.value)}
