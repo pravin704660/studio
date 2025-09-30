@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -6,10 +7,9 @@ import type { Tournament, WinnerPrize } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-// ખાતરી કરો કે getTournamentEntries એ જ નામ છે જે actions.ts માં છે
-import { joinTournament, getTournamentEntries } from "@/app/actions"; 
-// ✅ સુધારો: Build Error Fix - સાચો Path અહીં સેટ કરો
-import { useAuth } from "@/lib/hooks/useAuth"; 
+import { joinTournament, getTournamentEntries } from "@/app/actions";
+// ✅ સુધારો ૧: Netlify Build Error Fix - જો src/components માં હોય તો આ રિલેટિવ પાથ વાપરો
+import { useAuth } from "../../lib/hooks/useAuth"; 
 import { Spinner } from "./ui/spinner";
 import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users, Clock } from "lucide-react";
 import { Separator } from "./ui/separator";
@@ -42,14 +42,17 @@ const formatTime = (seconds: number) => {
 };
 
 export default function TournamentCard({ tournament }: TournamentCardProps) {
-  // ✅ સુધારો: Auth Loading સ્ટેટસ મેળવ્યું (Joined Retain Fix)
+  // ✅ સુધારો ૨: Auth Loading સ્ટેટસ મેળવ્યું (Joined Retain Fix)
   const { user, loading: authLoading } = useAuth(); 
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  
+  // ✅ કુલ લોડિંગ સ્ટેટસ
+  const totalLoading = authLoading || isJoining;
 
-  // ✅ સુધારો: useEffect હવે Auth Loading ની રાહ જુએ છે.
+  // ✅ સુધારો ૩: useEffect હવે Auth Loading ની રાહ જુએ છે.
   useEffect(() => {
     let isMounted = true;
     const checkJoinStatus = async () => {
@@ -116,14 +119,13 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
 
     setIsJoining(true);
     try {
-      // Firestore Error Fix માટે, actions.ts માં joinTournament સુધારેલું હોવું જોઈએ.
-      const result = await joinTournament(tournament.id, user.uid); 
+      const result = await joinTournament(tournament.id, user.uid);
       if (result.success) {
         toast({
           title: "Successfully Joined!",
           description: `You have joined the ${tournament.title} tournament.`,
         });
-        setHasJoined(true); // ✅ જોઈન સફળ થતાં તરત 'Joined' બતાવે છે
+        setHasJoined(true);
       } else {
         toast({
           variant: "destructive",
@@ -162,10 +164,6 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
 
   const showCredentials = tournament.status === 'live' && timeRemaining !== null && timeRemaining > 0;
   const timerHasExpired = tournament.status === 'live' && timeRemaining !== null && timeRemaining <= 0;
-  
-  // ✅ કુલ લોડિંગ સ્ટેટસ
-  const totalLoading = authLoading || isJoining;
-
 
   return (
     <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
