@@ -77,10 +77,8 @@ export async function joinTournament(
       const newBalance = userProfile.walletBalance - tournament.entryFee;
       transaction.update(userDocRef, { walletBalance: newBalance });
       
-      // ✅ સુધારો: joinedUsersList માં યુઝર ID ઉમેરો
       transaction.update(tournamentDocRef, { 
-          joinedUsersCount: increment(1),
-          joinedUsersList: arrayUnion(userId), // <-- આ ઉમેર્યું, જેનાથી Joined Status Retain થશે
+          joinedUsersCount: increment(1) 
       });
 
       const entryDocRef = doc(collection(db, "entries"));
@@ -105,7 +103,7 @@ export async function joinTournament(
       });
     });
 
-    // ... (Notification Logic)
+    // ? ? ??? ??? ?? ?? ??????? ??????? ????
     const adminsQuery = query(collection(db, "users"), where("role", "==", "admin"));
     const adminsSnapshot = await getDocs(adminsQuery);
     
@@ -135,7 +133,6 @@ export async function joinTournament(
     return { success: false, error: error?.message || "Failed to join tournament." };
   }
 }
-
 /**
  * submitWalletRequest
  */
