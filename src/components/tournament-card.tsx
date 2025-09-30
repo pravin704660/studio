@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -7,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { joinTournament, getTournamentEntries } from "@/app/actions";
-// ✅ સુધારો ૧: Build Error Fix - જો TournamentCard.tsx src/components માં હોય તો આ રિલેટિવ પાથ વાપરો
+// ✅ સુધારો: Build Path Error Fix - જો TournamentCard.tsx src/components માં હોય તો આ રિલેટિવ પાથ વાપરો
 import { useAuth } from "../../lib/hooks/useAuth"; 
 import { Spinner } from "./ui/spinner";
 import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users, Clock } from "lucide-react";
@@ -41,7 +42,7 @@ const formatTime = (seconds: number) => {
 };
 
 export default function TournamentCard({ tournament }: TournamentCardProps) {
-  // ✅ સુધારો ૨: Auth Loading સ્ટેટસ મેળવ્યું (Joined Retain Fix)
+  // ✅ Auth Loading સ્ટેટસ મેળવ્યું (Joined Retain Fix)
   const { user, loading: authLoading } = useAuth(); 
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
@@ -51,11 +52,11 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
   // ✅ કુલ લોડિંગ સ્ટેટસ
   const totalLoading = authLoading || isJoining;
 
-  // ✅ સુધારો ૩: useEffect હવે Auth Loading ની રાહ જુએ છે.
+  // ✅ Joined Status Retain Logic
   useEffect(() => {
     let isMounted = true;
     const checkJoinStatus = async () => {
-      // ❌ જો Auth લોડ થતું હોય OR યુઝર લૉગિન ન હોય, તો તરત બહાર નીકળી જાવ.
+      // Auth લોડ થતું હોય તો રાહ જુઓ. યુઝર ન હોય તો Joined ફૉલ્સ સેટ કરો.
       if (authLoading || !user || !tournament) { 
         if (isMounted) setHasJoined(false);
         return; 
@@ -77,7 +78,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
     }
     
     return () => { isMounted = false; };
-  }, [user, tournament, authLoading]); // ✅ Dependency Array માં 'authLoading' ઉમેર્યું
+  }, [user, tournament, authLoading]); // Dependency Array માં 'authLoading' ઉમેર્યું
 
   useEffect(() => {
     let countdownInterval: NodeJS.Timeout | null = null;
@@ -308,7 +309,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
             </DialogContent>
         </Dialog>
         
-        {/* ✅ સુધારેલું બટન લોજિક: હવે totalLoading નો ઉપયોગ કરે છે */}
+        {/* બટન લોજિક હવે totalLoading પર નિર્ભર છે */}
         {totalLoading ? (
              <Button className="w-full text-lg font-bold bg-gray-500" disabled>
                 <Spinner className="mr-2 h-4 w-4" /> Checking Status...
