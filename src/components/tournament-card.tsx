@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -6,9 +7,8 @@ import type { Tournament, WinnerPrize } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-// ખાતરી કરો કે getTournamentEntries એ જ નામ છે જે actions.ts માં છે
-import { joinTournament, getTournamentEntries } from "@/app/actions"; 
-import { useAuth } from "@/lib/hooks/useAuth"; // ✅ ખાતરી કરો કે Path સાચો છે
+import { joinTournament, getTournamentEntries } from "@/app/actions";
+import { useAuth } from "@/hooks/use-auth";
 import { Spinner } from "./ui/spinner";
 import { Ticket, Trophy, Calendar, KeyRound, UserCheck, Award, List, Users, Clock } from "lucide-react";
 import { Separator } from "./ui/separator";
@@ -41,37 +41,29 @@ const formatTime = (seconds: number) => {
 };
 
 export default function TournamentCard({ tournament }: TournamentCardProps) {
-  // ✅ સુધારો: useAuth માંથી 'loading' સ્ટેટસ મેળવ્યું
-  const { user, loading: authLoading } = useAuth(); 
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
-  // ✅ સુધારો: useEffect હવે authLoading અને user પર નિર્ભર છે.
+  // ? ? useEffect ??? ??? ????? ???? ? ??????? "Joined" ?????? ??????
   useEffect(() => {
     const checkJoinStatus = async () => {
-      // ❌ જો Auth લોડ થતું હોય OR યુઝર લૉગિન ન હોય, તો તરત બહાર નીકળી જાવ.
-      if (authLoading || !user || !tournament) { 
-        setHasJoined(false);
-        return; 
-      }
-      
-      try {
-        // 'Joined' સ્ટેટસ ડેટાબેઝમાંથી મેળવો
-        const result = await getTournamentEntries(tournament.id, user.uid); 
-        setHasJoined(result.isJoined);
-      } catch (error) {
-        console.error("Failed to check join status:", error);
+      if (user && tournament) {
+        try {
+          const result = await getTournamentEntries(tournament.id, user.uid);
+          setHasJoined(result.isJoined);
+        } catch (error) {
+          console.error("Failed to check join status:", error);
+          setHasJoined(false);
+        }
+      } else {
         setHasJoined(false);
       }
     };
-    
-    // Auth લોડ થયા પછી જ સ્ટેટસ ચેક કરો
-    if (!authLoading) {
-        checkJoinStatus();
-    }
-  }, [user, tournament, authLoading]); // ✅ Dependency Array માં 'authLoading' ઉમેર્યું
+    checkJoinStatus();
+  }, [user, tournament]);
 
   useEffect(() => {
     let countdownInterval: NodeJS.Timeout | null = null;
@@ -118,7 +110,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
           title: "Successfully Joined!",
           description: `You have joined the ${tournament.title} tournament.`,
         });
-        setHasJoined(true); // ✅ જોઈન સફળ થતાં તરત 'Joined' બતાવે છે (આ લોજિક બરાબર છે)
+        setHasJoined(true);
       } else {
         toast({
           variant: "destructive",
@@ -157,10 +149,6 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
 
   const showCredentials = tournament.status === 'live' && timeRemaining !== null && timeRemaining > 0;
   const timerHasExpired = tournament.status === 'live' && timeRemaining !== null && timeRemaining <= 0;
-  
-  // ✅ કુલ લોડિંગ સ્ટેટસ
-  const totalLoading = authLoading || isJoining;
-
 
   return (
     <Card className="overflow-hidden shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-primary/20">
@@ -192,12 +180,12 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
             <div className="flex flex-col items-center">
                 <Ticket className="h-6 w-6 text-primary" />
                 <span className="mt-1 text-sm font-semibold">Entry Fee</span>
-                <span className="text-lg font-bold">₹{tournament.entryFee}</span>
+                <span className="text-lg font-bold">?{tournament.entryFee}</span>
             </div>
             <div className="flex flex-col items-center">
                 <Trophy className="h-6 w-6 text-amber-400" />
                 <span className="mt-1 text-sm font-semibold">Prize Pool</span>
-                <span className="text-lg font-bold">₹{tournament.prize}</span>
+                <span className="text-lg font-bold">?{tournament.prize}</span>
             </div>
              <div className="flex flex-col items-center">
                 <Users className="h-6 w-6 text-cyan-400" />
@@ -241,7 +229,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
                         {tournament.winnerPrizes?.map((prize, index) => (
                            <div key={index} className="flex items-center gap-2 text-sm">
                                 <Award className={`h-4 w-4 ${prizeIcons[prize.rank] || 'text-blue-400'}`} />
-                                <span>{prize.rank} Prize: <span className="font-bold">₹{prize.prize}</span></span>
+                                <span>{prize.rank} Prize: <span className="font-bold">?{prize.prize}</span></span>
                             </div>
                         ))}
                     </div>
@@ -306,14 +294,10 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
             </DialogContent>
         </Dialog>
         
-        {/* ✅ સુધારેલું બટન લોજિક: હવે totalLoading નો ઉપયોગ કરે છે */}
-        {totalLoading ? (
-             <Button className="w-full text-lg font-bold bg-gray-500" disabled>
-                <Spinner className="mr-2 h-4 w-4" /> Checking Status...
-            </Button>
-        ) : hasJoined ? (
-            <Button className="w-full text-lg font-bold bg-green-600 hover:bg-green-600" disabled>
-                Joined ✅
+        {/* ? ? ????????? ??? ????? ?? */}
+        {hasJoined ? (
+            <Button className="w-full text-lg font-bold bg-green-500" disabled>
+                Joined
             </Button>
         ) : tournament.status === 'live' ? (
             <Button className="w-full text-lg font-bold bg-red-500" disabled>
