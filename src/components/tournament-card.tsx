@@ -169,9 +169,9 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
             <div className="absolute bottom-4 left-4">
-                <CardTitle className="text-2xl font-black text-white">{tournament.title}</CardTitle>
-                <p className="font-semibold text-primary-foreground/80">{tournament.gameType}</p>
-            </div>
+    <CardTitle className="text-2xl font-black text-white">{tournament.title}</CardTitle>
+    {/* <p className="font-semibold text-primary-foreground/80">{tournament.gameType}</p> ❌ આ લાઇન કાઢી નાખો */}
+</div>
         </div>
       </CardHeader>
       <CardContent className="p-4">
