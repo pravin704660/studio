@@ -293,24 +293,22 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
             </DialogContent>
         </Dialog>
         
-        {/* ✅ આ સુધારેલું બટન લોજિક છે */}
-        {hasJoined ? (
-            <Button className="w-full text-lg font-bold bg-green-500" disabled>
-                Joined
-            </Button>
-        ) : tournament.status === 'live' ? (
-            <Button className="w-full text-lg font-bold bg-red-500" disabled>
-                Live
-            </Button>
-        ) : tournament.status === 'completed' ? (
-            <Button className="w-full text-lg font-bold bg-gray-500" disabled>
-                Completed
-            </Button>
-        ) : (
-            <Button className="w-full text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining}>
-              {isJoining ? <Spinner /> : "Join Now"}
-            </Button>
-        )}
+        // ✅ સુધારેલું બટન લોજિક
+{totalLoading ? (
+     <Button className="w-full text-lg font-bold bg-gray-500" disabled>
+        <Spinner className="mr-2 h-4 w-4" /> Checking Status...
+    </Button>
+) : hasJoined ? (
+    <Button className="w-full text-lg font-bold bg-green-600 hover:bg-green-600" disabled>
+        Joined ✅
+    </Button>
+// ... (બાકીના buttons - Live, Completed, Join Now)
+) : (
+    <Button className="w-full text-lg font-bold" size="lg" onClick={handleJoin} disabled={isJoining}>
+      {isJoining ? <Spinner /> : "Join Now"}
+    </Button>
+)}
+
 
       </CardFooter>
     </Card>
