@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -169,6 +168,19 @@ export default function WalletScreen() {
 
   const qrImageUrlToShow = (paymentConfig?.qrImageUrl && paymentConfig.qrImageUrl.trim() !== '') ? paymentConfig.qrImageUrl : DEFAULT_QR_IMAGE_URL;
 
+  // ⭐️⭐️⭐️ નવું UPI Deep Link ફંક્શન અહીં ઉમેરવામાં આવ્યું છે ⭐️⭐️⭐️
+  const generateUpiLink = (amount: string, upiId: string, merchantName: string) => {
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) return '#';
+    
+    // MerchantName ને URL માટે એન્કોડ કરો
+    const encodedName = encodeURIComponent(merchantName);
+
+    // સામાન્ય UPI લિંક જે મોબાઇલ પર એપ ખોલશે
+    return `upi://pay?pa=${upiId}&pn=${encodedName}&am=${numAmount.toFixed(2)}&cu=INR`;
+  };
+  // ⭐️⭐️⭐️ નવું UPI Deep Link ફંક્શન અહીં સમાપ્ત થાય છે ⭐️⭐️⭐️
+
 
   return (
     <div className="space-y-6">
@@ -195,10 +207,25 @@ export default function WalletScreen() {
             <CardHeader>
               <CardTitle>Add Funds to Wallet</CardTitle>
               <CardDescription>
-                Scan the QR or use the UPI ID to pay, then enter the transaction details below.
+                Enter the amount, use the direct link to pay, and then enter the UTR code below.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              
+              {/* ⭐️⭐️⭐️ Amount Input ને અહીંયા ફોર્મની ઉપર મૂકવામાં આવ્યું છે ⭐️⭐️⭐️ */}
+              <div className="space-y-1">
+                  <Label htmlFor="addAmount">Amount</Label>
+                  <Input
+                    id="addAmount"
+                    type="number"
+                    value={addAmount}
+                    onChange={(e) => setAddAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    required
+                  />
+              </div>
+              
+              {/* QR કોડ અને UPI ID (જેમ છે તેમ) */}
               {configLoading ? (
                  <div className="flex flex-col items-center space-y-2 rounded-lg bg-muted p-4">
                     <Skeleton className="h-[200px] w-[200px] rounded-md" />
@@ -221,18 +248,52 @@ export default function WalletScreen() {
                     </div>
                 </div>
               )}
+              
+              {/* ⭐️⭐️⭐️ UPI Deep Link Buttons અહીં ઉમેરવામાં આવ્યા છે ⭐️⭐️⭐️ */}
+              {addAmount && parseFloat(addAmount) > 0 && (
+                  <div className="space-y-2 pt-2">
+                      <p className="font-semibold text-center text-sm text-primary">
+                          Pay ₹{parseFloat(addAmount).toFixed(2)} directly using:
+                      </p>
+                      <div className="grid grid-cols-3 gap-3">
+                          
+                          {/* Google Pay Button */}
+                          <a 
+                            href={generateUpiLink(addAmount, paymentConfig?.upiId || DEFAULT_UPI_ID, "Arena Ace")} 
+                            target="_self" 
+                            className="w-full h-10 flex items-center justify-center rounded-lg bg-[#4285F4] text-white font-bold text-sm"
+                          >
+                            GPay
+                          </a>
+                          
+                          {/* PhonePe Button */}
+                          <a 
+                            href={generateUpiLink(addAmount, paymentConfig?.upiId || DEFAULT_UPI_ID, "Arena Ace")} 
+                            target="_self"
+                            className="w-full h-10 flex items-center justify-center rounded-lg bg-[#6739B7] text-white font-bold text-sm"
+                          >
+                            PhonePe
+                          </a>
+                          
+                          {/* Paytm Button */}
+                          <a 
+                            href={generateUpiLink(addAmount, paymentConfig?.upiId || DEFAULT_UPI_ID, "Arena Ace")} 
+                            target="_self"
+                            className="w-full h-10 flex items-center justify-center rounded-lg bg-[#00B9F1] text-white font-bold text-sm"
+                          >
+                            Paytm
+                          </a>
+                      </div>
+                      <p className="mt-2 text-center text-xs text-red-400">
+                         Payment કર્યા પછી, 12-અંકનો UTR કોપી કરીને નીચે દાખલ કરો.
+                      </p>
+                  </div>
+              )}
+              {/* ⭐️⭐️⭐️ UPI Deep Link Buttons અહીં સમાપ્ત થાય છે ⭐️⭐️⭐️ */}
+
+              {/* UTR Submission Form */}
               <form onSubmit={handleAddMoney} className="space-y-4">
-                <div className="space-y-1">
-                  <Label htmlFor="addAmount">Amount</Label>
-                  <Input
-                    id="addAmount"
-                    type="number"
-                    value={addAmount}
-                    onChange={(e) => setAddAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    required
-                  />
-                </div>
+                {/* ❌ Amount Input અહીંયાથી દૂર કરવામાં આવ્યું છે */}
                 <div className="space-y-1">
                   <Label htmlFor="utr">UTR Code</Label>
                   <Input
@@ -244,7 +305,7 @@ export default function WalletScreen() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isAddingMoney}>
+                <Button type="submit" className="w-full" disabled={isAddingMoney || !addAmount}>
                   {isAddingMoney ? <Spinner /> : "Submit Request"}
                 </Button>
               </form>
@@ -324,4 +385,4 @@ export default function WalletScreen() {
       </Tabs>
     </div>
   );
-}
+        }
