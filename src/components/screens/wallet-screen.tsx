@@ -23,7 +23,7 @@ import UtrFollowUpNotifier from "../utr-follow-up-notifier";
 import { Skeleton } from "../ui/skeleton";
 import { ClipboardCopy } from "lucide-react";
 
-const DEFAULT_UPI_ID = "sankhatpravin121@oksbi";
+const DEFAULT_UPI_ID = "8155966320";
 const DEFAULT_QR_IMAGE_URL = "/done.png";
 
 export default function WalletScreen() {
