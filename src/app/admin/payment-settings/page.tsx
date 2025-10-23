@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { updatePaymentSettings } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-const DEFAULT_UPI_ID = "sankhatpravin121@oksbi";
+const DEFAULT_UPI_ID = "8155966320";
 const DEFAULT_QR_IMAGE_URL = "/done.png";
 
 export default function PaymentSettingsPage() {
