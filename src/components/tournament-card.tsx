@@ -186,7 +186,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
                 <span className="mt-1 text-sm font-semibold">Prize Pool</span>
                 <span className="text-lg font-bold">₹{tournament.prize}</span>
             </div>
-             // ... (ઉપરનો ભાગ)
+            
              <div className="flex flex-col items-center">
                 <Users className="h-6 w-6 text-cyan-400" />
                 <span className="mt-1 text-sm font-semibold">Total Slots</span> // ⬅️ આ લાઇન બદલવાની છે
@@ -194,7 +194,6 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
                     {tournament.slots}
                 </span>
             </div>
-// ... (નીચેનો ભાગ)
 
             <div className="flex flex-col items-center">
                 <Calendar className="h-6 w-6 text-green-400" />
