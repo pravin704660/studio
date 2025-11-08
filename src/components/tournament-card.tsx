@@ -46,7 +46,11 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
   const [hasJoined, setHasJoined] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
-  // ✅ આ useEffect પેજ લોડ થતાની સાથે જ યુઝરનું "Joined" સ્ટેટસ તપાસશે
+  // ⭐️ નવો State: શરૂ થવા માટે બાકી સમય (1 કલાક ટાઈમર માટે)
+  const [timeToStart, setTimeToStart] = useState<number | null>(null);
+
+
+  // ✅ Joined Status Check
   useEffect(() => {
     const checkJoinStatus = async () => {
       if (user && tournament) {
@@ -64,6 +68,7 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
     checkJoinStatus();
   }, [user, tournament]);
 
+  // ✅ Live Tournament Room Info Timer (5 મિનિટનો ટાઈમર)
   useEffect(() => {
     let countdownInterval: NodeJS.Timeout | null = null;
     const now = new Date().getTime();
@@ -90,6 +95,52 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
       if (countdownInterval) clearInterval(countdownInterval);
     };
   }, [tournament.status, tournament.liveStartTime]);
+
+  // ⭐️⭐️⭐️ નવું useEffect: ૧ કલાકનો કાઉન્ટડાઉન ટાઈમર લોજિક ⭐️⭐️⭐️
+  useEffect(() => {
+    let countdownInterval: NodeJS.Timeout | null = null;
+    const ONE_HOUR_IN_SECONDS = 3600;
+
+    if (tournament.status === 'published' && tournament.date) {
+        const startDate = (tournament.date instanceof Timestamp) 
+            ? tournament.date.toDate().getTime() 
+            : new Date().getTime(); // Fallback to now if not Timestamp
+        
+        const updateTimer = () => {
+            const now = new Date().getTime();
+            const timeDifferenceInSeconds = Math.max(0, Math.floor((startDate - now) / 1000));
+            
+            // જો 1 સેકન્ડથી વધારે અને 1 કલાક (3600 સેકન્ડ) ની અંદર હોય તો ટાઈમર બતાવો
+            if (timeDifferenceInSeconds > 0 && timeDifferenceInSeconds <= ONE_HOUR_IN_SECONDS) {
+                setTimeToStart(timeDifferenceInSeconds);
+            } else {
+                setTimeToStart(null); // ટાઈમર છુપાવો
+                if (countdownInterval) clearInterval(countdownInterval);
+            }
+            
+            if (timeDifferenceInSeconds <= 0) {
+                if (countdownInterval) clearInterval(countdownInterval);
+            }
+        };
+
+        updateTimer();
+        const initialDifference = Math.max(0, Math.floor((startDate - new Date().getTime()) / 1000));
+        
+        if (initialDifference > 0 && initialDifference <= ONE_HOUR_IN_SECONDS) {
+            countdownInterval = setInterval(updateTimer, 1000);
+        }
+    } else {
+        setTimeToStart(null);
+    }
+    
+    return () => {
+        if (countdownInterval) clearInterval(countdownInterval);
+    };
+  }, [tournament.date, tournament.status]); 
+  // ⭐️⭐️⭐️ નવું useEffect સમાપ્ત ⭐️⭐️⭐️
+
+  const isOneHourTimerVisible = timeToStart !== null && tournament.status === 'published';
+
 
   const handleJoin = async () => {
     if (!user) {
@@ -170,11 +221,26 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
             <div className="absolute bottom-4 left-4">
     <CardTitle className="text-2xl font-black text-white">{tournament.title}</CardTitle>
-    {/* <p className="font-semibold text-primary-foreground/80">{tournament.gameType}</p> ❌ આ લાઇન કાઢી નાખો */}
 </div>
         </div>
       </CardHeader>
       <CardContent className="p-4">
+        
+        {/* ⭐️⭐️⭐️ નવું ટાઈમર ડિસ્પ્લે (જો 1 કલાક બાકી હોય તો) ⭐️⭐️⭐️ */}
+        {isOneHourTimerVisible && (
+            <div className="flex flex-col items-center justify-center p-3 mb-4 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg border border-yellow-400">
+                <span className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
+                    Starts In:
+                </span>
+                <span className="text-3xl font-extrabold text-yellow-500 mt-1">
+                    <Clock className="inline-block h-6 w-6 mr-2 animate-pulse" />
+                    {formatTime(timeToStart!)}
+                </span>
+            </div>
+        )}
+        {/* ⭐️⭐️⭐️ ટાઈમર ડિસ્પ્લે સમાપ્ત ⭐️⭐️⭐️ */}
+
+
         <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-4">
             <div className="flex flex-col items-center">
                 <Ticket className="h-6 w-6 text-primary" />
@@ -199,12 +265,19 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
                 <Calendar className="h-6 w-6 text-green-400" />
                 <span className="mt-1 text-sm font-semibold">Starts</span>
                 <span className="text-lg font-bold">
-                    {getDisplayDate()}
-                    <br/>
-                    <span className="flex items-center gap-1 text-sm font-medium">
-                        <Clock className="h-4 w-4" />
-                        {getDisplayTime()}
-                    </span>
+                {/* જો 1 કલાકનું ટાઈમર ચાલુ હોય તો Date/Time છુપાવી દો */}
+                {!isOneHourTimerVisible ? (
+                    <>
+                        {getDisplayDate()}
+                        <br/>
+                        <span className="flex items-center gap-1 text-sm font-medium">
+                            <Clock className="h-4 w-4" />
+                            {getDisplayTime()}
+                        </span>
+                    </>
+                ) : (
+                    <span className="text-sm font-medium text-muted-foreground">Counting Down...</span>
+                )}
                 </span>
             </div>
         </div>
@@ -318,3 +391,4 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
     </Card>
   );
 }
+
