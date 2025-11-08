@@ -19,7 +19,9 @@ export default function HomeScreen() {
       setLoading(true);
       try {
         const tournamentsCollection = collection(db, "tournaments");
-        const q = query(tournamentsCollection, orderBy("date", "desc"));
+        
+        // ⭐️⭐️⭐️ અહીંયા ફેરફાર કરવામાં આવ્યો છે: "desc" ને બદલે "asc" ⭐️⭐️⭐️
+        const q = query(tournamentsCollection, orderBy("date", "asc")); 
 
         const querySnapshot = await getDocs(q);
         const allTournaments = querySnapshot.docs.map(
