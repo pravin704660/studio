@@ -255,7 +255,9 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
             
              <div className="flex flex-col items-center">
                 <Users className="h-6 w-6 text-cyan-400" />
-                <span className="mt-1 text-sm font-semibold">Total Slots</span> 
+                
+                <span className="mt-1 text-sm font-semibold">Total Players</span>
+
                 <span className="text-lg font-bold">
                     {tournament.slots}
                 </span>
